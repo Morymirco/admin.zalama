@@ -1,5 +1,6 @@
 import React from 'react';
 import { Filter, CheckCircle, AlertTriangle, Info, AlertCircle } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface NotificationFiltersProps {
   currentFilter: string;
@@ -7,6 +8,7 @@ interface NotificationFiltersProps {
 }
 
 export default function NotificationFilters({ currentFilter, onFilterChange }: NotificationFiltersProps) {
+  const { theme } = useTheme();
   const filters = [
     { id: 'all', label: 'Toutes', icon: Filter },
     { id: 'info', label: 'Info', icon: Info, color: 'text-blue-500' },
@@ -28,8 +30,10 @@ export default function NotificationFilters({ currentFilter, onFilterChange }: N
               onClick={() => onFilterChange(filter.id)}
               className={`flex items-center px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
                 isActive 
-                  ? 'bg-[var(--zalama-blue)]/10 text-[var(--zalama-blue)]' 
-                  : 'text-[var(--zalama-text)]/70 hover:bg-[var(--zalama-bg-light)] hover:text-[var(--zalama-text)]'
+                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
+                  : theme === 'dark'
+                    ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
               }`}
             >
               <Icon className={`w-4 h-4 mr-1.5 ${filter.color || ''}`} />

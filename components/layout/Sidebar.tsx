@@ -3,6 +3,7 @@ import { Home, Users, BarChart2, AlertCircle, Target, PieChart, Settings, LogOut
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const navItems = [
   { label: 'Tableau de bord', icon: Home, href: '/dashboard' },
@@ -17,6 +18,7 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  const { theme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -60,7 +62,7 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className="fixed top-0 left-0 h-screen sidebar text-zinc-100 flex flex-col shadow-lg z-30"
+      className={`fixed top-0 left-0 h-screen sidebar flex flex-col shadow-lg z-30 ${theme === 'dark' ? 'bg-[var(--zalama-sidebar)] text-zinc-100' : 'bg-white text-gray-800'}`}
       style={{ width: collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)' }}
     >
       <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--zalama-border)]">
@@ -80,10 +82,10 @@ export default function Sidebar() {
           <Link 
             key={href} 
             href={href} 
-            className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-[var(--zalama-bg-light)] transition-colors"
+            className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${theme === 'dark' ? 'hover:bg-[var(--zalama-bg-light)]' : 'hover:bg-gray-100'}`}
             title={label}
           >
-            <Icon className="w-5 h-5 text-[var(--zalama-blue)]" />
+            <Icon className={`w-5 h-5 ${theme === 'dark' ? 'text-[var(--zalama-blue)]' : 'text-blue-600'}`} />
             <span className={`sidebar-text ${collapsed ? 'hidden' : 'block'}`}>{label}</span>
           </Link>
         ))}

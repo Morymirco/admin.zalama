@@ -11,6 +11,19 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Helper function to apply theme to document
+const applyTheme = (theme: Theme) => {
+  // Set data-theme attribute for custom CSS variables
+  document.documentElement.setAttribute('data-theme', theme);
+  
+  // Add or remove dark class for Tailwind
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+};
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>('dark');
 
@@ -19,20 +32,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const savedTheme = localStorage.getItem('zalama-theme');
     if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
       setTheme(savedTheme);
-      document.documentElement.setAttribute('data-theme', savedTheme);
+      applyTheme(savedTheme);
     } else {
       // Utiliser les préférences du système si aucun thème n'est enregistré
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const defaultTheme = prefersDark ? 'dark' : 'light';
       setTheme(defaultTheme);
-      document.documentElement.setAttribute('data-theme', defaultTheme);
+      applyTheme(defaultTheme);
     }
   }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+    applyTheme(newTheme);
     localStorage.setItem('zalama-theme', newTheme);
   };
 

@@ -20,7 +20,7 @@ export default function NotificationHeader({ unreadCount, onClose }: Notificatio
       </div>
       <button
         onClick={onClose}
-        className="p-1 rounded-full hover:bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]/70 transition-colors"
+        className="p-1 rounded-full hover:bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]/70 dark:text-gray-200/70 transition-colors"
         aria-label="Fermer les notifications"
       >
         <X className="w-5 h-5" />

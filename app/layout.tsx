@@ -1,25 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, JetBrains_Mono } from "next/font/google";
+// Utilisation de CSS standard pour les polices au lieu de next/font/google
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
+// Nous utiliserons des polices système au lieu des polices Google pour éviter les problèmes avec Turbopack
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -34,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body
-        className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable} antialiased`}
+        className="font-sans antialiased"
       >
         <ThemeProvider>
           {children}

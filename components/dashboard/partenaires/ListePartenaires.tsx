@@ -1,6 +1,7 @@
 import React from 'react';
-import { Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Mail, Phone, Globe } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Mail, Phone, Globe, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface Partenaire {
   id: string;
@@ -51,6 +52,12 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
   onEditClick,
   onDeleteClick
 }) => {
+  const router = useRouter();
+  
+  // Fonction pour naviguer vers la page de détail d'un partenaire
+  const handleViewDetails = (id: string) => {
+    router.push(`/dashboard/partenaires/${id}`);
+  };
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -111,7 +118,11 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
           </div>
         ) : (
           currentItems.map((partenaire) => (
-            <div key={partenaire.id} className="bg-[var(--zalama-card)] rounded-xl shadow-sm overflow-hidden border border-[var(--zalama-border)]">
+            <div 
+              key={partenaire.id} 
+              className="bg-[var(--zalama-card)] rounded-xl shadow-sm overflow-hidden border border-[var(--zalama-border)] hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleViewDetails(partenaire.id)}
+            >
               <div className="relative h-32 bg-gradient-to-r from-[var(--zalama-blue)]/20 to-[var(--zalama-blue)]/5">
                 <div className="absolute top-4 right-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${
@@ -170,13 +181,28 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-[var(--zalama-border)]">
                   <button 
-                    onClick={() => onEditClick(partenaire)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Empêcher la propagation pour éviter de déclencher le onClick du parent
+                      handleViewDetails(partenaire.id);
+                    }}
+                    className="p-2 text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] rounded"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation(); // Empêcher la propagation
+                      onEditClick(partenaire);
+                    }}
                     className="p-2 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
                   >
                     <Edit className="h-4 w-4" />
                   </button>
                   <button 
-                    onClick={() => onDeleteClick(partenaire)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Empêcher la propagation
+                      onDeleteClick(partenaire);
+                    }}
                     className="p-2 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded"
                   >
                     <Trash2 className="h-4 w-4" />

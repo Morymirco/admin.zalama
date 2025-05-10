@@ -1,23 +1,33 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-interface ModaleAjoutPartenaireProps {
+interface ModaleModificationPartenaireProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   types: string[];
+  partenaire: any;
 }
 
-const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
+const ModaleModificationPartenaire: React.FC<ModaleModificationPartenaireProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  types
+  types,
+  partenaire
 }) => {
   // États pour le logo
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialiser le logo preview avec le logo existant
+  useEffect(() => {
+    if (partenaire && partenaire.logo) {
+      setLogoPreview(partenaire.logo);
+    }
+  }, [partenaire]);
 
   // Gestion du téléchargement du logo
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,13 +45,11 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
       reader.readAsDataURL(file);
     }
   };
-
-  // Gestion du clic sur le bouton de téléchargement
+  
+  // Clic sur le bouton de téléchargement du logo
   const handleLogoClick = () => {
     fileInputRef.current?.click();
   };
-
-
   
   // Gestion de la soumission du formulaire
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -90,7 +98,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
       onSubmit(e);
     } catch (error) {
       console.error('Erreur lors de la soumission du formulaire:', error);
-      alert('Une erreur est survenue lors de la soumission du formulaire. Veuillez réessayer.');
+      toast.error('Une erreur est survenue lors de la soumission du formulaire. Veuillez réessayer.');
     }
   };
 
@@ -100,8 +108,9 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-[var(--zalama-card)] rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-5 border-b border-[var(--zalama-border)]">
-          <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Ajouter un nouveau partenaire</h3>
+          <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Modifier le partenaire</h3>
           <button 
+            type="button" 
             onClick={onClose}
             className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors"
           >
@@ -113,35 +122,33 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
             <div className="space-y-6">
               {/* Section Logo et Nom */}
               <div className="flex gap-6">
-                {/* Logo upload */}
-                <div className="w-32">
-                  <label className="block text-sm font-medium text-[var(--zalama-text)] mb-2">Logo</label>
+                <div>
                   <div 
                     onClick={handleLogoClick}
-                    className="w-32 h-32 border-2 border-dashed border-[var(--zalama-border)] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[var(--zalama-bg-lighter)] transition-colors overflow-hidden"
+                    className="w-32 h-32 border-2 border-dashed border-[var(--zalama-border)] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[var(--zalama-bg-lighter)] transition-colors"
                   >
                     {logoPreview ? (
-                      <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain" />
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo preview" 
+                        className="w-full h-full object-contain rounded-lg"
+                      />
                     ) : (
                       <>
                         <Upload className="h-8 w-8 text-[var(--zalama-text-secondary)] mb-2" />
-                        <span className="text-xs text-center text-[var(--zalama-text-secondary)]">
-                          Cliquez pour télécharger
-                        </span>
+                        <span className="text-sm text-[var(--zalama-text-secondary)]">Logo</span>
                       </>
                     )}
                     <input
                       type="file"
-                      id="logo"
                       ref={fileInputRef}
-                      accept="image/*"
                       onChange={handleLogoChange}
+                      accept="image/*"
                       className="hidden"
                     />
                   </div>
                 </div>
                 
-                {/* Nom et type */}
                 <div className="flex-1 space-y-4">
                   <div>
                     <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom de l'entreprise</label>
@@ -149,6 +156,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="text"
                       id="nom"
                       required
+                      defaultValue={partenaire?.nom || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       placeholder="Nom de l'entreprise"
                     />
@@ -160,27 +168,41 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       <select
                         id="type"
                         required
+                        defaultValue={partenaire?.type || ''}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       >
                         <option value="">Sélectionner un type</option>
-                        {types.filter(type => type !== 'tous').map(type => (
-                          <option key={type} value={type}>{type}</option>
+                        {types.map((type, index) => (
+                          <option key={index} value={type}>{type}</option>
                         ))}
                       </select>
                     </div>
                     
                     <div>
-                      <label htmlFor="domaine" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Domaine d'activité</label>
+                      <label htmlFor="domaine" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Secteur d'activité</label>
                       <input
                         type="text"
                         id="domaine"
                         required
+                        defaultValue={partenaire?.secteur || ''}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                        placeholder="Domaine d'activité"
+                        placeholder="Secteur d'activité"
                       />
                     </div>
                   </div>
                 </div>
+              </div>
+              
+              {/* Description */}
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Description</label>
+                <textarea
+                  id="description"
+                  rows={3}
+                  defaultValue={partenaire?.description || ''}
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                  placeholder="Description de l'entreprise"
+                ></textarea>
               </div>
               
               {/* Section Représentant */}
@@ -193,6 +215,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="text"
                       id="nomRepresentant"
                       required
+                      defaultValue={partenaire?.nomRepresentant || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       placeholder="Nom complet"
                     />
@@ -203,8 +226,9 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="email"
                       id="emailRepresentant"
                       required
+                      defaultValue={partenaire?.emailRepresentant || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Email du représentant"
+                      placeholder="Email"
                     />
                   </div>
                   <div>
@@ -213,6 +237,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="tel"
                       id="telephoneRepresentant"
                       required
+                      defaultValue={partenaire?.telephoneRepresentant || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       placeholder="Numéro de téléphone"
                     />
@@ -230,6 +255,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="text"
                       id="nomRH"
                       required
+                      defaultValue={partenaire?.nomRH || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       placeholder="Nom complet"
                     />
@@ -240,8 +266,9 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="email"
                       id="emailRH"
                       required
+                      defaultValue={partenaire?.emailRH || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Email du responsable RH"
+                      placeholder="Email"
                     />
                   </div>
                   <div>
@@ -250,6 +277,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="tel"
                       id="telephoneRH"
                       required
+                      defaultValue={partenaire?.telephoneRH || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       placeholder="Numéro de téléphone"
                     />
@@ -257,7 +285,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                 </div>
               </div>
               
-              {/* Section Informations légales */}
+              {/* Section Informations légales et contact */}
               <div>
                 <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3">Informations légales et contact</h4>
                 <div className="grid grid-cols-2 gap-4">
@@ -266,7 +294,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                     <input
                       type="text"
                       id="rccm"
-                      required
+                      defaultValue={partenaire?.rccm || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       placeholder="Numéro RCCM"
                     />
@@ -276,22 +304,20 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                     <input
                       type="text"
                       id="nif"
-                      required
+                      defaultValue={partenaire?.nif || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       placeholder="Numéro NIF"
                     />
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mt-3">
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email professionnel</label>
+                    <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email</label>
                     <input
                       type="email"
                       id="email"
                       required
+                      defaultValue={partenaire?.email || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Email de contact"
+                      placeholder="Email de l'entreprise"
                     />
                   </div>
                   <div>
@@ -300,38 +326,38 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="tel"
                       id="telephone"
                       required
+                      defaultValue={partenaire?.telephone || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                       placeholder="Numéro de téléphone"
                     />
                   </div>
-                </div>
-                
-                <div className="mt-3">
-                  <label htmlFor="adresse" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Adresse</label>
-                  <input
-                    type="text"
-                    id="adresse"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Adresse complète"
-                  />
-                </div>
-                
-                <div className="mt-3">
-                  <label htmlFor="siteWeb" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Site Web</label>
-                  <input
-                    type="text"
-                    id="siteWeb"
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="www.exemple.com"
-                  />
+                  <div>
+                    <label htmlFor="adresse" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Adresse</label>
+                    <input
+                      type="text"
+                      id="adresse"
+                      required
+                      defaultValue={partenaire?.adresse || ''}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                      placeholder="Adresse"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="siteWeb" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Site Web</label>
+                    <input
+                      type="url"
+                      id="siteWeb"
+                      defaultValue={partenaire?.siteWeb || ''}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                      placeholder="Site Web"
+                    />
+                  </div>
                 </div>
               </div>
               
               {/* Section Autres informations */}
               <div>
                 <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3">Autres informations</h4>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="dateAdhesion" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Date d'adhésion</label>
@@ -339,34 +365,21 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                       type="date"
                       id="dateAdhesion"
                       required
+                      defaultValue={partenaire?.dateAdhesion || ''}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                     />
                   </div>
-                  <div className="flex items-center pt-6">
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        id="actif"
-                        className="sr-only peer"
-                        defaultChecked
-                      />
-                      <div className="relative w-10 h-5 bg-[var(--zalama-bg-lighter)] rounded-full transition peer-checked:bg-[var(--zalama-success)]/20">
-                        <div className="dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition peer-checked:left-5 peer-checked:bg-[var(--zalama-success)]"></div>
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-[var(--zalama-text)]">Actif</span>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="actif"
+                      defaultChecked={partenaire?.actif || false}
+                      className="h-4 w-4 rounded border-[var(--zalama-border)] text-[var(--zalama-blue)] focus:ring-[var(--zalama-blue)]"
+                    />
+                    <label htmlFor="actif" className="ml-2 block text-sm text-[var(--zalama-text)]">
+                      Partenaire actif
                     </label>
                   </div>
-                </div>
-                
-                <div className="mt-3">
-                  <label htmlFor="description" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Description</label>
-                  <textarea
-                    id="description"
-                    required
-                    rows={4}
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Objectifs, rôle, etc."
-                  ></textarea>
                 </div>
               </div>
               
@@ -383,7 +396,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                   type="submit"
                   className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
                 >
-                  Enregistrer le partenaire
+                  Enregistrer les modifications
                 </button>
               </div>
             </div>
@@ -393,4 +406,4 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
   );
 };
 
-export default ModaleAjoutPartenaire;
+export default ModaleModificationPartenaire;

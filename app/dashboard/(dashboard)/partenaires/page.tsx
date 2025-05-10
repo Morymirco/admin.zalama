@@ -273,32 +273,56 @@ export default function PartenairesPage() {
 
   const handleSubmitAddPartenaire = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget;
     
-    // Génération d'un ID unique
-    const newId = Date.now().toString();
-    
-    const newPartenaire: Partenaire = {
-      id: newId,
-      nom: (form.querySelector('#nom') as HTMLInputElement).value,
-      type: (form.querySelector('#type') as HTMLSelectElement).value,
-      secteur: (form.querySelector('#secteur') as HTMLInputElement).value,
-      description: (form.querySelector('#description') as HTMLTextAreaElement).value,
-      adresse: (form.querySelector('#adresse') as HTMLInputElement).value,
-      email: (form.querySelector('#email') as HTMLInputElement).value,
-      telephone: (form.querySelector('#telephone') as HTMLInputElement).value,
-      siteWeb: (form.querySelector('#siteWeb') as HTMLInputElement).value,
-      logo: '/images/partners/default.png', // Logo par défaut
-      datePartenariat: new Date().toISOString().split('T')[0],
-      actif: (form.querySelector('#actif') as HTMLInputElement).checked,
-    };
-    
-    setPartenaires([...partenaires, newPartenaire]);
-    setFilteredPartenaires([...partenaires, newPartenaire]);
-    setShowAddModal(false);
-    
-    // Notification de succès (à implémenter)
-    console.log('Partenaire ajouté avec succès:', newPartenaire);
+    try {
+      // Récupération des données du formulaire depuis window.formData
+      const formData = (window as any).formData;
+      
+      if (!formData) {
+        console.error('Aucune donnée de formulaire trouvée');
+        alert('Une erreur est survenue lors de la soumission du formulaire. Veuillez réessayer.');
+        return;
+      }
+      
+      // Génération d'un ID unique
+      const newId = Date.now().toString();
+      
+      // Création du nouvel objet partenaire avec les données du formulaire
+      const newPartenaire: Partenaire = {
+        id: newId,
+        nom: formData.nom,
+        type: formData.type,
+        secteur: formData.domaine,
+        description: formData.description,
+        adresse: formData.adresse,
+        email: formData.email,
+        telephone: formData.telephone,
+        siteWeb: formData.siteWeb,
+        logo: '/images/partners/default.png', // Logo par défaut, à remplacer par l'upload réel
+        datePartenariat: formData.dateAdhesion || new Date().toISOString().split('T')[0],
+        actif: formData.actif,
+      };
+      
+      // Ajout du nouveau partenaire à la liste
+      const updatedPartenaires = [...partenaires, newPartenaire];
+      setPartenaires(updatedPartenaires);
+      setFilteredPartenaires(updatedPartenaires);
+      setShowAddModal(false);
+      
+      // Notification de succès
+      console.log('Partenaire ajouté avec succès:', newPartenaire);
+      alert('Partenaire ajouté avec succès!');
+      
+      // Redirection vers la page de détail du partenaire
+      // Cette ligne est commentée car elle nécessite l'accès au router
+      // router.push(`/dashboard/partenaires/${newId}`);
+      
+      // Nettoyage des données temporaires
+      delete (window as any).formData;
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du partenaire:', error);
+      alert('Une erreur est survenue lors de l\'ajout du partenaire. Veuillez réessayer.');
+    }
   };
 
   const handleSubmitEditPartenaire = (e: React.FormEvent<HTMLFormElement>) => {

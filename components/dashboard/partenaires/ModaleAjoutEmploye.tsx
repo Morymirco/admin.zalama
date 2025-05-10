@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { Employe } from './types';
 import toast from 'react-hot-toast';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface ModaleAjoutEmployeProps {
@@ -68,7 +68,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
         ...formData,
         partenaireId: partenaireId,
         dateCreation: serverTimestamp(),
-        nomComplet: `${formData.prenom} ${formData.nom}` // Créer un champ pour le nom complet
+        nomComplet: `${formData.prenom} ${formData.nom}`
       };
       
       // Ajouter l'employé à Firestore
@@ -81,6 +81,41 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
         id: docRef.id
       };
       
+      // Créer un compte utilisateur pour l'employé
+      if (formData.email) {
+        try {
+          const response = await fetch('/api/auth/create-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              displayName: `${formData.prenom} ${formData.nom}`,
+              role: 'employe',
+              partenaireId: partenaireId,
+            }),
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            // Mettre à jour l'employé avec l'ID utilisateur
+            await updateDoc(doc(db, 'employes', docRef.id), {
+              userId: data.userId,
+            });
+            
+            toast.success('Un email d\'invitation a été envoyé à l\'employé');
+          } else {
+            console.error('Erreur lors de la création du compte:', data.error);
+            toast.error('Impossible de créer un compte pour cet employé');
+          }
+        } catch (authError) {
+          console.error('Erreur lors de la création du compte:', authError);
+          toast.error('Impossible de créer un compte pour cet employé');
+        }
+      }
+      
       // Fermer le toast de chargement
       toast.dismiss(loadingToast);
       toast.success('Employé ajouté avec succès!');
@@ -88,7 +123,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
       // Appel de la fonction onSubmit passée en props
       onSubmit(newEmploye);
       
-      // Réinitialiser le formulaire
+      // Réinitialiser le formulaire et fermer la modale
       setFormData({
         id: '',
         nom: '',
@@ -104,11 +139,10 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
         dateEmbauche: new Date().toISOString().split('T')[0]
       });
       
-      // Fermer la modale
       onClose();
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'employé:', error);
-      toast.error('Une erreur est survenue lors de l\'ajout de l\'employé. Veuillez réessayer.');
+      toast.error('Une erreur est survenue lors de l\'ajout de l\'employé');
     } finally {
       setIsSubmitting(false);
     }

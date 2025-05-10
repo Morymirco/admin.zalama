@@ -1,5 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Wand2 } from 'lucide-react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
+import { toast } from 'react-hot-toast';
 
 interface ModaleAjoutPartenaireProps {
   isOpen: boolean;
@@ -17,7 +20,11 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
   // États pour le logo
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Références aux champs du formulaire
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Gestion du téléchargement du logo
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,16 +47,83 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
   const handleLogoClick = () => {
     fileInputRef.current?.click();
   };
-
-
   
+  // Fonction pour préremplir les champs avec des données fictives
+  const handlePreFill = () => {
+    if (!formRef.current) return;
+    
+    const form = formRef.current;
+    const secteurs = ['Finance', 'Télécommunications', 'Éducation', 'Santé', 'Mines', 'Agriculture'];
+    const secteurAleatoire = secteurs[Math.floor(Math.random() * secteurs.length)];
+    const typeAleatoire = types[Math.floor(Math.random() * types.length)];
+    
+    // Préremplir les champs
+    (form.querySelector('#nom') as HTMLInputElement).value = `Entreprise ${secteurAleatoire}`;
+    (form.querySelector('#type') as HTMLSelectElement).value = typeAleatoire;
+    (form.querySelector('#domaine') as HTMLInputElement).value = secteurAleatoire;
+    (form.querySelector('#description') as HTMLTextAreaElement).value = `Description détaillée de l'entreprise spécialisée dans le secteur ${secteurAleatoire}.`;
+    
+    // Représentant
+    (form.querySelector('#nomRepresentant') as HTMLInputElement).value = 'Amadou Diallo';
+    (form.querySelector('#emailRepresentant') as HTMLInputElement).value = `amadou.diallo@${secteurAleatoire.toLowerCase().replace(' ', '')}.gn`;
+    (form.querySelector('#telephoneRepresentant') as HTMLInputElement).value = '+224 628 123 456';
+    
+    // RH
+    (form.querySelector('#nomRH') as HTMLInputElement).value = 'Mariama Camara';
+    (form.querySelector('#emailRH') as HTMLInputElement).value = `mariama.camara@${secteurAleatoire.toLowerCase().replace(' ', '')}.gn`;
+    (form.querySelector('#telephoneRH') as HTMLInputElement).value = '+224 622 987 654';
+    
+    // Informations légales
+    (form.querySelector('#rccm') as HTMLInputElement).value = `RCCM/GN/2023/B/${Math.floor(Math.random() * 10000)}`;
+    (form.querySelector('#nif') as HTMLInputElement).value = `NIF${Math.floor(Math.random() * 1000000000)}`;
+    
+    // Contact
+    (form.querySelector('#email') as HTMLInputElement).value = `contact@${secteurAleatoire.toLowerCase().replace(' ', '')}.gn`;
+    (form.querySelector('#telephone') as HTMLInputElement).value = '+224 625 789 123';
+    (form.querySelector('#adresse') as HTMLInputElement).value = 'Quartier Almamya, Commune de Kaloum, Conakry, Guinée';
+    (form.querySelector('#siteWeb') as HTMLInputElement).value = `www.${secteurAleatoire.toLowerCase().replace(' ', '')}.gn`;
+    
+    // Autres
+    const dateActuelle = new Date();
+    const dateAdhesion = new Date(dateActuelle.getFullYear(), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1);
+    (form.querySelector('#dateAdhesion') as HTMLInputElement).value = dateAdhesion.toISOString().split('T')[0];
+    (form.querySelector('#actif') as HTMLInputElement).checked = true;
+    
+    toast.success('Formulaire prérempli avec des données fictives');
+  };
+
   // Gestion de la soumission du formulaire
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setUploading(true);
     
     try {
       // Collecte des données du formulaire
       const form = e.currentTarget;
+      
+      // Upload du logo si présent
+      let logoUrl = '/images/partners/default.png';
+      
+      if (logoFile) {
+        try {
+          const storageRef = ref(storage, `logos/${Date.now()}_${logoFile.name}`);
+          
+          // Afficher un toast pour l'upload
+          const uploadToast = toast.loading('Upload du logo en cours...');
+          
+          await uploadBytes(storageRef, logoFile);
+          logoUrl = await getDownloadURL(storageRef);
+          
+          // Remplacer le toast
+          toast.dismiss(uploadToast);
+          toast.success('Logo téléchargé avec succès');
+        } catch (error) {
+          console.error("Erreur lors de l'upload du logo:", error);
+          toast.error("Erreur lors de l'upload du logo");
+        }
+      }
+      
+      // Structurer les données selon le format attendu par Firestore
       const formData = {
         // Informations sur l'entreprise
         nom: (form.querySelector('#nom') as HTMLInputElement)?.value || '',
@@ -67,9 +141,11 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         emailRH: (form.querySelector('#emailRH') as HTMLInputElement)?.value || '',
         telephoneRH: (form.querySelector('#telephoneRH') as HTMLInputElement)?.value || '',
         
-        // Informations légales et contact
+        // Informations légales
         rccm: (form.querySelector('#rccm') as HTMLInputElement)?.value || '',
         nif: (form.querySelector('#nif') as HTMLInputElement)?.value || '',
+        
+        // Contact
         email: (form.querySelector('#email') as HTMLInputElement)?.value || '',
         telephone: (form.querySelector('#telephone') as HTMLInputElement)?.value || '',
         adresse: (form.querySelector('#adresse') as HTMLInputElement)?.value || '',
@@ -80,7 +156,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         actif: (form.querySelector('#actif') as HTMLInputElement)?.checked || false,
         
         // Logo
-        logo: logoFile
+        logo: logoUrl,
       };
       
       // Stockage temporaire des données
@@ -88,9 +164,14 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
       
       // Appel de la fonction onSubmit passée en props
       onSubmit(e);
+      
+      // Fermer la modale après soumission
+      onClose();
     } catch (error) {
       console.error('Erreur lors de la soumission du formulaire:', error);
-      alert('Une erreur est survenue lors de la soumission du formulaire. Veuillez réessayer.');
+      toast.error('Une erreur est survenue lors de la soumission du formulaire');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -101,15 +182,25 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
       <div className="bg-[var(--zalama-card)] rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-5 border-b border-[var(--zalama-border)]">
           <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Ajouter un nouveau partenaire</h3>
-          <button 
-            onClick={onClose}
-            className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handlePreFill}
+              className="flex items-center gap-1 text-[var(--zalama-blue)] hover:text-[var(--zalama-blue-accent)] transition-colors"
+              type="button"
+            >
+              <Wand2 className="h-4 w-4" />
+              <span className="text-sm">Préremplir</span>
+            </button>
+            <button 
+              onClick={onClose}
+              className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         
-        <form onSubmit={handleFormSubmit} className="p-5">
+        <form ref={formRef} onSubmit={handleFormSubmit} className="p-5">
             <div className="space-y-6">
               {/* Section Logo et Nom */}
               <div className="flex gap-6">
@@ -376,14 +467,16 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                   type="button"
                   onClick={onClose}
                   className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors"
+                  disabled={uploading}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
+                  className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors disabled:opacity-70"
+                  disabled={uploading}
                 >
-                  Enregistrer le partenaire
+                  {uploading ? "Enregistrement..." : "Enregistrer le partenaire"}
                 </button>
               </div>
             </div>

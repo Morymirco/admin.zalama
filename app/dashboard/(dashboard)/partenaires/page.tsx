@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Building, Users, Globe } from 'lucide-react';
+import { Building, Users, Globe, Search, Plus, Filter } from 'lucide-react';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { toast } from 'react-hot-toast';
 
 // Importation des composants
 import {
@@ -27,6 +30,7 @@ interface Partenaire {
   logo: string;
   datePartenariat: string;
   actif: boolean;
+  dateCreation?: any;
 }
 
 interface StatistiquePartenaire {
@@ -58,197 +62,134 @@ export default function PartenairesPage() {
   // Liste des types de partenaires
   const types = ['tous', 'Entreprise', 'Institution financière', 'ONG', 'Gouvernement', 'Université'];
 
-  // Données fictives pour la démo
+  // Récupération des partenaires depuis Firestore
   useEffect(() => {
-    // Simuler un chargement depuis une API
-    setTimeout(() => {
-      const mockData: Partenaire[] = [
-        { 
-          id: '1', 
-          nom: 'Banque Centrale de Guinée', 
-          type: 'Institution financière', 
-          secteur: 'Finance', 
-          description: 'Banque centrale et régulateur financier', 
-          adresse: 'Conakry, Guinée', 
-          email: 'contact@bcg.gov.gn', 
-          telephone: '+224 123 456 789', 
-          siteWeb: 'www.bcg.gov.gn', 
-          logo: '/images/partners/bcg.png', 
-          datePartenariat: '2023-01-15', 
-          actif: true 
-        },
-        { 
-          id: '2', 
-          nom: 'Orange Guinée', 
-          type: 'Entreprise', 
-          secteur: 'Télécommunications', 
-          description: 'Opérateur de téléphonie mobile et fournisseur de services financiers', 
-          adresse: 'Conakry, Guinée', 
-          email: 'contact@orange.gn', 
-          telephone: '+224 611 000 000', 
-          siteWeb: 'www.orange.gn', 
-          logo: '/images/partners/orange.png', 
-          datePartenariat: '2023-02-20', 
-          actif: true 
-        },
-        { 
-          id: '3', 
-          nom: 'Université Gamal Abdel Nasser', 
-          type: 'Université', 
-          secteur: 'Éducation', 
-          description: 'Institution d\'enseignement supérieur', 
-          adresse: 'Conakry, Guinée', 
-          email: 'info@uganc.edu.gn', 
-          telephone: '+224 628 123 456', 
-          siteWeb: 'www.uganc.edu.gn', 
-          logo: '/images/partners/uganc.png', 
-          datePartenariat: '2023-03-10', 
-          actif: true 
-        },
-        { 
-          id: '4', 
-          nom: 'Ministère de l\'Économie et des Finances', 
-          type: 'Gouvernement', 
-          secteur: 'Finance publique', 
-          description: 'Ministère en charge de l\'économie et des finances', 
-          adresse: 'Conakry, Guinée', 
-          email: 'contact@mef.gov.gn', 
-          telephone: '+224 622 987 654', 
-          siteWeb: 'www.mef.gov.gn', 
-          logo: '/images/partners/mef.png', 
-          datePartenariat: '2023-04-05', 
-          actif: true 
-        },
-        { 
-          id: '5', 
-          nom: 'MTN Guinée', 
-          type: 'Entreprise', 
-          secteur: 'Télécommunications', 
-          description: 'Opérateur de téléphonie mobile et services financiers', 
-          adresse: 'Conakry, Guinée', 
-          email: 'info@mtn.gn', 
-          telephone: '+224 655 123 456', 
-          siteWeb: 'www.mtn.gn', 
-          logo: '/images/partners/mtn.png', 
-          datePartenariat: '2023-05-15', 
-          actif: false 
-        },
-        { 
-          id: '6', 
-          nom: 'ONG Développement Durable', 
-          type: 'ONG', 
-          secteur: 'Développement', 
-          description: 'Organisation non gouvernementale pour le développement durable', 
-          adresse: 'Conakry, Guinée', 
-          email: 'contact@ongdd.org', 
-          telephone: '+224 666 789 123', 
-          siteWeb: 'www.ongdd.org', 
-          logo: '/images/partners/ongdd.png', 
-          datePartenariat: '2023-06-20', 
-          actif: true 
-        },
-        { 
-          id: '7', 
-          nom: 'Ecobank Guinée', 
-          type: 'Institution financière', 
-          secteur: 'Finance', 
-          description: 'Banque commerciale panafricaine', 
-          adresse: 'Conakry, Guinée', 
-          email: 'info@ecobank.gn', 
-          telephone: '+224 631 234 567', 
-          siteWeb: 'www.ecobank.com/gn', 
-          logo: '/images/partners/ecobank.png', 
-          datePartenariat: '2023-07-10', 
-          actif: true 
-        },
-        { 
-          id: '8', 
-          nom: 'Chambre de Commerce de Guinée', 
-          type: 'Institution financière', 
-          secteur: 'Commerce', 
-          description: 'Organisation représentant les intérêts des entreprises', 
-          adresse: 'Conakry, Guinée', 
-          email: 'contact@ccg.org.gn', 
-          telephone: '+224 622 345 678', 
-          siteWeb: 'www.ccg.org.gn', 
-          logo: '/images/partners/ccg.png', 
-          datePartenariat: '2023-08-05', 
-          actif: true 
-        },
-      ];
-      
-      setPartenaires(mockData);
-      setFilteredPartenaires(mockData);
-      setIsLoading(false);
-    }, 1000);
-
-    // Données fictives pour les statistiques des partenaires
-    setTimeout(() => {
-      const statsMockData: StatistiquePartenaire[] = [
-        {
-          type: 'Entreprises',
-          nombre: 24,
-          nouveauxCeMois: 3,
-          actifs: 20,
-          inactifs: 4,
-          tendance: 'hausse',
-          icon: <Building className="h-6 w-6 text-[var(--zalama-blue)]" />
-        },
-        {
-          type: 'Institutions financières',
-          nombre: 12,
-          nouveauxCeMois: 1,
-          actifs: 10,
-          inactifs: 2,
-          tendance: 'stable',
-          icon: <Users className="h-6 w-6 text-[var(--zalama-success)]" />
-        },
-        {
-          type: 'Gouvernements',
-          nombre: 5,
-          nouveauxCeMois: 0,
-          actifs: 5,
-          inactifs: 0,
-          tendance: 'stable',
-          icon: <Globe className="h-6 w-6 text-[var(--zalama-warning)]" />
-        }
-      ];
-      
-      setStatistiques(statsMockData);
-      setStatsLoading(false);
-    }, 1500);
+    const fetchPartenaires = async () => {
+      setIsLoading(true);
+      try {
+        const partenairesRef = collection(db, 'partenaires');
+        const snapshot = await getDocs(partenairesRef);
+        
+        const partenairesList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Partenaire[];
+        
+        setPartenaires(partenairesList);
+        setFilteredPartenaires(partenairesList);
+        
+        // Calculer les statistiques
+        calculateStatistics(partenairesList);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des partenaires:", error);
+        toast.error("Impossible de charger les partenaires");
+      } finally {
+        setIsLoading(false);
+        setStatsLoading(false);
+      }
+    };
+    
+    fetchPartenaires();
   }, []);
+
+  // Calcul des statistiques
+  const calculateStatistics = (data: Partenaire[]) => {
+    // Grouper par type
+    const typeGroups: Record<string, Partenaire[]> = {};
+    data.forEach(partenaire => {
+      if (!typeGroups[partenaire.type]) {
+        typeGroups[partenaire.type] = [];
+      }
+      typeGroups[partenaire.type].push(partenaire);
+    });
+    
+    // Créer les statistiques
+    const stats: StatistiquePartenaire[] = [
+      {
+        type: 'Entreprises',
+        nombre: typeGroups['Entreprise']?.length || 0,
+        nouveauxCeMois: countNewThisMonth(typeGroups['Entreprise'] || []),
+        actifs: countActive(typeGroups['Entreprise'] || []),
+        inactifs: (typeGroups['Entreprise']?.length || 0) - countActive(typeGroups['Entreprise'] || []),
+        tendance: 'hausse',
+        icon: <Building className="h-6 w-6 text-[var(--zalama-blue)]" />
+      },
+      {
+        type: 'Institutions financières',
+        nombre: typeGroups['Institution financière']?.length || 0,
+        nouveauxCeMois: countNewThisMonth(typeGroups['Institution financière'] || []),
+        actifs: countActive(typeGroups['Institution financière'] || []),
+        inactifs: (typeGroups['Institution financière']?.length || 0) - countActive(typeGroups['Institution financière'] || []),
+        tendance: 'stable',
+        icon: <Users className="h-6 w-6 text-[var(--zalama-success)]" />
+      },
+      {
+        type: 'Autres partenaires',
+        nombre: data.length - (typeGroups['Entreprise']?.length || 0) - (typeGroups['Institution financière']?.length || 0),
+        nouveauxCeMois: countNewThisMonth(data.filter(p => p.type !== 'Entreprise' && p.type !== 'Institution financière')),
+        actifs: countActive(data.filter(p => p.type !== 'Entreprise' && p.type !== 'Institution financière')),
+        inactifs: data.filter(p => p.type !== 'Entreprise' && p.type !== 'Institution financière').length - countActive(data.filter(p => p.type !== 'Entreprise' && p.type !== 'Institution financière')),
+        tendance: 'hausse',
+        icon: <Globe className="h-6 w-6 text-[var(--zalama-warning)]" />
+      }
+    ];
+    
+    setStatistiques(stats);
+  };
+  
+  // Compter les partenaires créés ce mois-ci
+  const countNewThisMonth = (partenaires: Partenaire[]) => {
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    return partenaires.filter(p => {
+      if (!p.dateCreation) return false;
+      const creationDate = p.dateCreation.toDate ? p.dateCreation.toDate() : new Date(p.dateCreation);
+      return creationDate >= firstDayOfMonth;
+    }).length;
+  };
+  
+  // Compter les partenaires actifs
+  const countActive = (partenaires: Partenaire[]) => {
+    return partenaires.filter(p => p.actif).length;
+  };
 
   // Filtrage des partenaires
   useEffect(() => {
-    let result = [...partenaires];
-    
-    // Filtre par recherche
-    if (searchTerm) {
-      result = result.filter(partenaire => 
-        partenaire.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        partenaire.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        partenaire.secteur.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    let filtered = [...partenaires];
     
     // Filtre par type
     if (typeFilter !== 'tous') {
-      result = result.filter(partenaire => partenaire.type === typeFilter);
+      filtered = filtered.filter(partenaire => partenaire.type === typeFilter);
     }
     
-    setFilteredPartenaires(result);
-    setCurrentPage(1); // Réinitialiser la pagination lors du filtrage
+    // Filtre par recherche
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(partenaire => 
+        partenaire.nom.toLowerCase().includes(term) ||
+        partenaire.secteur.toLowerCase().includes(term) ||
+        partenaire.email.toLowerCase().includes(term)
+      );
+    }
+    
+    setFilteredPartenaires(filtered);
+    setCurrentPage(1); // Réinitialiser la pagination
   }, [searchTerm, typeFilter, partenaires]);
 
-  // Handlers
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredPartenaires.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredPartenaires.length / itemsPerPage);
+
+  // Handlers pour les filtres
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 
   const handleTypeFilterChange = (type: string) => {
     setTypeFilter(type);
-    // Réinitialiser la pagination lors du changement de filtre
     setCurrentPage(1);
   };
 
@@ -271,7 +212,7 @@ export default function PartenairesPage() {
     setShowDeleteModal(true);
   };
 
-  const handleSubmitAddPartenaire = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitAddPartenaire = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     try {
@@ -280,16 +221,15 @@ export default function PartenairesPage() {
       
       if (!formData) {
         console.error('Aucune donnée de formulaire trouvée');
-        alert('Une erreur est survenue lors de la soumission du formulaire. Veuillez réessayer.');
+        toast.error('Une erreur est survenue lors de la soumission du formulaire');
         return;
       }
       
-      // Génération d'un ID unique
-      const newId = Date.now().toString();
+      // Afficher un toast de chargement
+      const loadingToast = toast.loading('Ajout du partenaire en cours...');
       
       // Création du nouvel objet partenaire avec les données du formulaire
-      const newPartenaire: Partenaire = {
-        id: newId,
+      const newPartenaireData = {
         nom: formData.nom,
         type: formData.type,
         secteur: formData.domaine,
@@ -297,31 +237,57 @@ export default function PartenairesPage() {
         adresse: formData.adresse,
         email: formData.email,
         telephone: formData.telephone,
-        siteWeb: formData.siteWeb,
-        logo: '/images/partners/default.png', // Logo par défaut, à remplacer par l'upload réel
+        siteWeb: formData.siteWeb || '',
+        logo: formData.logo || '/images/partners/default.png', // Utiliser le logo uploadé
         datePartenariat: formData.dateAdhesion || new Date().toISOString().split('T')[0],
         actif: formData.actif,
+        dateCreation: serverTimestamp(),
+        // Informations supplémentaires
+        representant: {
+          nom: formData.nomRepresentant || '',
+          email: formData.emailRepresentant || '',
+          telephone: formData.telephoneRepresentant || ''
+        },
+        rh: {
+          nom: formData.nomRH || '',
+          email: formData.emailRH || '',
+          telephone: formData.telephoneRH || ''
+        },
+        infoLegales: {
+          rccm: formData.rccm || '',
+          nif: formData.nif || ''
+        }
       };
       
-      // Ajout du nouveau partenaire à la liste
+      // Ajout du document à Firestore
+      const partenairesRef = collection(db, 'partenaires');
+      const docRef = await addDoc(partenairesRef, newPartenaireData);
+      
+      // Ajout du nouveau partenaire à l'état local avec l'ID généré
+      const newPartenaire: Partenaire = {
+        id: docRef.id,
+        ...newPartenaireData
+      } as Partenaire;
+      
       const updatedPartenaires = [...partenaires, newPartenaire];
       setPartenaires(updatedPartenaires);
       setFilteredPartenaires(updatedPartenaires);
+      
+      // Recalculer les statistiques
+      calculateStatistics(updatedPartenaires);
+      
+      // Fermer la modale
       setShowAddModal(false);
       
       // Notification de succès
-      console.log('Partenaire ajouté avec succès:', newPartenaire);
-      alert('Partenaire ajouté avec succès!');
-      
-      // Redirection vers la page de détail du partenaire
-      // Cette ligne est commentée car elle nécessite l'accès au router
-      // router.push(`/dashboard/partenaires/${newId}`);
+      toast.dismiss(loadingToast);
+      toast.success('Partenaire ajouté avec succès!');
       
       // Nettoyage des données temporaires
       delete (window as any).formData;
     } catch (error) {
       console.error('Erreur lors de l\'ajout du partenaire:', error);
-      alert('Une erreur est survenue lors de l\'ajout du partenaire. Veuillez réessayer.');
+      toast.error('Une erreur est survenue lors de l\'ajout du partenaire');
     }
   };
 
@@ -368,7 +334,54 @@ export default function PartenairesPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Partenaires</h1>
+        
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+          {/* Barre de recherche */}
+          <div className="relative w-full md:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+            </div>
+            <input
+              type="text"
+              placeholder="Rechercher un partenaire..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
+            />
+          </div>
+          
+          {/* Filtre par type */}
+          <div className="relative w-full md:w-auto">
+            <select
+              value={typeFilter}
+              onChange={(e) => handleTypeFilterChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
+            >
+              {types.map((type) => (
+                <option key={type} value={type}>
+                  {type === 'tous' ? 'Tous les types' : type}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Filter className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+            </div>
+          </div>
+          
+          {/* Bouton d'ajout */}
+          <button
+            onClick={handleAddPartenaire}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </button>
+        </div>
+      </div>
+
       {/* Section des statistiques */}
       <StatistiquesPartenaires 
         statistiques={statistiques} 
@@ -377,57 +390,55 @@ export default function PartenairesPage() {
       
       {/* Résumé des partenaires */}
       <ResumePartenaires 
-        totalPartenaires={partenaires.length}
-        partenairesActifs={partenaires.filter(p => p.actif).length}
-        typesPartenaires={types}
-      />
-      
-      {/* Liste des partenaires avec filtres et pagination */}
-      <ListePartenaires 
-        partenaires={partenaires}
-        filteredPartenaires={filteredPartenaires}
-        searchTerm={searchTerm}
-        typeFilter={typeFilter}
-        types={types}
-        currentPage={currentPage}
-        itemsPerPage={itemsPerPage}
+        totalPartenaires={filteredPartenaires.length}
+        partenairesActifs={filteredPartenaires.filter(p => p.actif).length}
+        partenairesInactifs={filteredPartenaires.filter(p => !p.actif).length}
         isLoading={isLoading}
-        onSearch={handleSearch}
-        onTypeFilterChange={handleTypeFilterChange}
-        onPageChange={handlePageChange}
-        onAddClick={handleAddPartenaire}
-        onEditClick={handleEditPartenaire}
-        onDeleteClick={handleDeletePartenaire}
       />
       
-      {/* Modales pour les opérations CRUD */}
+      {/* Liste des partenaires */}
+      <ListePartenaires 
+        partenaires={currentItems}
+        onEdit={handleEditPartenaire}
+        onDelete={handleDeletePartenaire}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        isLoading={isLoading}
+      />
+      
+      {/* Modales */}
       <ModaleAjoutPartenaire 
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSubmit={handleSubmitAddPartenaire}
-        types={types}
+        types={types.filter(t => t !== 'tous')}
       />
       
-      <ModaleEditionPartenaire 
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setCurrentPartenaire(null);
-        }}
-        onSubmit={handleSubmitEditPartenaire}
-        partenaire={currentPartenaire}
-        types={types}
-      />
+      {showEditModal && currentPartenaire && (
+        <ModaleEditionPartenaire 
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setCurrentPartenaire(null);
+          }}
+          onSubmit={handleSubmitEditPartenaire}
+          partenaire={currentPartenaire}
+          types={types.filter(t => t !== 'tous')}
+        />
+      )}
       
-      <ModaleSuppressionPartenaire 
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setCurrentPartenaire(null);
-        }}
-        onConfirm={handleConfirmDelete}
-        partenaire={currentPartenaire}
-      />
+      {showDeleteModal && currentPartenaire && (
+        <ModaleSuppressionPartenaire 
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setCurrentPartenaire(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          partenaire={currentPartenaire}
+        />
+      )}
     </div>
   );
 }

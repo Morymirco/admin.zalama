@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { Employe } from './types';
 import toast from 'react-hot-toast';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface ModaleAjoutEmployeProps {
   isOpen: boolean;
@@ -28,8 +30,11 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
     poste: '',
     role: '',
     typeContrat: 'CDI',
-    salaireNet: 0
+    salaireNet: 0,
+    dateEmbauche: new Date().toISOString().split('T')[0]
   });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Gestion des changements dans le formulaire
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -50,15 +55,35 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
   };
   
   // Gestion de la soumission du formulaire
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
     try {
-      // Générer un ID unique
-      const newEmploye: Employe = {
-        ...formData as Employe,
-        id: Date.now().toString()
+      // Afficher un toast de chargement
+      const loadingToast = toast.loading('Ajout de l\'employé en cours...');
+      
+      // Préparer les données de l'employé
+      const employeData = {
+        ...formData,
+        partenaireId: partenaireId,
+        dateCreation: serverTimestamp(),
+        nomComplet: `${formData.prenom} ${formData.nom}` // Créer un champ pour le nom complet
       };
+      
+      // Ajouter l'employé à Firestore
+      const employesRef = collection(db, 'employes');
+      const docRef = await addDoc(employesRef, employeData);
+      
+      // Ajouter l'ID du document à l'objet employé
+      const newEmploye: Employe = {
+        ...employeData as Employe,
+        id: docRef.id
+      };
+      
+      // Fermer le toast de chargement
+      toast.dismiss(loadingToast);
+      toast.success('Employé ajouté avec succès!');
       
       // Appel de la fonction onSubmit passée en props
       onSubmit(newEmploye);
@@ -75,7 +100,8 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
         poste: '',
         role: '',
         typeContrat: 'CDI',
-        salaireNet: 0
+        salaireNet: 0,
+        dateEmbauche: new Date().toISOString().split('T')[0]
       });
       
       // Fermer la modale
@@ -83,6 +109,8 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'employé:', error);
       toast.error('Une erreur est survenue lors de l\'ajout de l\'employé. Veuillez réessayer.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -97,6 +125,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
             type="button" 
             onClick={onClose}
             className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors"
+            disabled={isSubmitting}
           >
             <X className="h-5 w-5" />
           </button>
@@ -118,6 +147,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                     placeholder="Nom de famille"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -130,6 +160,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                     placeholder="Prénom"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -140,6 +171,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     value={formData.genre}
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                    disabled={isSubmitting}
                   >
                     <option value="Homme">Homme</option>
                     <option value="Femme">Femme</option>
@@ -155,6 +187,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                     placeholder="Adresse"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -174,6 +207,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                     placeholder="Email"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -186,6 +220,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                     placeholder="Numéro de téléphone"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -205,10 +240,11 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                     placeholder="Poste occupé"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Département/Rôle</label>
+                  <label htmlFor="role" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Rôle</label>
                   <input
                     type="text"
                     id="role"
@@ -216,7 +252,8 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     value={formData.role}
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Département ou rôle"
+                    placeholder="Rôle dans l'entreprise"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -227,15 +264,17 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     value={formData.typeContrat}
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                    disabled={isSubmitting}
                   >
                     <option value="CDI">CDI</option>
                     <option value="CDD">CDD</option>
                     <option value="Stage">Stage</option>
                     <option value="Consultant">Consultant</option>
+                    <option value="Autre">Autre</option>
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="salaireNet" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Salaire Net (GNF)</label>
+                  <label htmlFor="salaireNet" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Salaire net (GNF)</label>
                   <input
                     type="number"
                     id="salaireNet"
@@ -243,28 +282,42 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     value={formData.salaireNet}
                     onChange={handleChange}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Salaire net mensuel"
+                    placeholder="Salaire mensuel net"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="dateEmbauche" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Date d'embauche</label>
+                  <input
+                    type="date"
+                    id="dateEmbauche"
+                    required
+                    value={formData.dateEmbauche}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
             </div>
-            
-            {/* Boutons de soumission */}
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
-              >
-                Ajouter l'employé
-              </button>
-            </div>
+          </div>
+          
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors"
+              disabled={isSubmitting}
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors disabled:opacity-70"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Ajout en cours..." : "Ajouter l'employé"}
+            </button>
           </div>
         </form>
       </div>

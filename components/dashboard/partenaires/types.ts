@@ -11,6 +11,7 @@ export interface Employe {
   role: string;
   typeContrat: 'CDI' | 'CDD' | 'Consultant' | 'Stage' | 'Autre';
   salaireNet: number;
+  dateEmbauche: string;
 }
 
 export interface Partenaire {

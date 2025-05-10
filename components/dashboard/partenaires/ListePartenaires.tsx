@@ -20,37 +20,22 @@ interface Partenaire {
 
 interface ListePartenairesProps {
   partenaires: Partenaire[];
-  filteredPartenaires: Partenaire[];
-  searchTerm: string;
-  typeFilter: string;
-  types: string[];
+  onEdit: (partenaire: Partenaire) => void;
+  onDelete: (partenaire: Partenaire) => void;
   currentPage: number;
-  itemsPerPage: number;
-  isLoading: boolean;
-  onSearch: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onTypeFilterChange: (type: string) => void;
+  totalPages: number;
   onPageChange: (page: number) => void;
-  onAddClick: () => void;
-  onEditClick: (partenaire: Partenaire) => void;
-  onDeleteClick: (partenaire: Partenaire) => void;
+  isLoading: boolean;
 }
 
 const ListePartenaires: React.FC<ListePartenairesProps> = ({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   partenaires,
-  filteredPartenaires,
-  searchTerm,
-  typeFilter,
-  types,
+  onEdit,
+  onDelete,
   currentPage,
-  itemsPerPage,
-  isLoading,
-  onSearch,
-  onTypeFilterChange,
+  totalPages,
   onPageChange,
-  onAddClick,
-  onEditClick,
-  onDeleteClick
+  isLoading
 }) => {
   const router = useRouter();
   
@@ -58,53 +43,9 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
   const handleViewDetails = (id: string) => {
     router.push(`/dashboard/partenaires/${id}`);
   };
-  // Pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredPartenaires.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredPartenaires.length / itemsPerPage);
 
   return (
     <>
-      {/* Barre d'outils et filtres */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div className="relative w-full md:w-64">
-          <input
-            type="text"
-            placeholder="Rechercher..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-            value={searchTerm}
-            onChange={onSearch}
-          />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-[var(--zalama-text-secondary)]" />
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <button 
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
-            onClick={onAddClick}
-          >
-            <Plus className="h-4 w-4" />
-            Ajouter
-          </button>
-          
-          <div className="flex items-center">
-            <span className="mr-2 text-[var(--zalama-text)]">Type:</span>
-            <select 
-              value={typeFilter}
-              onChange={(e) => onTypeFilterChange(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-            >
-              {types.map(type => (
-                <option key={type} value={type}>
-                  {type === 'tous' ? 'Tous les types' : type}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-      
       {/* Grille des partenaires */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
@@ -112,12 +53,12 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
             <RefreshCw className="h-8 w-8 animate-spin text-[var(--zalama-blue)]" />
             <span className="ml-2 text-[var(--zalama-text)]">Chargement...</span>
           </div>
-        ) : filteredPartenaires.length === 0 ? (
+        ) : partenaires.length === 0 ? (
           <div className="col-span-full py-12 text-center">
             <p className="text-[var(--zalama-text-secondary)]">Aucun partenaire trouvé</p>
           </div>
         ) : (
-          currentItems.map((partenaire) => (
+          partenaires.map((partenaire) => (
             <div 
               key={partenaire.id} 
               className="bg-[var(--zalama-card)] rounded-xl shadow-sm overflow-hidden border border-[var(--zalama-border)] hover:shadow-md transition-shadow cursor-pointer"
@@ -192,7 +133,7 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
                   <button 
                     onClick={(e) => {
                       e.stopPropagation(); // Empêcher la propagation
-                      onEditClick(partenaire);
+                      onEdit(partenaire);
                     }}
                     className="p-2 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
                   >
@@ -201,7 +142,7 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
                   <button 
                     onClick={(e) => {
                       e.stopPropagation(); // Empêcher la propagation
-                      onDeleteClick(partenaire);
+                      onDelete(partenaire);
                     }}
                     className="p-2 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded"
                   >
@@ -221,23 +162,19 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`p-2 rounded ${
-                currentPage === 1 
-                  ? 'text-[var(--zalama-text-secondary)] cursor-not-allowed' 
-                  : 'text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)]'
-              }`}
+              className="px-3 py-1 rounded-md border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4" />
             </button>
             
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <button
                 key={page}
                 onClick={() => onPageChange(page)}
-                className={`px-3 py-1 rounded ${
-                  currentPage === page 
-                    ? 'bg-[var(--zalama-blue)] text-white' 
-                    : 'text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)]'
+                className={`px-3 py-1 rounded-md ${
+                  currentPage === page
+                    ? 'bg-[var(--zalama-blue)] text-white'
+                    : 'border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]'
                 }`}
               >
                 {page}
@@ -247,13 +184,9 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`p-2 rounded ${
-                currentPage === totalPages 
-                  ? 'text-[var(--zalama-text-secondary)] cursor-not-allowed' 
-                  : 'text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)]'
-              }`}
+              className="px-3 py-1 rounded-md border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>

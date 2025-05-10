@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import LogoutButton from "@/components/LogoutButton";
 
 const navItems = [
   { label: 'Tableau de bord', icon: Home, href: '/dashboard' },
@@ -165,13 +166,7 @@ export default function DashboardSidebar() {
                   </Link>
                 </li>
                 <li>
-                  <Link 
-                    href="/auth/logout" 
-                    className="flex items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Déconnexion
-                  </Link>
+                  <LogoutButton />
                 </li>
               </ul>
             </div>

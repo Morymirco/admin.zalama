@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 export default function Home() {
@@ -13,6 +13,17 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Vérifier si l'utilisateur est déjà connecté
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push("/dashboard");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -20,7 +31,11 @@ export default function Home() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
+      
+      // Attendre un court instant avant de rediriger
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 500);
     } catch (error: any) {
       console.error("Erreur de connexion:", error);
       setError(

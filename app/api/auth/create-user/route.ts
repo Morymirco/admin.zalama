@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/firebase-admin';
+import { sendPasswordResetEmail } from '@/lib/email-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,14 +32,16 @@ export async function POST(request: NextRequest) {
 
     // Envoyer un email de réinitialisation de mot de passe
     const resetLink = await auth.generatePasswordResetLink(email);
-
-    // Ici, vous pourriez utiliser un service d'envoi d'emails comme SendGrid, Mailjet, etc.
-    // Pour l'exemple, nous allons simplement retourner le lien
+    
+    // Envoyer l'email avec le lien de réinitialisation via Resend
+    const emailSent = await sendPasswordResetEmail(email, displayName, resetLink);
     
     return NextResponse.json({
       success: true,
       userId: userRecord.uid,
-      resetLink,
+      emailSent,
+      // Ne pas inclure le resetLink en production pour des raisons de sécurité
+      ...(process.env.NODE_ENV !== 'production' && { resetLink }),
     });
   } catch (error: any) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);

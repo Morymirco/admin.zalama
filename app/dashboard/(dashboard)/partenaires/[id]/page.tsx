@@ -100,48 +100,586 @@ export default function PartenaireDetailPage() {
                 prenom: 'Mamadou',
                 genre: 'Homme',
                 email: 'm.barry@bcg.gov.gn',
-              telephone: '+224 611 123 456',
-              adresse: 'Conakry, Guinée',
-              poste: 'Développeur',
-              role: 'Technique',
-              typeContrat: 'CDI',
-              salaireNet: 5000000
-            },
-            {
-              id: '2',
-              nom: 'Bah',
-              prenom: 'Fatoumata',
-              genre: 'Femme',
-              email: 'fatoumata.bah@orange.gn',
-              telephone: '+224 622 789 012',
-              adresse: 'Conakry, Guinée',
-              poste: 'Comptable',
-              role: 'Finance',
-              typeContrat: 'CDD',
-              salaireNet: 4000000
-            },
-            {
-              id: '3',
-              nom: 'Soumah',
-              prenom: 'Mohamed',
-              genre: 'Homme',
-              email: 'mohamed.soumah@orange.gn',
-              telephone: '+224 666 456 789',
-              adresse: 'Conakry, Guinée',
-              poste: 'Commercial',
-              role: 'Ventes',
-              typeContrat: 'CDI',
-              salaireNet: 4500000
+                telephone: '+224 622 111 222',
+                adresse: 'Conakry, Guinée',
+                poste: 'Analyste financier',
+                role: 'Finance',
+                typeContrat: 'CDI',
+                salaireNet: 6000000
+              },
+              {
+                id: '2',
+                nom: 'Diallo',
+                prenom: 'Aissatou',
+                genre: 'Femme',
+                email: 'a.diallo@bcg.gov.gn',
+                telephone: '+224 622 333 444',
+                adresse: 'Conakry, Guinée',
+                poste: 'Comptable',
+                role: 'Finance',
+                typeContrat: 'CDI',
+                salaireNet: 5500000
+              },
+              {
+                id: '3',
+                nom: 'Camara',
+                prenom: 'Ibrahima',
+                genre: 'Homme',
+                email: 'i.camara@bcg.gov.gn',
+                telephone: '+224 622 555 666',
+                adresse: 'Conakry, Guinée',
+                poste: 'Auditeur',
+                role: 'Audit',
+                typeContrat: 'CDI',
+                salaireNet: 5800000
+              },
+              {
+                id: '4',
+                nom: 'Sylla',
+                prenom: 'Mariama',
+                genre: 'Femme',
+                email: 'm.sylla@bcg.gov.gn',
+                telephone: '+224 622 777 888',
+                adresse: 'Conakry, Guinée',
+                poste: 'Assistante RH',
+                role: 'RH',
+                typeContrat: 'CDD',
+                salaireNet: 4200000
+              },
+              {
+                id: '5',
+                nom: 'Balde',
+                prenom: 'Ousmane',
+                genre: 'Homme',
+                email: 'o.balde@bcg.gov.gn',
+                telephone: '+224 622 999 000',
+                adresse: 'Conakry, Guinée',
+                poste: 'Analyste de risque',
+                role: 'Risque',
+                typeContrat: 'CDI',
+                salaireNet: 6200000
+              }
+            ],
+            salaireNetTotal: 27700000,
+            contratsCounts: {
+              'CDI': 4,
+              'CDD': 1
             }
-          ],
-          salaireNetTotal: 13500000,
-          contratsCounts: {
-            'CDI': 2,
-            'CDD': 1
+          },
+          '2': {
+            id: '2',
+            nom: 'Orange Guinée',
+            type: 'Entreprise',
+            secteur: 'Télécommunications',
+            description: 'Opérateur de téléphonie mobile et fournisseur de services financiers en Guinée.',
+            
+            nomRepresentant: 'Amadou Diallo',
+            emailRepresentant: 'amadou.diallo@orange.gn',
+            telephoneRepresentant: '+224 611 000 001',
+            
+            nomRH: 'Mariama Bah',
+            emailRH: 'mariama.bah@orange.gn',
+            telephoneRH: '+224 611 000 002',
+            
+            rccm: 'RCCM/GN/2007/B/1234',
+            nif: 'NIF123456789',
+            email: 'contact@orange.gn',
+            telephone: '+224 611 000 000',
+            adresse: 'Kaloum, Conakry, Guinée',
+            siteWeb: 'www.orange.gn',
+            
+            logo: '/images/partners/orange.png',
+            dateAdhesion: '2023-02-20',
+            actif: true,
+            
+            nombreEmployes: 3,
+            employes: [
+              {
+                id: '1',
+                nom: 'Camara',
+                prenom: 'Ibrahim',
+                genre: 'Homme',
+                email: 'ibrahim.camara@orange.gn',
+                telephone: '+224 611 123 456',
+                adresse: 'Conakry, Guinée',
+                poste: 'Développeur',
+                role: 'Technique',
+                typeContrat: 'CDI',
+                salaireNet: 5000000
+              },
+              {
+                id: '2',
+                nom: 'Bah',
+                prenom: 'Fatoumata',
+                genre: 'Femme',
+                email: 'fatoumata.bah@orange.gn',
+                telephone: '+224 622 789 012',
+                adresse: 'Conakry, Guinée',
+                poste: 'Comptable',
+                role: 'Finance',
+                typeContrat: 'CDD',
+                salaireNet: 4000000
+              },
+              {
+                id: '3',
+                nom: 'Soumah',
+                prenom: 'Mohamed',
+                genre: 'Homme',
+                email: 'mohamed.soumah@orange.gn',
+                telephone: '+224 666 456 789',
+                adresse: 'Conakry, Guinée',
+                poste: 'Commercial',
+                role: 'Ventes',
+                typeContrat: 'CDI',
+                salaireNet: 4500000
+              }
+            ],
+            salaireNetTotal: 13500000,
+            contratsCounts: {
+              'CDI': 2,
+              'CDD': 1
+            }
+          },
+          '3': {
+            id: '3',
+            nom: 'Université Gamal Abdel Nasser',
+            type: 'Université',
+            secteur: 'Éducation',
+            description: 'Institution d\'enseignement supérieur publique de Guinée, offrant des programmes dans divers domaines académiques.',
+            
+            nomRepresentant: 'Dr. Ousmane Balde',
+            emailRepresentant: 'o.balde@uganc.edu.gn',
+            telephoneRepresentant: '+224 628 111 222',
+            
+            nomRH: 'Mme. Kadiatou Diallo',
+            emailRH: 'k.diallo@uganc.edu.gn',
+            telephoneRH: '+224 628 333 444',
+            
+            rccm: 'N/A',
+            nif: 'NIF300000001',
+            email: 'info@uganc.edu.gn',
+            telephone: '+224 628 123 456',
+            adresse: 'Conakry, Guinée',
+            siteWeb: 'www.uganc.edu.gn',
+            
+            logo: '/images/partners/uganc.png',
+            dateAdhesion: '2023-03-10',
+            actif: true,
+            
+            nombreEmployes: 4,
+            employes: [
+              {
+                id: '1',
+                nom: 'Toure',
+                prenom: 'Mamoudou',
+                genre: 'Homme',
+                email: 'm.toure@uganc.edu.gn',
+                telephone: '+224 628 555 666',
+                adresse: 'Conakry, Guinée',
+                poste: 'Professeur',
+                role: 'Enseignement',
+                typeContrat: 'CDI',
+                salaireNet: 4800000
+              },
+              {
+                id: '2',
+                nom: 'Conde',
+                prenom: 'Aminata',
+                genre: 'Femme',
+                email: 'a.conde@uganc.edu.gn',
+                telephone: '+224 628 777 888',
+                adresse: 'Conakry, Guinée',
+                poste: 'Chercheur',
+                role: 'Recherche',
+                typeContrat: 'CDI',
+                salaireNet: 5200000
+              },
+              {
+                id: '3',
+                nom: 'Keita',
+                prenom: 'Sekou',
+                genre: 'Homme',
+                email: 's.keita@uganc.edu.gn',
+                telephone: '+224 628 999 000',
+                adresse: 'Conakry, Guinée',
+                poste: 'Assistant administratif',
+                role: 'Administration',
+                typeContrat: 'CDD',
+                salaireNet: 3500000
+              },
+              {
+                id: '4',
+                nom: 'Bangoura',
+                prenom: 'Fanta',
+                genre: 'Femme',
+                email: 'f.bangoura@uganc.edu.gn',
+                telephone: '+224 628 111 333',
+                adresse: 'Conakry, Guinée',
+                poste: 'Bibliothécaire',
+                role: 'Support',
+                typeContrat: 'CDI',
+                salaireNet: 3800000
+              }
+            ],
+            salaireNetTotal: 17300000,
+            contratsCounts: {
+              'CDI': 3,
+              'CDD': 1
+            }
+          },
+          '4': {
+            id: '4',
+            nom: 'Ministère de l\'Économie et des Finances',
+            type: 'Gouvernement',
+            secteur: 'Finance publique',
+            description: 'Ministère en charge de l\'économie et des finances de la Guinée, responsable de la gestion des finances publiques et de la politique économique.',
+            
+            nomRepresentant: 'M. Moussa Conde',
+            emailRepresentant: 'm.conde@mef.gov.gn',
+            telephoneRepresentant: '+224 622 111 000',
+            
+            nomRH: 'Mme. Hawa Sylla',
+            emailRH: 'h.sylla@mef.gov.gn',
+            telephoneRH: '+224 622 222 000',
+            
+            rccm: 'N/A',
+            nif: 'NIF400000001',
+            email: 'contact@mef.gov.gn',
+            telephone: '+224 622 987 654',
+            adresse: 'Kaloum, Conakry, Guinée',
+            siteWeb: 'www.mef.gov.gn',
+            
+            logo: '/images/partners/mef.png',
+            dateAdhesion: '2023-04-05',
+            actif: true,
+            
+            nombreEmployes: 3,
+            employes: [
+              {
+                id: '1',
+                nom: 'Kaba',
+                prenom: 'Mamadou',
+                genre: 'Homme',
+                email: 'm.kaba@mef.gov.gn',
+                telephone: '+224 622 333 000',
+                adresse: 'Conakry, Guinée',
+                poste: 'Directeur financier',
+                role: 'Finance',
+                typeContrat: 'CDI',
+                salaireNet: 7000000
+              },
+              {
+                id: '2',
+                nom: 'Balde',
+                prenom: 'Kadiatou',
+                genre: 'Femme',
+                email: 'k.balde@mef.gov.gn',
+                telephone: '+224 622 444 000',
+                adresse: 'Conakry, Guinée',
+                poste: 'Analyste budgétaire',
+                role: 'Budget',
+                typeContrat: 'CDI',
+                salaireNet: 6500000
+              },
+              {
+                id: '3',
+                nom: 'Diallo',
+                prenom: 'Ibrahima',
+                genre: 'Homme',
+                email: 'i.diallo@mef.gov.gn',
+                telephone: '+224 622 555 000',
+                adresse: 'Conakry, Guinée',
+                poste: 'Assistant administratif',
+                role: 'Administration',
+                typeContrat: 'CDD',
+                salaireNet: 4000000
+              }
+            ],
+            salaireNetTotal: 17500000,
+            contratsCounts: {
+              'CDI': 2,
+              'CDD': 1
+            }
+          },
+          '5': {
+            id: '5',
+            nom: 'MTN Guinée',
+            type: 'Entreprise',
+            secteur: 'Télécommunications',
+            description: 'Opérateur de téléphonie mobile et services financiers en Guinée, offrant des solutions de communication et de paiement mobile.',
+            
+            nomRepresentant: 'M. Aliou Bah',
+            emailRepresentant: 'a.bah@mtn.gn',
+            telephoneRepresentant: '+224 655 111 222',
+            
+            nomRH: 'Mme. Fatou Camara',
+            emailRH: 'f.camara@mtn.gn',
+            telephoneRH: '+224 655 333 444',
+            
+            rccm: 'RCCM/GN/2005/B/5678',
+            nif: 'NIF500000001',
+            email: 'info@mtn.gn',
+            telephone: '+224 655 123 456',
+            adresse: 'Matam, Conakry, Guinée',
+            siteWeb: 'www.mtn.gn',
+            
+            logo: '/images/partners/mtn.png',
+            dateAdhesion: '2023-05-15',
+            actif: false,
+            
+            nombreEmployes: 4,
+            employes: [
+              {
+                id: '1',
+                nom: 'Toure',
+                prenom: 'Alpha',
+                genre: 'Homme',
+                email: 'a.toure@mtn.gn',
+                telephone: '+224 655 555 666',
+                adresse: 'Conakry, Guinée',
+                poste: 'Ingénieur réseau',
+                role: 'Technique',
+                typeContrat: 'CDI',
+                salaireNet: 5500000
+              },
+              {
+                id: '2',
+                nom: 'Diallo',
+                prenom: 'Mariama',
+                genre: 'Femme',
+                email: 'm.diallo@mtn.gn',
+                telephone: '+224 655 777 888',
+                adresse: 'Conakry, Guinée',
+                poste: 'Responsable marketing',
+                role: 'Marketing',
+                typeContrat: 'CDI',
+                salaireNet: 6000000
+              },
+              {
+                id: '3',
+                nom: 'Camara',
+                prenom: 'Mamadou',
+                genre: 'Homme',
+                email: 'm.camara@mtn.gn',
+                telephone: '+224 655 999 000',
+                adresse: 'Conakry, Guinée',
+                poste: 'Développeur',
+                role: 'IT',
+                typeContrat: 'CDD',
+                salaireNet: 4800000
+              },
+              {
+                id: '4',
+                nom: 'Sylla',
+                prenom: 'Fatoumata',
+                genre: 'Femme',
+                email: 'f.sylla@mtn.gn',
+                telephone: '+224 655 111 333',
+                adresse: 'Conakry, Guinée',
+                poste: 'Agent commercial',
+                role: 'Commercial',
+                typeContrat: 'CDI',
+                salaireNet: 3500000
+              }
+            ],
+            salaireNetTotal: 19800000,
+            contratsCounts: {
+              'CDI': 3,
+              'CDD': 1
+            }
+          },
+          '6': {
+            id: '6',
+            nom: 'ONG Développement Durable',
+            type: 'ONG',
+            secteur: 'Développement',
+            description: 'Organisation non gouvernementale dédiée au développement durable et à la protection de l\'environnement en Guinée.',
+            
+            nomRepresentant: 'Dr. Sekou Conde',
+            emailRepresentant: 's.conde@ongdd.org',
+            telephoneRepresentant: '+224 666 111 222',
+            
+            nomRH: 'Mme. Aissatou Bah',
+            emailRH: 'a.bah@ongdd.org',
+            telephoneRH: '+224 666 333 444',
+            
+            rccm: 'RCCM/GN/2010/N/1234',
+            nif: 'NIF600000001',
+            email: 'contact@ongdd.org',
+            telephone: '+224 666 789 123',
+            adresse: 'Ratoma, Conakry, Guinée',
+            siteWeb: 'www.ongdd.org',
+            
+            logo: '/images/partners/ongdd.png',
+            dateAdhesion: '2023-06-20',
+            actif: true,
+            
+            nombreEmployes: 3,
+            employes: [
+              {
+                id: '1',
+                nom: 'Barry',
+                prenom: 'Ousmane',
+                genre: 'Homme',
+                email: 'o.barry@ongdd.org',
+                telephone: '+224 666 555 666',
+                adresse: 'Conakry, Guinée',
+                poste: 'Chef de projet',
+                role: 'Gestion de projet',
+                typeContrat: 'CDI',
+                salaireNet: 4500000
+              },
+              {
+                id: '2',
+                nom: 'Camara',
+                prenom: 'Fatoumata',
+                genre: 'Femme',
+                email: 'f.camara@ongdd.org',
+                telephone: '+224 666 777 888',
+                adresse: 'Conakry, Guinée',
+                poste: 'Chargée de communication',
+                role: 'Communication',
+                typeContrat: 'CDD',
+                salaireNet: 3800000
+              },
+              {
+                id: '3',
+                nom: 'Diallo',
+                prenom: 'Ibrahim',
+                genre: 'Homme',
+                email: 'i.diallo@ongdd.org',
+                telephone: '+224 666 999 000',
+                adresse: 'Conakry, Guinée',
+                poste: 'Coordinateur terrain',
+                role: 'Opérations',
+                typeContrat: 'CDI',
+                salaireNet: 4200000
+              }
+            ],
+            salaireNetTotal: 12500000,
+            contratsCounts: {
+              'CDI': 2,
+              'CDD': 1
+            }
+          },
+          '7': {
+            id: '7',
+            nom: 'Société des Mines de Guinée',
+            type: 'Entreprise',
+            secteur: 'Mines',
+            description: 'Entreprise spécialisée dans l\'exploitation minière en Guinée, principalement dans l\'extraction de bauxite et d\'or.',
+            
+            nomRepresentant: 'M. Amadou Bah',
+            emailRepresentant: 'a.bah@smg.gn',
+            telephoneRepresentant: '+224 677 111 222',
+            
+            nomRH: 'M. Mamadou Diallo',
+            emailRH: 'm.diallo@smg.gn',
+            telephoneRH: '+224 677 333 444',
+            
+            rccm: 'RCCM/GN/2008/B/5678',
+            nif: 'NIF700000001',
+            email: 'contact@smg.gn',
+            telephone: '+224 677 789 123',
+            adresse: 'Boké, Guinée',
+            siteWeb: 'www.smg.gn',
+            
+            logo: '/images/partners/smg.png',
+            dateAdhesion: '2023-07-05',
+            actif: true,
+            
+            nombreEmployes: 5,
+            employes: [
+              {
+                id: '1',
+                nom: 'Camara',
+                prenom: 'Sekou',
+                genre: 'Homme',
+                email: 's.camara@smg.gn',
+                telephone: '+224 677 555 666',
+                adresse: 'Boké, Guinée',
+                poste: 'Ingénieur des mines',
+                role: 'Technique',
+                typeContrat: 'CDI',
+                salaireNet: 7500000
+              },
+              {
+                id: '2',
+                nom: 'Bah',
+                prenom: 'Mamadou',
+                genre: 'Homme',
+                email: 'm.bah@smg.gn',
+                telephone: '+224 677 777 888',
+                adresse: 'Boké, Guinée',
+                poste: 'Géologue',
+                role: 'Technique',
+                typeContrat: 'CDI',
+                salaireNet: 6800000
+              },
+              {
+                id: '3',
+                nom: 'Diallo',
+                prenom: 'Aissatou',
+                genre: 'Femme',
+                email: 'a.diallo@smg.gn',
+                telephone: '+224 677 999 000',
+                adresse: 'Conakry, Guinée',
+                poste: 'Comptable',
+                role: 'Finance',
+                typeContrat: 'CDI',
+                salaireNet: 5200000
+              },
+              {
+                id: '4',
+                nom: 'Soumah',
+                prenom: 'Ibrahima',
+                genre: 'Homme',
+                email: 'i.soumah@smg.gn',
+                telephone: '+224 677 111 333',
+                adresse: 'Boké, Guinée',
+                poste: 'Technicien',
+                role: 'Opérations',
+                typeContrat: 'CDD',
+                salaireNet: 4500000
+              },
+              {
+                id: '5',
+                nom: 'Barry',
+                prenom: 'Mariama',
+                genre: 'Femme',
+                email: 'm.barry@smg.gn',
+                telephone: '+224 677 222 444',
+                adresse: 'Boké, Guinée',
+                poste: 'Responsable sécurité',
+                role: 'Sécurité',
+                typeContrat: 'CDI',
+                salaireNet: 5800000
+              }
+            ],
+            salaireNetTotal: 29800000,
+            contratsCounts: {
+              'CDI': 4,
+              'CDD': 1
+            }
           }
         };
         
-        setPartenaire(mockData);
+        // Récupérer les données du partenaire en fonction de l'ID
+        const partenaireId = params.id as string;
+        const partenaireData = mockPartenaires[partenaireId as keyof typeof mockPartenaires];
+        
+        if (partenaireData) {
+          setPartenaire(partenaireData as PartenaireDetail);
+        } else {
+          // Si le partenaire n'existe pas, rediriger vers la liste des partenaires
+          console.error(`Partenaire avec l'ID ${partenaireId} non trouvé`);
+          toast.error(`Le partenaire avec l'ID ${partenaireId} n'existe pas`);
+          // Redirection après un court délai
+          setTimeout(() => {
+            router.push('/dashboard/partenaires');
+          }, 2000);
+        }
+        
         setIsLoading(false);
       }, 1000);
     };
@@ -557,7 +1095,7 @@ export default function PartenaireDetailPage() {
               
               <label
                 htmlFor="import-excel"
-                className="flex items-center gap-1 px-3 py-1.5 bg-[var(--zalama-success)] hover:bg-[var(--zalama-success-accent)] text-white rounded-lg transition-colors text-sm cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 bg-[var(--zalama-success)] hover:bg-[var(--zalama-blue-accent)]  text-white rounded-lg transition-colors text-sm cursor-pointer"
               >
                 <Upload className="h-4 w-4" />
                 Importer Excel

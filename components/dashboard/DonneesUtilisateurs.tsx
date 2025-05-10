@@ -1,7 +1,18 @@
 import React from 'react';
 import { Star } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 export default function DonneesUtilisateurs() {
+  // Données pour le graphique circulaire des types d'utilisateurs
+  const typeUtilisateursData = [
+    { name: 'Employés', value: 45, color: '#4f46e5' },
+    { name: 'Pensionnaires', value: 30, color: '#60a5fa' },
+    { name: 'Étudiants', value: 25, color: '#34d399' },
+  ];
+
+  // Couleurs personnalisées pour le graphique
+  const COLORS = ['#4f46e5', '#60a5fa', '#34d399'];
+
   return (
     <div>
         <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Données utilisateurs</h2>

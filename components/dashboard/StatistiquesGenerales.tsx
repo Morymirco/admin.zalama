@@ -1,110 +1,45 @@
 import React from 'react';
-import { PieChart, Pie, Sector, ResponsiveContainer } from 'recharts';
-import { PieSectorDataItem } from 'recharts/types/polar/Pie';
-
-interface ActiveShapeProps {
-  cx: number;
-  cy: number;
-  midAngle: number;
-  innerRadius: number;
-  outerRadius: number;
-  startAngle: number;
-  endAngle: number;
-  fill: string;
-  payload: {
-    name: string;
-  value: number;
-  };
-  percent: number;
-  value: number;
-}
-
-const renderActiveShape = (props: PieSectorDataItem) => {
-  const {
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    startAngle,
-    endAngle,
-    fill,
-    payload,
-    percent,
-    value
-  } = props as ActiveShapeProps;
-
-  const RADIAN = Math.PI / 180;
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 10) * cos;
-  const sy = cy + (outerRadius + 10) * sin;
-  const mx = cx + (outerRadius + 30) * cos;
-  const my = cy + (outerRadius + 30) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
-  return (
-    <g>
-      <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill}>
-        {payload.name}
-      </text>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-                    />
-      <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={outerRadius + 6}
-        outerRadius={outerRadius + 10}
-        fill={fill}
-                />
-      <path
-        d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
-        stroke={fill}
-        fill="none"
-      />
-      <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-      <text
-        x={ex + (cos >= 0 ? 1 : -1) * 12}
-        y={ey}
-        textAnchor={textAnchor}
-        fill="#999"
-      >{`${value} utilisateurs`}</text>
-      <text
-        x={ex + (cos >= 0 ? 1 : -1) * 12}
-        y={ey}
-        dy={18}
-        textAnchor={textAnchor}
-        fill="#999"
-              >
-        {`(${(percent * 100).toFixed(2)}%)`}
-      </text>
-    </g>
-  );
-};
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 export default function StatistiquesGenerales() {
-  const [activeIndex, setActiveIndex] = React.useState<number>(0);
-
+  // Données pour le graphique circulaire des types d'utilisateurs
   const userTypeData = [
     { name: 'Étudiants', value: 45 },
     { name: 'Salariés', value: 40 },
     { name: 'Pensionnés', value: 15 },
   ];
 
+  // Couleurs personnalisées pour le graphique
   const COLORS = ['#3b82f6', '#10b981', '#6366f1'];
 
-  const onPieEnter = (_: unknown, index: number) => {
-    setActiveIndex(index);
+  // Fonction pour formater les labels du graphique
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: {
+    cx: number;
+    cy: number;
+    midAngle: number;
+    innerRadius: number;
+    outerRadius: number;
+    percent: number;
+    index: number;
+    name: string;
+  }) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor="middle" 
+        dominantBaseline="central"
+        fontWeight="bold"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
   };
 
   return (
@@ -128,33 +63,36 @@ export default function StatistiquesGenerales() {
           </div>
         </div>
         <div className="flex flex-col items-center mt-6 md:mt-0 md:w-1/2">
-          <div className="h-50 w-full">
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart width={400} height={400}>
+              <PieChart>
                 <Pie
-                  activeIndex={activeIndex}
-                  activeShape={renderActiveShape}
                   data={userTypeData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
+                  labelLine={false}
+                  label={renderCustomizedLabel}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  onMouseEnter={onPieEnter}
-                />
+                >
+                  {userTypeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} utilisateurs`, 'Nombre']} />
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex flex-wrap justify-center">
+          <div className="flex flex-wrap justify-center gap-4 mt-4">
             {userTypeData.map((entry, index) => (
               <div 
                 key={`legend-${index}`} 
-                className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setActiveIndex(index)}
+                className="flex items-center px-3 py-1 rounded-md bg-[var(--zalama-bg-light)]"
               >
                 <div 
-                  className="w-2 h-2 rounded-full mr-2" 
+                  className="w-3 h-3 rounded-full mr-2" 
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 ></div>
                 <span className="text-sm font-medium text-[var(--zalama-text)]">{entry.name} ({entry.value}%)</span>

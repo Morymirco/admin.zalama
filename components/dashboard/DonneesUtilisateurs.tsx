@@ -1,6 +1,17 @@
 import React from 'react';
-import { Star } from 'lucide-react';
+import { Star, MapPin } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import dynamic from 'next/dynamic';
+
+// Chargement dynamique du composant de carte pour éviter les problèmes de rendu côté serveur
+const GuineaMap = dynamic(() => import('./GuineaMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full w-full bg-[var(--zalama-bg-light)] rounded-lg">
+      <div className="text-sm text-[var(--zalama-text-secondary)]">Chargement de la carte...</div>
+    </div>
+  )
+});
 
 export default function DonneesUtilisateurs() {
   // Données pour le graphique circulaire des types d'utilisateurs
@@ -60,12 +71,21 @@ export default function DonneesUtilisateurs() {
           
           <div>
             <h3 className="text-sm font-medium mb-2 text-[var(--zalama-text)]">Localisation géographique</h3>
-            <div className="relative h-32 w-full bg-[var(--zalama-bg-light)] rounded-lg overflow-hidden">
-              {/* Carte simplifiée de l'Afrique comme sur l'image */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg viewBox="0 0 200 200" className="h-full w-full">
-                  <path d="M80,40 C100,30 120,30 140,40 C150,60 160,80 150,100 C140,120 130,140 120,160 C100,170 80,170 60,160 C50,140 40,120 50,100 C60,80 70,60 80,40 Z" fill="#60a5fa" opacity="0.6" />
-                </svg>
+            <div className="relative h-64 w-full bg-[var(--zalama-bg-light)] rounded-lg overflow-hidden">
+              {/* Carte interactive de la Guinée Conakry */}
+              <GuineaMap />
+              
+              {/* Légende de la carte */}
+              <div className="absolute bottom-2 right-2 bg-white bg-opacity-80 p-2 rounded-md text-xs z-[1000]">
+                <div className="font-semibold mb-1">Répartition par région</div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-[var(--zalama-blue)]"></div>
+                  <div>Conakry: 45%</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-[var(--zalama-success)]"></div>
+                  <div>Autres régions: 55%</div>
+                </div>
               </div>
             </div>
           </div>

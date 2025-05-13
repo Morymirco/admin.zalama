@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/firebase-admin';
 import { sendPasswordResetEmail } from '@/lib/email-service';
+import { sendWelcomeSMS } from '@/lib/sms-service';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, displayName, role, partenaireId } = await request.json();
+    const { email, displayName, role, partenaireId, phoneNumber } = await request.json();
 
     if (!email || !displayName) {
       return NextResponse.json(
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
       displayName,
       password: temporaryPassword,
       emailVerified: false,
+      phoneNumber: phoneNumber ? `+${phoneNumber.replace(/\D/g, '')}` : undefined
     });
 
     // Définir les claims personnalisés pour l'utilisateur
@@ -36,10 +38,18 @@ export async function POST(request: NextRequest) {
     // Envoyer l'email avec le lien de réinitialisation via Resend
     const emailSent = await sendPasswordResetEmail(email, displayName, resetLink);
     
+    // Envoyer un SMS si un numéro de téléphone est fourni
+    let smsSent = false;
+    if (phoneNumber) {
+      smsSent = await sendWelcomeSMS(phoneNumber, displayName);
+      console.log('SMS envoyé avec succès:', smsSent);
+    }
+    
     return NextResponse.json({
       success: true,
       userId: userRecord.uid,
       emailSent,
+      smsSent,
       // Ne pas inclure le resetLink en production pour des raisons de sécurité
       ...(process.env.NODE_ENV !== 'production' && { resetLink }),
     });

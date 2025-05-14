@@ -38,7 +38,8 @@ const EmployesForm: React.FC<EmployesFormProps> = ({ employes, onChange, onExcel
       poste: '',
       role: '',
       typeContrat: 'CDI',
-      salaireNet: 0
+      salaireNet: 0,
+      dateEmbauche: new Date().toISOString()
     };
     onChange([...employes, newEmploye]);
   };

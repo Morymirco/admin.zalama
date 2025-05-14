@@ -5,7 +5,8 @@ export async function POST(request: NextRequest) {
   const { token } = await request.json();
   
   // Définir le cookie de session avec le token Firebase
-  cookies().set({
+  const cookieStore = cookies();
+  cookieStore.set({
     name: "session",
     value: token,
     httpOnly: true,
@@ -19,7 +20,8 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   // Supprimer le cookie de session
-  cookies().delete("session");
+  const cookieStore = cookies();
+  cookieStore.delete("session");
   
   return NextResponse.json({ success: true });
 } 

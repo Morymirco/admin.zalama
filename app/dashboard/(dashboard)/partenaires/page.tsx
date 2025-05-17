@@ -330,6 +330,63 @@ export default function PartenairesPage() {
           toast.error(`Impossible de créer le compte RH: ${rhError.message || 'Erreur inconnue'}`);
         }
       }
+
+      // Créer un compte responsable si les informations sont disponibles
+      if (formData.emailRepresentant && formData.nomRepresentant) {
+        try {
+          console.log("Tentative de création du compte responsable pour:", formData.emailRepresentant);
+          
+          // Valider et formater le numéro de téléphone côté client
+          let phoneNumber = null;
+          if (formData.telephoneRepresentant && formData.telephoneRepresentant.trim() !== '') {
+            // Nettoyer le numéro
+            const cleaned = formData.telephoneRepresentant.replace(/\D/g, '');
+            
+            // Vérifier la longueur
+            if (cleaned.length >= 8 && cleaned.length <= 15) {
+              phoneNumber = cleaned;
+            } else {
+              console.warn("Numéro de téléphone invalide (longueur):", cleaned);
+            }
+          }
+          
+          const responsableResponse = await fetch('/api/auth/create-responsable', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.emailRepresentant,
+              displayName: formData.nomRepresentant,
+              partenaireId: docRef.id,
+              phoneNumber: phoneNumber, // Numéro validé ou null
+              poste: formData.posteRepresentant || 'Responsable'
+            }),
+          });
+          
+          if (!responsableResponse.ok) {
+            const errorData = await responsableResponse.json();
+            throw new Error(`Erreur API: ${errorData.error} (${errorData.code})`);
+          }
+          
+          const responsableData = await responsableResponse.json();
+          
+          if (responsableData.success) {
+            console.log('Compte responsable créé avec succès:', responsableData);
+            toast.success('Compte responsable créé et invitation envoyée');
+            
+            // Si vous avez un lien de réinitialisation en mode développement
+            if (responsableData.resetLink) {
+              console.log('Lien de réinitialisation pour le responsable:', responsableData.resetLink);
+            }
+          } else {
+            throw new Error(responsableData.error || 'Erreur inconnue');
+          }
+        } catch (responsableError: any) {
+          console.error('Erreur lors de la création du compte responsable:', responsableError);
+          toast.error(`Impossible de créer le compte responsable: ${responsableError.message || 'Erreur inconnue'}`);
+        }
+      }
       
       // // Envoyer des notifications aux RH et au responsable
       // await envoyerNotificationsPartenaire(newPartenaire);

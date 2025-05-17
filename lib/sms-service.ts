@@ -5,26 +5,47 @@ import admin from '@/lib/firebase-admin';
  * @param phoneNumber Numéro de téléphone du destinataire (format international)
  * @param displayName Nom complet de l'utilisateur
  * @param resetLink Lien de réinitialisation de mot de passe (optionnel)
+ * @param userType Type d'utilisateur (standard, rh, responsable, admin)
  * @returns Résultat de l'envoi
  */
-export async function sendWelcomeSMS(phoneNumber: string, displayName: string, resetLink?: string) {
+export async function sendWelcomeSMS(phoneNumber: string, displayName: string, resetLink?: string, userType: string = 'standard') {
   try {
     if (!phoneNumber) {
       console.error('Numéro de téléphone manquant');
       return false;
     }
 
-    // Formater le numéro de téléphone si nécessaire
-    const formattedPhone = formatPhoneNumber(phoneNumber);
+    // Formater le numéro de téléphone
+    const formattedPhone = phoneNumber;
     
-    // Créer le message
-    const message = resetLink 
-      ? `Bienvenue chez Zalama, ${displayName}! Votre compte a été créé. Configurez votre mot de passe ici: ${resetLink}`
-      : `Bienvenue chez Zalama, ${displayName}! Votre compte a été créé. Consultez votre email pour configurer votre mot de passe.`;
+    // Créer le message en fonction du type d'utilisateur
+    let message = '';
+    
+    switch(userType) {
+      case 'rh':
+        message = resetLink 
+          ? `Bienvenue chez Zalama, ${displayName}! Votre compte RH a été créé. Configurez votre mot de passe ici: ${resetLink}`
+          : `Bienvenue chez Zalama, ${displayName}! Votre compte RH a été créé. Consultez votre email pour configurer votre mot de passe.`;
+        break;
+      case 'responsable':
+        message = resetLink 
+          ? `Bienvenue chez Zalama, ${displayName}! Votre compte Responsable a été créé. Configurez votre mot de passe ici: ${resetLink}`
+          : `Bienvenue chez Zalama, ${displayName}! Votre compte Responsable a été créé. Consultez votre email pour configurer votre mot de passe.`;
+        break;
+      case 'admin':
+        message = resetLink 
+          ? `Bienvenue chez Zalama, ${displayName}! Votre compte Administrateur a été créé. Configurez votre mot de passe ici: ${resetLink}`
+          : `Bienvenue chez Zalama, ${displayName}! Votre compte Administrateur a été créé. Consultez votre email pour configurer votre mot de passe.`;
+        break;
+      default:
+        message = resetLink 
+          ? `Bienvenue chez Zalama, ${displayName}! Votre compte a été créé. Configurez votre mot de passe ici: ${resetLink}`
+          : `Bienvenue chez Zalama, ${displayName}! Votre compte a été créé. Consultez votre email pour configurer votre mot de passe.`;
+    }
 
     // Ajouter le message à la collection Firebase pour l'envoi
     await admin
-        .firestore()
+      .firestore()
       .collection("messages")
       .add({
         to: [formattedPhone],

@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
       // S'assurer que le numéro commence par un +
       if (!cleaned.startsWith('+')) {
         // Si le numéro commence par un 0, le remplacer par le code pays (par défaut +33 pour la France)
-        if (cleaned.startsWith('0')) {
-          cleaned = '33' + cleaned.substring(1);
+        if (cleaned.startsWith('00')) {
+          cleaned = '224' + cleaned.substring(2);
         }
         cleaned = '+' + cleaned;
       }
@@ -67,6 +67,11 @@ export async function POST(request: NextRequest) {
       role: 'rh',
       partenaireId,
     });
+
+    // Récupérer le nom du partenaire depuis Firestore
+    const partenaireDoc = await db.firestore().collection('partenaires').doc(partenaireId).get();
+    const partenaireData = partenaireDoc.data();
+    const partenaireNom = partenaireData?.nom || 'votre entreprise';
 
     // Stocker les informations supplémentaires du RH dans Firestore
     await db.firestore().collection('users').doc(userRecord.uid).set({
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest) {
     const resetLink = await auth.generatePasswordResetLink(email);
     
     // Envoyer l'email avec le lien de réinitialisation
-    const emailSent = await sendPasswordResetEmailRH(email, displayName, resetLink);
+    const emailSent = await sendPasswordResetEmailRH(email, displayName, partenaireNom, resetLink);
     
     // Envoyer un SMS si un numéro de téléphone est fourni
     let smsSent = false;

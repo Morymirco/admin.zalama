@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Building, Users, Globe, Search, Plus, Filter } from 'lucide-react';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
+import { Building, Filter, Globe, Plus, Search, Users } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 // Importation des composants
 import {
-  StatistiquesPartenaires,
-  ResumePartenaires,
   ListePartenaires,
   ModaleAjoutPartenaire,
   ModaleEditionPartenaire,
-  ModaleSuppressionPartenaire
+  ModaleSuppressionPartenaire,
+  ResumePartenaires,
+  StatistiquesPartenaires
 } from '@/components/dashboard/partenaires';
 
 // Types
@@ -276,6 +276,64 @@ export default function PartenairesPage() {
       // Recalculer les statistiques
       calculateStatistics(updatedPartenaires);
       
+      // Créer un compte RH si les informations sont disponibles
+      if (formData.emailRH && formData.nomRH) {
+        try {
+          console.log("Tentative de création du compte RH pour:", formData.emailRH);
+          
+          // Vérifier si le numéro de téléphone est valide avant de l'envoyer
+          let phoneNumber = null;
+          if (formData.telephoneRH && formData.telephoneRH.trim() !== '') {
+            // Ne pas envoyer le numéro de téléphone s'il est trop court
+            if (formData.telephoneRH.replace(/\D/g, '').length >= 8) {
+              phoneNumber = formData.telephoneRH;
+            } else {
+              console.warn("Numéro de téléphone trop court, il ne sera pas utilisé");
+            }
+          }
+          
+          const rhResponse = await fetch('/api/auth/create-rh', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.emailRH,
+              displayName: formData.nomRH,
+              partenaireId: docRef.id,
+              phoneNumber: phoneNumber,
+              poste: formData.posteRH || 'Responsable RH',
+              departement: 'Ressources Humaines'
+            }),
+          });
+          
+          if (!rhResponse.ok) {
+            const errorData = await rhResponse.json();
+            throw new Error(`Erreur API: ${errorData.error} (${errorData.code})`);
+          }
+          
+          const rhData = await rhResponse.json();
+          
+          if (rhData.success) {
+            console.log('Compte RH créé avec succès:', rhData);
+            toast.success('Compte RH créé et invitation envoyée');
+            
+            // Si vous avez un lien de réinitialisation en mode développement
+            if (rhData.resetLink) {
+              console.log('Lien de réinitialisation:', rhData.resetLink);
+            }
+          } else {
+            throw new Error(rhData.error || 'Erreur inconnue');
+          }
+        } catch (rhError: any) {
+          console.error('Erreur lors de la création du compte RH:', rhError);
+          toast.error(`Impossible de créer le compte RH: ${rhError.message || 'Erreur inconnue'}`);
+        }
+      }
+      
+      // // Envoyer des notifications aux RH et au responsable
+      // await envoyerNotificationsPartenaire(newPartenaire);
+      
       // Fermer la modale
       setShowAddModal(false);
       
@@ -442,3 +500,7 @@ export default function PartenairesPage() {
     </div>
   );
 }
+function envoyerNotificationsPartenaire(newPartenaire: Partenaire) {
+  throw new Error('Function not implemented.');
+}
+

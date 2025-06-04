@@ -146,37 +146,54 @@ const uploadReceiptToStorage = async (file: File, transactionId: string): Promis
 
 // Template HTML pour les emails
 const genererTemplateEmail = (titre: string, contenu: string, entreprise: string): string => {
-  const htmlTemplate = 
-    '<!DOCTYPE html>' +
-    '<html>' +
-    '<head>' +
-    '<meta charset="utf-8">' +
-    '<style>' +
-    'body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }' +
-    '.container { max-width: 600px; margin: 0 auto; padding: 20px; }' +
-    '.header { background: #2563eb; color: white; padding: 20px; text-align: center; }' +
-    '.content { padding: 20px; background: #f9fafb; }' +
-    '.footer { text-align: center; padding: 10px; font-size: 12px; color: #666; }' +
-    '.highlight { background: #e5f3ff; padding: 15px; border-left: 4px solid #2563eb; margin: 15px 0; }' +
-    '</style>' +
-    '</head>' +
-    '<body>' +
-    '<div class="container">' +
-    '<div class="header">' +
-    '<h1>' + titre + '</h1>' +
-    '</div>' +
-    '<div class="content">' +
-    contenu +
-    '</div>' +
-    '<div class="footer">' +
-    '<p>Cet email a été envoyé automatiquement par le système Zalama.<br>' +
-    'Entreprise: ' + entreprise + '</p>' +
-    '</div>' +
-    '</div>' +
-    '</body>' +
-    '</html>';
-  
-  return htmlTemplate;
+  return `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${titre}</title>
+</head>
+<body style="background-color: #ffffff; font-family: 'Roboto', Helvetica, sans-serif; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; min-height: 100%; margin: 20px auto; background-color: #ffffff; border: 4px solid #1e40af; border-radius: 16px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 15px; text-align: center; border-radius: 12px 12px 0 0;">
+        <span style="color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); display: inline-block; padding: 8px 16px; background-color: rgba(0,0,0,0.1); border-radius: 8px;">Zalama</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px; background-color: #f9fafb;">
+        <h2 style="color: #1e3a8a; font-size: 30px; font-weight: 700; margin: 0 0 25px 0; border-bottom: 6px solid #3b82f6; padding-bottom: 12px; text-align: center; letter-spacing: 1px;">${titre}</h2>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+              ${contenu.replace(/\n/g, '<br>')}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; border: 1px solid #dbeafe;">
+              <span style="font-weight: bold; color: #1e40af;">Entreprise :</span> ${entreprise}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #1e40af; padding: 25px; text-align: center; font-size: 14px; color: #ffffff; border-radius: 0 0 12px 12px;">
+        <p style="margin: 0 0 15px 0; font-weight: 500;">Zalama SAS - Communication système</p>
+        <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); padding: 12px 30px; border-radius: 10px; border: 1px solid #ffffff;">
+              <a href="mailto:contact@zalamagn.com" style="color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">Contactez-nous</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
 };
 
 export default function PartenaireDetailPage() {

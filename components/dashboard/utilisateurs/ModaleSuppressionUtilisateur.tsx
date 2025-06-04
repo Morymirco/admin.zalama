@@ -1,22 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-
-interface Utilisateur {
-  id: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone: string;
-  adresse: string;
-  type: 'Étudiant' | 'Salarié' | 'Entreprise';
-  statut: 'Actif' | 'Inactif' | 'En attente';
-  dateInscription: string;
-  photo: string;
-  organisation?: string;
-  poste?: string;
-  niveauEtudes?: string;
-  etablissement?: string;
-}
+import { Utilisateur } from '@/types/utilisateur';
 
 interface ModaleSuppressionUtilisateurProps {
   isOpen: boolean;
@@ -48,7 +32,7 @@ const ModaleSuppressionUtilisateur: React.FC<ModaleSuppressionUtilisateurProps> 
         
         <div className="p-5">
           <p className="text-[var(--zalama-text)] mb-4">
-            Êtes-vous sûr de vouloir supprimer l&apos;utilisateur <span className="font-semibold">&ldquo;{utilisateur.prenom} {utilisateur.nom}&rdquo;</span> ? Cette action est irréversible.
+            Êtes-vous sûr de vouloir supprimer l&apos;utilisateur <span className="font-semibold">&ldquo;{utilisateur.displayName}&rdquo;</span> ? Cette action est irréversible.
           </p>
           
           <div className="flex justify-end gap-3">

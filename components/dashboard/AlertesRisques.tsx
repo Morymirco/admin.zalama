@@ -1,61 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Shield, Activity, TrendingUp, Bell, CheckCircle } from 'lucide-react';
-import { collection, query, orderBy, limit, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import React from 'react';
+import { AlertTriangle, Shield, Activity, TrendingUp, Bell } from 'lucide-react';
+import { orderBy, limit, Timestamp } from 'firebase/firestore';
+import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
+import notificationService from '@/services/notificationService';
+import { Notification } from '@/types/notification';
 
-interface Notification {
-  id: string;
-  titre: string;
-  message: string;
-  type: string;
-  dateCreation: Timestamp;
-  lue: boolean;
-  lienId?: string;
-}
+// Interface déplacée vers types/notification.ts
 
 export default function AlertesRisques() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const notificationsRef = collection(db, 'notifications');
-        const q = query(
-          notificationsRef, 
-          orderBy('dateCreation', 'desc'),
-          limit(3)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const notificationsList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Notification));
-        
-        setNotifications(notificationsList);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des notifications:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNotifications();
-  }, []);
+  // Utiliser notre hook pour récupérer les notifications récentes
+  const { data: notifications, loading, error } = useFirebaseCollection<Notification>(
+    notificationService,
+    [orderBy('dateCreation', 'desc'), limit(3)]
+  );
 
   const markAsRead = async (id: string) => {
     try {
-      const notificationRef = doc(db, 'notifications', id);
-      await updateDoc(notificationRef, { lue: true });
-      
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === id ? { ...notif, lue: true } : notif
-        )
-      );
+      await notificationService.update(id, { lue: true });
     } catch (error) {
       console.error('Erreur lors du marquage comme lue:', error);
     }

@@ -1,141 +1,107 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { collection, query, where, getCountFromServer, Timestamp, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { where, orderBy, Timestamp } from 'firebase/firestore';
+import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
+import userService from '@/services/userService';
+import { Utilisateur } from '@/types/utilisateur';
 
 interface UserStats {
   totalUsers: number;
   activeUsers: number;
   newUsersThisMonth: number;
-  userTypeData: Array<{ name: string; value: number }>;
+  userTypeData: Array<{ name: string; value: number; count: number }>;
 }
 
 export default function StatistiquesGenerales() {
-  const [stats, setStats] = useState<UserStats>({
-    totalUsers: 0,
-    activeUsers: 0,
-    newUsersThisMonth: 0,
-    userTypeData: [
-      { name: 'Étudiants', value: 0 },
-      { name: 'Salariés', value: 0 },
-      { name: 'Pensionnés', value: 0 },
-    ]
-  });
-  const [loading, setLoading] = useState(true);
+  // Utiliser notre hook pour récupérer tous les utilisateurs
+  const { data: users, loading, error } = useFirebaseCollection<Utilisateur>(userService);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        console.log('Début de la récupération des statistiques...');
-        const usersRef = collection(db, 'users');
-        
-        // Récupérer le nombre total d'utilisateurs
-        const totalSnapshot = await getCountFromServer(usersRef);
-        console.log('Total utilisateurs:', totalSnapshot.data().count);
-        
-        // Récupérer le nombre d'utilisateurs actifs
-        const activeQuery = query(usersRef, where('active', '==', true));
-        const activeSnapshot = await getCountFromServer(activeQuery);
-        console.log('Utilisateurs actifs:', activeSnapshot.data().count);
-        
-        // Récupérer les nouveaux utilisateurs du mois courant
-        const now = new Date();
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        console.log('Premier jour du mois:', firstDayOfMonth);
-        
-        const newUsersQuery = query(
-          usersRef,
-          where('createdAt', '>=', Timestamp.fromDate(firstDayOfMonth))
-        );
-        const newUsersSnapshot = await getCountFromServer(newUsersQuery);
-        console.log('Nouveaux utilisateurs ce mois-ci:', newUsersSnapshot.data().count);
-        
-        // Récupérer tous les utilisateurs avec leur type
-        console.log('Récupération des types d\'utilisateurs...');
-        const usersSnapshot = await getDocs(usersRef);
-        const users = usersSnapshot.docs.map(doc => doc.data());
-        
-        // Compter les utilisateurs par type
-        const typeCounts = users.reduce((acc, user) => {
-          if (user.type) {
-            acc[user.type] = (acc[user.type] || 0) + 1;
-          }
-          return acc;
-        }, {} as Record<string, number>);
-        
-        console.log('Utilisateurs par type:', typeCounts);
-        
-        const total = totalSnapshot.data().count || 1;
-        
-        // Calculer les totaux
-        const totalWithTypes = (typeCounts.etudiant || 0) + (typeCounts.salaries || 0) + (typeCounts.pension || 0);
-        
-        // Calculer les pourcentages exacts
-        const calculatePercentage = (count: number) => (count / totalWithTypes) * 100;
-        
-        // Créer un tableau des types avec leurs comptes et pourcentages
-        const types = [
-          { key: 'etudiant', name: 'Étudiants', count: typeCounts.etudiant || 0 },
-          { key: 'salaries', name: 'Salariés', count: typeCounts.salaries || 0 },
-          { key: 'pension', name: 'Pensionnés', count: typeCounts.pension || 0 }
-        ];
-        
-        // Trier par ordre décroissant de compte
-        types.sort((a, b) => b.count - a.count);
-        
-        // Calculer les pourcentages entiers
-        let remainingPercentage = 100;
-        const result = types.map((type, index) => {
-          // Pour le dernier élément, on prend tout le reste
-          if (index === types.length - 1) {
-            return {
-              ...type,
-              value: remainingPercentage,
-              rawValue: calculatePercentage(type.count)
-            };
-          }
-          
-          // Calculer le pourcentage arrondi
-          const percentage = Math.round(calculatePercentage(type.count));
-          remainingPercentage -= percentage;
-          
-          return {
-            ...type,
-            value: percentage,
-            rawValue: calculatePercentage(type.count)
-          };
-        });
-        
-        // Convertir en format final
-        const userTypeData = result.map(item => ({
-          name: item.name,
-          value: item.value,
-          count: item.count,
-          rawValue: item.rawValue
-        }));
-        
-        console.log('Données du graphique:', userTypeData);
-        console.log('Total des comptes:', totalWithTypes);
-        
-        console.log('Données du graphique:', userTypeData);
-        
-        setStats({
-          totalUsers: totalSnapshot.data().count,
-          activeUsers: activeSnapshot.data().count,
-          newUsersThisMonth: newUsersSnapshot.data().count,
-          userTypeData
-        });
-      } catch (error) {
-        console.error('Erreur lors de la récupération des statistiques:', error);
-      } finally {
-        setLoading(false);
+  // Calculer les statistiques à partir des données utilisateurs
+  const stats = useMemo(() => {
+    if (loading || !users.length) {
+      return {
+        totalUsers: 0,
+        activeUsers: 0,
+        newUsersThisMonth: 0,
+        userTypeData: [
+          { name: 'Étudiants', value: 0, count: 0 },
+          { name: 'Salariés', value: 0, count: 0 },
+          { name: 'Pensionnés', value: 0, count: 0 },
+        ]
+      };
+    }
+
+    // Date du début du mois courant
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Calculer le nombre d'utilisateurs actifs
+    const activeUsers = users.filter(user => user.active).length;
+    
+    // Calculer le nombre de nouveaux utilisateurs ce mois-ci
+    const newUsersThisMonth = users.filter(user => {
+      if (!user.createdAt) return false;
+      const createdAt = user.createdAt instanceof Timestamp 
+        ? user.createdAt.toDate() 
+        : new Date(user.createdAt);
+      return createdAt >= firstDayOfMonth;
+    }).length;
+    
+    // Compter les utilisateurs par type
+    const typeCounts = users.reduce((acc, user) => {
+      if (user.type) {
+        acc[user.type] = (acc[user.type] || 0) + 1;
       }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Calculer les totaux
+    const totalWithTypes = (typeCounts.etudiant || 0) + (typeCounts.salaries || 0) + (typeCounts.pension || 0);
+    
+    // Calculer les pourcentages
+    const calculatePercentage = (count: number) => (count / (totalWithTypes || 1)) * 100;
+    
+    // Créer un tableau des types avec leurs comptes et pourcentages
+    const types = [
+      { key: 'etudiant', name: 'Étudiants', count: typeCounts.etudiant || 0 },
+      { key: 'salaries', name: 'Salariés', count: typeCounts.salaries || 0 },
+      { key: 'pension', name: 'Pensionnés', count: typeCounts.pension || 0 }
+    ];
+    
+    // Trier par ordre décroissant de compte
+    types.sort((a, b) => b.count - a.count);
+    
+    // Calculer les pourcentages entiers
+    let remainingPercentage = 100;
+    const userTypeData = types.map((type, index) => {
+      // Pour le dernier élément, on prend tout le reste
+      if (index === types.length - 1) {
+        return {
+          ...type,
+          value: remainingPercentage
+        };
+      }
+      
+      // Calculer le pourcentage arrondi
+      const exactPercentage = calculatePercentage(type.count);
+      const roundedPercentage = Math.round(exactPercentage);
+      remainingPercentage -= roundedPercentage;
+      
+      return {
+        ...type,
+        value: roundedPercentage
+      };
+    });
+    
+    return {
+      totalUsers: users.length,
+      activeUsers,
+      newUsersThisMonth,
+      userTypeData
     };
-
-    fetchStats();
-  }, []);
+  }, [users, loading]);
 
   // Données pour le graphique circulaire des types d'utilisateurs
   const { userTypeData } = stats;

@@ -17,4 +17,8 @@ export interface Utilisateur {
   niveauEtudes?: string;
   organization?: string;
   address?: string;
+  dateNaissance?: string;
+  sexe?: string;
+  region?: string;
+  note?: number;
 }

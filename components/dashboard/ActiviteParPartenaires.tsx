@@ -1,129 +1,84 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { collection, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import React, { useMemo } from 'react';
+import { where, Timestamp } from 'firebase/firestore';
+import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
+import partenaireService from '@/services/partenaireService';
+import { Partenaire } from '@/types/partenaire';
 
-interface Representant {
-  email: string;
-  id: string;
-  nom: string;
-  phoneNumber: string;
-  telephone: string;
-}
-
-interface RH {
-  email: string;
-  id: string;
-  nom: string;
-  phoneNumber: string;
-  telephone: string;
-}
-
-interface Partenaire {
-  totalEmployes: number;
-  id: string;
-  actif: boolean;
-  adresse: string;
-  dateCreation: Timestamp;
-  datePartenariat: string;
-  description: string;
-  email: string;
-  infoLegales: {
-    nif: string;
-    rccm: string;
-  };
-  logo: string;
-  nom: string;
-  representant: Representant;
-  rh: RH;
-  secteur: string;
-  siteWeb: string;
-  telephone: string;
-  type: string;
-  updatedAt: Timestamp;
-}
+// Interfaces déplacées vers types/partenaire.ts
 
 export default function ActiviteParPartenaires() {
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalPartenaires: 0,
-    totalEmployes: 0,
-    nouveauxPartenaires: 0,
-    employesParEntreprise: [] as Array<{
-      nom: string;
-      count: number;
-      pourcentage: number;
-    }>
-  });
+  // Utiliser notre hook pour récupérer tous les partenaires
+  const { data: partenaires, loading, error } = useFirebaseCollection<Partenaire>(partenaireService);
 
-  useEffect(() => {
-    const fetchPartenaires = async () => {
-      try {
-        const partenairesRef = collection(db, 'partenaires');
-        const now = new Date();
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        
-        // Récupérer tous les partenaires
-        const partenairesSnapshot = await getDocs(partenairesRef);
-        const partenaires = partenairesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Partenaire[];
+  // Calculer les statistiques à partir des données des partenaires
+  const stats = useMemo(() => {
+    if (loading || !partenaires.length) {
+      return {
+        totalPartenaires: 0,
+        totalEmployes: 0,
+        nouveauxPartenaires: 0,
+        employesParEntreprise: [] as Array<{
+          nom: string;
+          count: number;
+          pourcentage: number;
+        }>
+      };
+    }
 
-        // Compter les nouveaux partenaires du mois
-        const nouveauxPartenaires = partenaires.filter(
-          p => p.dateCreation.toDate() >= firstDayOfMonth
-        ).length;
+    // Date du début du mois courant
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Compter les nouveaux partenaires du mois
+    const nouveauxPartenaires = partenaires.filter(p => {
+      if (!p.dateCreation) return false;
+      const dateCreation = p.dateCreation instanceof Timestamp 
+        ? p.dateCreation.toDate() 
+        : new Date(p.dateCreation);
+      return dateCreation >= firstDayOfMonth;
+    }).length;
 
-        // Calculer le nombre total d'employés et préparer les données du graphique
-        const employesParEntreprise = partenaires
-          .filter(p => p.totalEmployes && p.totalEmployes > 0) // Ne garder que les partenaires avec des employés
-          .sort((a, b) => (b.totalEmployes || 0) - (a.totalEmployes || 0)) // Trier par nombre d'employés décroissant
-          .slice(0, 5) // Prendre les 5 premiers
-          .map(p => ({
-            nom: p.nom,
-            count: p.totalEmployes || 0,
-            pourcentage: 0 // Sera calculé après
-          }));
-          
-        // Calculer le total des employés pour les partenaires affichés
-        const totalEmployes = employesParEntreprise.reduce((sum, p) => sum + p.count, 0);
-        
-        // Calculer le pourcentage de chaque entreprise par rapport au total
-        // Le total est la somme des employés des entreprises affichées
-        const totalEmployesAffiches = employesParEntreprise.reduce((sum, p) => sum + p.count, 0);
-        
-        // Mettre à jour les pourcentages
-        employesParEntreprise.forEach(p => {
-          p.pourcentage = totalEmployesAffiches > 0 
-            ? Math.round((p.count / totalEmployesAffiches) * 100) 
-            : 0;
-        });
-        
-        // Ajuster le dernier pourcentage pour que la somme fasse exactement 100%
-        if (employesParEntreprise.length > 0) {
-          const sum = employesParEntreprise.reduce((s, p) => s + p.pourcentage, 0);
-          if (sum !== 100 && employesParEntreprise.length > 0) {
-            employesParEntreprise[employesParEntreprise.length - 1].pourcentage += 100 - sum;
-          }
-        }
-
-        setStats({
-          totalPartenaires: partenaires.length,
-          totalEmployes,
-          nouveauxPartenaires,
-          employesParEntreprise
-        });
-      } catch (error) {
-        console.error('Erreur lors de la récupération des partenaires:', error);
-      } finally {
-        setLoading(false);
+    // Calculer le nombre total d'employés et préparer les données du graphique
+    const employesParEntreprise = partenaires
+      .filter(p => p.totalEmployes && p.totalEmployes > 0) // Ne garder que les partenaires avec des employés
+      .sort((a, b) => (b.totalEmployes || 0) - (a.totalEmployes || 0)) // Trier par nombre d'employés décroissant
+      .slice(0, 5) // Prendre les 5 premiers
+      .map(p => ({
+        nom: p.nom,
+        count: p.totalEmployes || 0,
+        pourcentage: 0 // Sera calculé après
+      }));
+      
+    // Calculer le total des employés pour tous les partenaires
+    const totalEmployes = partenaires.reduce((sum, p) => sum + (p.totalEmployes || 0), 0);
+    
+    // Calculer le pourcentage de chaque entreprise par rapport au total des entreprises affichées
+    const totalEmployesAffiches = employesParEntreprise.reduce((sum, p) => sum + p.count, 0);
+    
+    // Mettre à jour les pourcentages
+    employesParEntreprise.forEach(p => {
+      p.pourcentage = totalEmployesAffiches > 0 
+        ? Math.round((p.count / totalEmployesAffiches) * 100) 
+        : 0;
+    });
+    
+    // Ajuster le dernier pourcentage pour que la somme fasse exactement 100%
+    if (employesParEntreprise.length > 0) {
+      const sum = employesParEntreprise.reduce((s, p) => s + p.pourcentage, 0);
+      if (sum !== 100) {
+        employesParEntreprise[employesParEntreprise.length - 1].pourcentage += 100 - sum;
       }
-    };
+    }
 
-    fetchPartenaires();
-  }, []);
+    return {
+      totalPartenaires: partenaires.length,
+      totalEmployes,
+      nouveauxPartenaires,
+      employesParEntreprise
+    };
+  }, [partenaires, loading]);
 
   if (loading) {
     return (

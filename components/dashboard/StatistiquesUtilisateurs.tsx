@@ -1,60 +1,121 @@
 "use client";
 
-import React from 'react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
+import userService from '@/services/userService';
+import { Utilisateur } from '@/types/utilisateur';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
-interface StatistiquesProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  utilisateurs: any[];
-}
-
-export default function StatistiquesUtilisateurs({ utilisateurs }: StatistiquesProps) {
-  // Calcul des statistiques
-  const totalUtilisateurs = utilisateurs.length;
-  const utilisateursActifs = utilisateurs.filter(user => user.statut === 'actif').length;
-  const utilisateursInactifs = utilisateurs.filter(user => user.statut === 'inactif').length;
-  
-  // Données pour le graphique en camembert (statut)
-  const statutData = [
-    { name: 'Actifs', value: utilisateursActifs },
-    { name: 'Inactifs', value: utilisateursInactifs },
-  ];
-  
-  // Données pour le graphique en barres (rôles)
-  const roleCount: Record<string, number> = {};
-  utilisateurs.forEach(user => {
-    roleCount[user.role] = (roleCount[user.role] || 0) + 1;
-  });
-  
-  const roleData = Object.keys(roleCount).map(role => ({
-    name: role,
-    value: roleCount[role]
-  }));
-  
-  // Données pour le graphique d'évolution (inscriptions par mois)
-  const monthsData: Record<string, number> = {};
-  utilisateurs.forEach(user => {
-    const month = user.dateCreation.substring(0, 7); // Format YYYY-MM
-    monthsData[month] = (monthsData[month] || 0) + 1;
-  });
-  
-  // Trier les mois chronologiquement
-  const sortedMonths = Object.keys(monthsData).sort();
-  const evolutionData = sortedMonths.map(month => {
-    // Convertir YYYY-MM en format plus lisible (Jan 2025, Fév 2025, etc.)
-    const date = new Date(month + '-01');
-    const monthName = date.toLocaleDateString('fr-FR', { month: 'short' });
-    const year = date.getFullYear();
+export default function StatistiquesUtilisateurs() {
+  // Utiliser notre hook pour récupérer les utilisateurs
+  const { data: utilisateurs, loading, error } = useFirebaseCollection<Utilisateur>(userService);
+  // Calcul des statistiques avec useMemo pour optimiser les performances
+  const {
+    totalUtilisateurs,
+    utilisateursActifs,
+    utilisateursInactifs,
+    statutData,
+    roleData,
+    evolutionData
+  } = useMemo(() => {
+    if (!utilisateurs || utilisateurs.length === 0) {
+      return {
+        totalUtilisateurs: 0,
+        utilisateursActifs: 0,
+        utilisateursInactifs: 0,
+        statutData: [],
+        roleData: [],
+        evolutionData: []
+      };
+    }
+    
+    // Calcul des statistiques de base
+    const total = utilisateurs.length;
+    const actifs = utilisateurs.filter(user => user.active).length;
+    const inactifs = utilisateurs.filter(user => !user.active).length;
+    
+    // Données pour le graphique en camembert (statut)
+    const statut = [
+      { name: 'Actifs', value: actifs },
+      { name: 'Inactifs', value: inactifs },
+    ];
+    
+    // Données pour le graphique en barres (rôles)
+    const roleCount: Record<string, number> = {};
+    utilisateurs.forEach(user => {
+      if (user.role) {
+        roleCount[user.role] = (roleCount[user.role] || 0) + 1;
+      }
+    });
+    
+    const roles = Object.keys(roleCount).map(role => ({
+      name: role,
+      value: roleCount[role]
+    }));
+    
+    // Données pour le graphique d'évolution (inscriptions par mois)
+    const monthsData: Record<string, number> = {};
+    utilisateurs.forEach(user => {
+      if (user.createdAt) {
+        // Convertir le Timestamp Firebase en Date
+        const date = user.createdAt.toDate ? user.createdAt.toDate() : new Date(user.createdAt);
+        const month = format(date, 'yyyy-MM');
+        monthsData[month] = (monthsData[month] || 0) + 1;
+      }
+    });
+    
+    // Trier les mois chronologiquement
+    const sortedMonths = Object.keys(monthsData).sort();
+    const evolution = sortedMonths.map(month => {
+      // Convertir YYYY-MM en format plus lisible (Jan 2025, Fév 2025, etc.)
+      const date = new Date(month + '-01');
+      const monthName = format(date, 'MMM', { locale: fr });
+      const year = date.getFullYear();
+      
+      return {
+        name: `${monthName} ${year}`,
+        value: monthsData[month]
+      };
+    });
     
     return {
-      name: `${monthName} ${year}`,
-      value: monthsData[month]
+      totalUtilisateurs: total,
+      utilisateursActifs: actifs,
+      utilisateursInactifs: inactifs,
+      statutData: statut,
+      roleData: roles,
+      evolutionData: evolution
     };
-  });
+  }, [utilisateurs]);
   
   // Couleurs pour les graphiques
   const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+  
+  // Afficher un spinner pendant le chargement
+  if (loading) {
+    return (
+      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)] mb-6">
+        <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Statistiques des utilisateurs</h2>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--zalama-primary)]"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Afficher un message d'erreur si nécessaire
+  if (error) {
+    return (
+      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)] mb-6">
+        <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Statistiques des utilisateurs</h2>
+        <div className="p-4 text-center bg-red-50 dark:bg-red-900/20 rounded-lg">
+          <p className="text-sm text-red-600 dark:text-red-400">Erreur lors du chargement des données utilisateurs</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)] mb-6">

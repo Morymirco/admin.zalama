@@ -4,7 +4,7 @@ export interface Transaction {
   id: string;
   montant: number;
   type: 'revenu' | 'depense' | 'p2p' | 'salaire' | 'avance' | 'autre' | 'entree' | 'sortie' | 'credit' | 'debit';
-  statut: 'EFFECTUEE' | 'en cours' | 'annulee' | 'echouee';
+  statut: 'EFFECTUEE' | 'complete' | 'en cours' | 'annulee' | 'echouee';
   dateCreation?: string;
   dateTransaction: string | Timestamp;
   description?: string;

@@ -14,8 +14,8 @@ import {
   ModaleSuppressionService
 } from '@/components/dashboard/services';
 
-// Import du type Service depuis ListeServices pour la compatibilité
-import type { Service as UIService } from '@/components/dashboard/services/ListeServices';
+// Import du type Service directement depuis le fichier de types
+import type { Service as UIService } from '@/types/service';
 
 // Importation des services Firebase
 import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
@@ -102,7 +102,7 @@ export default function ServicesPage() {
       const transactionsStats: DemandeStats = {
         type: 'Transactions',
         nombre: transactions.length,
-        approuvees: transactions.filter(t => t.statut === 'completee').length,
+        approuvees: transactions.filter(t => t.statut === 'complete' || t.statut === 'EFFECTUEE').length,
         enCours: transactions.filter(t => t.statut === 'en cours').length,
         refusees: transactions.filter(t => t.statut === 'annulee' || t.statut === 'echouee').length,
         delaiMoyen: 12, // À calculer à partir des timestamps

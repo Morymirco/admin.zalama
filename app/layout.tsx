@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 // Utilisation de CSS standard pour les polices au lieu de next/font/google
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import { Toaster } from "react-hot-toast";
 import FirebaseAuthProvider from "@/components/auth/FirebaseAuthProvider";
 
@@ -24,8 +25,9 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <FirebaseAuthProvider>
-            {children}
-            <Toaster
+            <NotificationProvider>
+              {children}
+              <Toaster
               position="bottom-right"
               toastOptions={{
                 duration: 3000,
@@ -54,6 +56,7 @@ export default function RootLayout({
                 },
               }}
             />
+            </NotificationProvider>
           </FirebaseAuthProvider>
         </ThemeProvider>
       </body>

@@ -1,11 +1,15 @@
+import { Timestamp } from 'firebase/firestore';
+
 export type NotificationType = 'info' | 'warning' | 'success' | 'error';
 
 export interface Notification {
-  id: number;
-  title: string;
+  id: string;
+  titre: string;
   message: string;
-  type: NotificationType;
-  timestamp: Date;
-  read: boolean;
-  link?: string;
+  type: string;
+  dateCreation: Timestamp | string;
+  lue: boolean;
+  lienId?: string;
+  destinataireId?: string;
+  priorite?: 'basse' | 'normale' | 'haute';
 }

@@ -5,9 +5,11 @@ import { usePathname } from 'next/navigation';
 import NotificationDrawer from '@/components/dashboard/notifications/NotificationDrawer';
 import Link from 'next/link';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 export default function DashboardHeader() {
   const { theme, toggleTheme } = useTheme();
+  const { unreadCount, refreshUnreadCount } = useNotifications();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const pathname = usePathname();
   
@@ -37,6 +39,11 @@ export default function DashboardHeader() {
   // Gérer l'ouverture/fermeture du drawer de notifications
   const toggleNotifications = () => {
     setNotificationsOpen(!notificationsOpen);
+    
+    // Rafraîchir le compteur lorsqu'on ouvre/ferme le drawer
+    if (!notificationsOpen) {
+      refreshUnreadCount();
+    }
   };
 
   return (
@@ -52,8 +59,14 @@ export default function DashboardHeader() {
             onClick={toggleNotifications}
           >
             <Bell className={`w-6 h-6 ${theme === 'dark' ? 'text-zinc-300 hover:text-white' : 'text-gray-600 hover:text-gray-800'} transition-colors`} />
-            <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-red-400 opacity-75"></span>
-            <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">3</span>
+            {unreadCount > 0 && (
+              <>
+                <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-red-400 opacity-75"></span>
+                <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              </>
+            )}
           </button>
           <button
             onClick={toggleTheme}

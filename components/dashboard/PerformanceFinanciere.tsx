@@ -32,17 +32,17 @@ export default function PerformanceFinanciere() {
           
           // Calculer le montant débloqué (sorties)
           const montantDebloque = transactions
-            .filter(t => ['sortie', 'debit', 'avance'].includes(t.type) && t.statut === 'completee')
+            .filter(t => ['sortie', 'debit', 'avance'].includes(t.type) && (t.statut === 'complete' || t.statut === 'EFFECTUEE'))
             .reduce((total, t) => total + t.montant, 0);
           
           // Calculer le montant récupéré (entrées)
           const montantRecupere = transactions
-            .filter(t => ['entree', 'credit'].includes(t.type) && t.statut === 'completee')
+            .filter(t => ['entree', 'credit'].includes(t.type) && (t.statut === 'complete' || t.statut === 'EFFECTUEE'))
             .reduce((total, t) => total + t.montant, 0);
           
           // Calculer les revenus générés (frais)
           const revenusGeneres = transactions
-            .filter(t => t.statut === 'completee')
+            .filter(t => t.statut === 'complete' || t.statut === 'EFFECTUEE')
             .reduce((total, t) => total + (t.frais || 0), 0);
           
           // Calculer le taux de remboursement

@@ -59,10 +59,14 @@ export const getObjectifsMensuels = async (): Promise<ObjectifProgression[]> => 
   
   // Volume de prêts
   const volumePrets = transactions
-    .filter(transaction => 
-      transaction.type === 'p2p' && 
-      transaction.dateTransaction.toDate() >= firstDayOfMonth
-    )
+    .filter(transaction => {
+      // Vérifier si dateTransaction est un Timestamp ou une string
+      const transactionDate = typeof transaction.dateTransaction === 'string'
+        ? new Date(transaction.dateTransaction)
+        : transaction.dateTransaction.toDate();
+      
+      return transaction.type === 'p2p' && transactionDate >= firstDayOfMonth;
+    })
     .reduce((sum, transaction) => sum + transaction.montant, 0);
   
   // Partenariats (simulé - à remplacer par une vraie logique)
@@ -109,23 +113,30 @@ export const getTauxCroissanceMensuel = async (): Promise<TauxCroissance> => {
   // Récupérer toutes les transactions
   const allTransactions = await transactionService.getAll();
   
+  // Fonction utilitaire pour convertir dateTransaction en Date
+  const getTransactionDate = (dateTransaction: string | Timestamp): Date => {
+    return typeof dateTransaction === 'string'
+      ? new Date(dateTransaction)
+      : dateTransaction.toDate();
+  };
+
   // Calculer le volume pour chaque mois
   const volumeCurrentMonth = allTransactions
-    .filter(t => t.dateTransaction.toDate() >= firstDayCurrentMonth)
+    .filter(t => getTransactionDate(t.dateTransaction) >= firstDayCurrentMonth)
     .reduce((sum, t) => sum + t.montant, 0);
   
   const volumePreviousMonth = allTransactions
-    .filter(t => 
-      t.dateTransaction.toDate() >= firstDayPreviousMonth && 
-      t.dateTransaction.toDate() < firstDayCurrentMonth
-    )
+    .filter(t => {
+      const transactionDate = getTransactionDate(t.dateTransaction);
+      return transactionDate >= firstDayPreviousMonth && transactionDate < firstDayCurrentMonth;
+    })
     .reduce((sum, t) => sum + t.montant, 0);
   
   const volumeTwoMonthsAgo = allTransactions
-    .filter(t => 
-      t.dateTransaction.toDate() >= firstDayTwoMonthsAgo && 
-      t.dateTransaction.toDate() < firstDayPreviousMonth
-    )
+    .filter(t => {
+      const transactionDate = getTransactionDate(t.dateTransaction);
+      return transactionDate >= firstDayTwoMonthsAgo && transactionDate < firstDayPreviousMonth;
+    })
     .reduce((sum, t) => sum + t.montant, 0);
   
   // Calculer les taux de croissance

@@ -18,10 +18,10 @@ export default function TransactionsRecentes() {
   );
 
   // Fonction pour formater les montants
-  const formatMontant = (montant: number, devise: string) => {
+  const formatMontant = (montant: number, devise?: string) => {
     return new Intl.NumberFormat('fr-FR', { 
       style: 'currency', 
-      currency: devise || 'CDF',
+      currency: devise || 'GNF',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(montant);

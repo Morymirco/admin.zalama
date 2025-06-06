@@ -5,8 +5,8 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
 import userService from '@/services/userService';
 import { Utilisateur } from '@/types/utilisateur';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { format } from 'date-fns/format';
+import { fr } from 'date-fns/locale/fr';
 
 export default function StatistiquesUtilisateurs() {
   // Utiliser notre hook pour récupérer les utilisateurs

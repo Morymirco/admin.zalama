@@ -3,14 +3,15 @@ import { Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight } from
 
 import { Service as ServiceType } from '@/types/service';
 
-// Interface locale pour le composant
-interface Service extends Omit<ServiceType, 'createdAt'> {
+// Interface locale pour le composant - utiliser UIService pour la cohérence
+type UIService = Omit<ServiceType, 'createdAt'> & {
   dateCreation?: string; // Optionnel pour la compatibilité avec l'ancien code
+  createdAt?: any; // Rendre createdAt optionnel
 }
 
 interface ListeServicesProps {
-  services: Service[];
-  filteredServices: Service[];
+  services: UIService[];
+  filteredServices: UIService[];
   searchTerm: string;
   categorieFilter: string;
   categories: string[];
@@ -21,8 +22,8 @@ interface ListeServicesProps {
   onCategorieFilterChange: (categorie: string) => void;
   onPageChange: (page: number) => void;
   onAddClick: () => void;
-  onEditClick: (service: Service) => void;
-  onDeleteClick: (service: Service) => void;
+  onEditClick: (service: UIService) => void;
+  onDeleteClick: (service: UIService) => void;
 }
 
 const ListeServices: React.FC<ListeServicesProps> = ({

@@ -82,7 +82,7 @@ export default function FinancesPage() {
       // Mapper les statuts
       let financeStatut: 'complete' | 'en cours' | 'annulee';
       switch (transaction.statut) {
-        case 'completee':
+        case 'complete':
           financeStatut = 'complete';
           break;
         case 'en cours':
@@ -204,10 +204,10 @@ export default function FinancesPage() {
       const firestoreType = type === 'revenu' ? 'entree' : 'sortie';
       
       // Convertir le statut de l'interface en statut Firestore
-      let firestoreStatut: 'en cours' | 'completee' | 'annulee' | 'echouee';
+      let firestoreStatut: 'complete' | 'en cours' | 'annulee' | 'echouee';
       switch (statut) {
         case 'complete':
-          firestoreStatut = 'completee';
+          firestoreStatut = 'complete';
           break;
         case 'en_attente':
           firestoreStatut = 'en cours';
@@ -261,10 +261,10 @@ export default function FinancesPage() {
       const firestoreType = type === 'revenu' ? 'entree' : 'sortie';
       
       // Convertir le statut de l'interface en statut Firestore
-      let firestoreStatut: 'en cours' | 'completee' | 'annulee' | 'echouee';
+      let firestoreStatut: 'complete' | 'en cours' | 'annulee' | 'echouee';
       switch (statut) {
         case 'complete':
-          firestoreStatut = 'completee';
+          firestoreStatut = 'complete';
           break;
         case 'en_attente':
           firestoreStatut = 'en cours';

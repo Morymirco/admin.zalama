@@ -1,15 +1,11 @@
 import React from 'react';
 import { Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
-interface Service {
-  id: string;
-  nom: string;
-  description: string;
-  categorie: string;
-  prix: number;
-  duree: string;
-  disponible: boolean;
-  dateCreation: string;
+import { Service as ServiceType } from '@/types/service';
+
+// Interface locale pour le composant
+interface Service extends Omit<ServiceType, 'createdAt'> {
+  dateCreation?: string; // Optionnel pour la compatibilité avec l'ancien code
 }
 
 interface ListeServicesProps {
@@ -83,8 +79,8 @@ const ListeServices: React.FC<ListeServicesProps> = ({
               onChange={(e) => onCategorieFilterChange(e.target.value)}
               className="px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
             >
-              {categories.map(categorie => (
-                <option key={categorie} value={categorie}>
+              {categories.map((categorie, index) => (
+                <option key={`${categorie}-${index}`} value={categorie}>
                   {categorie === 'toutes' ? 'Toutes les catégories' : categorie}
                 </option>
               ))}
@@ -128,7 +124,7 @@ const ListeServices: React.FC<ListeServicesProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--zalama-text-secondary)] text-sm">Prix:</span>
-                    <span className="text-[var(--zalama-text)] text-sm font-medium">{service.prix.toLocaleString()} GNF</span>
+                    <span className="text-[var(--zalama-text)] text-sm font-medium">{(service.prix !== undefined ? service.prix : 0).toLocaleString()} GNF</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--zalama-text-secondary)] text-sm">Durée:</span>

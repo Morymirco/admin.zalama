@@ -8,8 +8,7 @@ import DonneesUtilisateurs from '@/components/dashboard/DonneesUtilisateurs';
 import AlertesRisques from '@/components/dashboard/AlertesRisques';
 import GraphiquesVisualisations from '@/components/dashboard/GraphiquesVisualisations';
 import ObjectifsPerformances from '@/components/dashboard/ObjectifsPerformances';
-import TransactionsRecentes from '@/components/dashboard/TransactionsRecentes';
-import DemandesAvanceSalaire from '@/components/dashboard/DemandesAvanceSalaire';
+
 
 export default function DashboardPage() {
   return (
@@ -52,14 +51,7 @@ export default function DashboardPage() {
           <ObjectifsPerformances />
         </div>
         
-        {/* Cinquième rangée - Nouveaux composants */}
-        <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
-          <TransactionsRecentes />
-        </div>
-        
-        <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
-          <DemandesAvanceSalaire />
-        </div>
+
       </div>
     </div>
   );

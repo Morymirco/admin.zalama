@@ -183,7 +183,7 @@ export default function ServicesPage() {
         nom: (form.querySelector('#add-nom') as HTMLInputElement).value,
         description: (form.querySelector('#add-description') as HTMLTextAreaElement).value,
         categorie: (form.querySelector('#add-categorie') as HTMLInputElement).value,
-        prix: parseFloat((form.querySelector('#add-prix') as HTMLInputElement).value),
+        pourcentageMax: parseFloat((form.querySelector('#add-pourcentage') as HTMLInputElement).value),
         duree: (form.querySelector('#add-duree') as HTMLInputElement).value,
         disponible: (form.querySelector('#add-disponible') as HTMLInputElement).checked,
         createdAt: Timestamp.now(), // Ajouter le timestamp de création
@@ -214,7 +214,7 @@ export default function ServicesPage() {
         nom: (form.querySelector('#edit-nom') as HTMLInputElement).value,
         description: (form.querySelector('#edit-description') as HTMLTextAreaElement).value,
         categorie: (form.querySelector('#edit-categorie') as HTMLInputElement).value,
-        prix: parseFloat((form.querySelector('#edit-prix') as HTMLInputElement).value),
+        pourcentageMax: parseFloat((form.querySelector('#edit-pourcentage') as HTMLInputElement).value),
         duree: (form.querySelector('#edit-duree') as HTMLInputElement).value,
         disponible: (form.querySelector('#edit-disponible') as HTMLInputElement).checked,
       };

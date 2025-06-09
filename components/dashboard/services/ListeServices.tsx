@@ -124,8 +124,8 @@ const ListeServices: React.FC<ListeServicesProps> = ({
                     <span className="text-[var(--zalama-text)] text-sm font-medium">{service.categorie}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[var(--zalama-text-secondary)] text-sm">Prix:</span>
-                    <span className="text-[var(--zalama-text)] text-sm font-medium">{(service.prix !== undefined ? service.prix : 0).toLocaleString()} GNF</span>
+                    <span className="text-[var(--zalama-text-secondary)] text-sm">Pourcentage:</span>
+                    <span className="text-[var(--zalama-text)] text-sm font-medium">{(service.pourcentageMax !== undefined ? service.pourcentageMax : 0).toLocaleString()} %</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--zalama-text-secondary)] text-sm">Durée:</span>

@@ -68,15 +68,15 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
               </div>
               
               <div>
-                <label htmlFor="prix" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Prix (GNF)</label>
+                <label htmlFor="pourcentage" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Pourcentage (%)</label>
                 <input
                   type="number"
-                  id="add-prix"
-                  name="prix"
+                  id="add-pourcentage"
+                  name="pourcentage"
                   required
                   min="0"
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                  placeholder="Prix en GNF"
+                  placeholder="Pourcentage des frais"
                 />
               </div>
             </div>
@@ -102,9 +102,7 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
                     name="disponible"
                     className="h-4 w-4 rounded border-[var(--zalama-border)] text-[var(--zalama-blue)]"
                   />
-                  <div className="relative w-10 h-5 bg-[var(--zalama-bg-lighter)] rounded-full transition peer-checked:bg-[var(--zalama-success)]/20">
-                    <div className="dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition peer-checked:left-5 peer-checked:bg-[var(--zalama-success)]"></div>
-                  </div>
+                  
                   <span className="ml-3 text-sm font-medium text-[var(--zalama-text)]">Disponible</span>
                 </label>
               </div>

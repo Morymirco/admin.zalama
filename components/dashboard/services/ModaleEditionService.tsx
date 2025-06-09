@@ -66,13 +66,13 @@ const ModaleEditionService: React.FC<ModaleEditionServiceProps> = ({
               </div>
               
               <div>
-                <label htmlFor="edit-prix" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Prix (GNF)</label>
+                <label htmlFor="edit-pourcentage" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Pourcentage (%)</label>
                 <input
                   type="number"
-                  id="edit-prix"
+                  id="edit-pourcentage"
                   required
                   min="0"
-                  defaultValue={service.prix}
+                  defaultValue={service.pourcentageMax}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>

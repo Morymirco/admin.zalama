@@ -5,7 +5,7 @@ export interface Service {
   nom: string;
   description: string;
   categorie: string;
-  prix: number;
+  pourcentageMax: number;
   duree: string;
   disponible: boolean;
   createdAt: Timestamp;

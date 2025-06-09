@@ -9,6 +9,7 @@ import AlertesRisques from '@/components/dashboard/AlertesRisques';
 import GraphiquesVisualisations from '@/components/dashboard/GraphiquesVisualisations';
 import ObjectifsPerformances from '@/components/dashboard/ObjectifsPerformances';
 
+
 export default function DashboardPage() {
   return (
     <div className="p-4 md:p-6">
@@ -49,6 +50,8 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
           <ObjectifsPerformances />
         </div>
+        
+
       </div>
     </div>
   );

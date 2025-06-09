@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 interface ModaleAjoutUtilisateurProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (formData: FormData) => Promise<void>;
 }
 
 const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({

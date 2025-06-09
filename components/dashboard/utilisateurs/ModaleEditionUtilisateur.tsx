@@ -1,23 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-
-interface Utilisateur {
-  id: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone: string;
-  adresse: string;
-  type: 'Étudiant' | 'Salarié' | 'Entreprise';
-  statut: 'Actif' | 'Inactif' | 'En attente';
-  dateInscription: string;
-  photo: string;
-  organisation?: string;
-  poste?: string;
-  niveauEtudes?: string;
-  etablissement?: string;
-  secteur?: string;
-}
+import { Utilisateur } from '@/types/utilisateur';
 
 interface ModaleEditionUtilisateurProps {
   isOpen: boolean;
@@ -83,7 +66,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                   id="edit-prenom"
                   name="prenom"
                   required
-                  defaultValue={utilisateur.prenom}
+                  defaultValue={utilisateur.displayName.split(' ')[0]}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>
@@ -95,7 +78,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                   id="edit-nom"
                   name="nom"
                   required
-                  defaultValue={utilisateur.nom}
+                  defaultValue={utilisateur.displayName.split(' ')[1]}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>
@@ -121,7 +104,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                 id="edit-telephone"
                 name="telephone"
                 required
-                defaultValue={utilisateur.telephone}
+                defaultValue={utilisateur.phoneNumber}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
               />
             </div>
@@ -133,7 +116,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                 id="edit-adresse"
                 name="adresse"
                 required
-                defaultValue={utilisateur.adresse}
+                defaultValue={utilisateur.address}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
               />
             </div>
@@ -183,7 +166,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                     id="edit-organisation"
                     name="organisation"
                     required
-                    defaultValue={utilisateur.organisation}
+                    defaultValue={utilisateur.organization}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                   />
                 </div>
@@ -211,7 +194,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                     id="edit-organisation"
                     name="organisation"
                     required
-                    defaultValue={utilisateur.organisation}
+                    defaultValue={utilisateur.organization}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                   />
                 </div>
@@ -223,7 +206,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                     id="edit-secteur"
                     name="secteur"
                     required
-                    defaultValue={utilisateur.secteur}
+                    defaultValue={utilisateur.poste}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                   />
                 </div>
@@ -237,7 +220,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                 id="edit-statut"
                 name="statut"
                 required
-                defaultValue={utilisateur.statut}
+                defaultValue={utilisateur.active ? "Actif" : "Inactif"}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
               >
                 <option value="Actif">Actif</option>

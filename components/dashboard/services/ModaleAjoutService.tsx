@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { Service } from '@/types/service';
 
 interface ModaleAjoutServiceProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
               <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom du service</label>
               <input
                 type="text"
-                id="nom"
+                id="add-nom"
                 name="nom"
                 required
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
@@ -44,7 +45,7 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Description</label>
               <textarea
-                id="description"
+                id="add-description"
                 name="description"
                 required
                 rows={3}
@@ -58,7 +59,7 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
                 <label htmlFor="categorie" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Catégorie</label>
                 <input
                   type="text"
-                  id="categorie"
+                  id="add-categorie"
                   name="categorie"
                   required
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
@@ -67,15 +68,15 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
               </div>
               
               <div>
-                <label htmlFor="prix" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Prix (GNF)</label>
+                <label htmlFor="pourcentage" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Pourcentage (%)</label>
                 <input
                   type="number"
-                  id="prix"
-                  name="prix"
+                  id="add-pourcentage"
+                  name="pourcentage"
                   required
                   min="0"
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                  placeholder="Prix"
+                  placeholder="Pourcentage des frais"
                 />
               </div>
             </div>
@@ -85,11 +86,11 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
                 <label htmlFor="duree" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Durée</label>
                 <input
                   type="text"
-                  id="duree"
+                  id="add-duree"
                   name="duree"
                   required
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                  placeholder="Ex: 2 jours"
+                  placeholder="Ex: 1 heure"
                 />
               </div>
               
@@ -97,14 +98,11 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
                 <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    id="disponible"
+                    id="add-disponible"
                     name="disponible"
-                    className="sr-only peer"
-                    defaultChecked
+                    className="h-4 w-4 rounded border-[var(--zalama-border)] text-[var(--zalama-blue)]"
                   />
-                  <div className="relative w-10 h-5 bg-[var(--zalama-bg-lighter)] rounded-full transition peer-checked:bg-[var(--zalama-success)]/20">
-                    <div className="dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition peer-checked:left-5 peer-checked:bg-[var(--zalama-success)]"></div>
-                  </div>
+                  
                   <span className="ml-3 text-sm font-medium text-[var(--zalama-text)]">Disponible</span>
                 </label>
               </div>

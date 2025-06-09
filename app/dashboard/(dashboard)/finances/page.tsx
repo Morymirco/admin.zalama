@@ -1,36 +1,45 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight, 
   X, RefreshCw, TrendingUp, TrendingDown, DollarSign, BarChart, PieChart, LineChart
 } from 'lucide-react';
+import { Timestamp, serverTimestamp } from 'firebase/firestore';
+
+// Services Firebase
+import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
+import transactionService, { 
+  getTransactionsByDateRange,
+  getTransactionsByType,
+  getTransactionsByStatus
+} from '@/services/transactionService';
 
 // Types
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  montant: number;
+import { Transaction } from '@/types/transaction';
+
+// Interface pour la page finances (adaptation de l'interface Transaction existante)
+interface FinanceTransaction extends Omit<Transaction, 'type' | 'statut'> {
   type: 'revenu' | 'depense';
+  date: string; // Format YYYY-MM-DD pour l'affichage
+  statut: 'complete' | 'en cours' | 'annulee';
   categorie: string;
-  statut: 'complete' | 'en_attente' | 'annulee';
 }
 
 export default function FinancesPage() {
   // États
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentTransaction, setCurrentTransaction] = useState<FinanceTransaction | null>(null);
   const [dateRange, setDateRange] = useState({ debut: '', fin: '' });
   const [typeFilter, setTypeFilter] = useState<'tous' | 'revenu' | 'depense'>('tous');
+  
+  // Utilisation du hook pour récupérer les transactions depuis Firestore
+  const { data: firebaseTransactions, loading: isLoading } = useFirebaseCollection<Transaction>(transactionService);
 
   // Handlers
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,25 +63,63 @@ export default function FinancesPage() {
     setShowAddModal(true);
   };
 
-  const handleEditTransaction = (transaction: Transaction) => {
+  const handleEditTransaction = (transaction: FinanceTransaction) => {
     setCurrentTransaction(transaction);
     setShowEditModal(true);
   };
 
-  const handleDeleteTransaction = (transaction: Transaction) => {
+  const handleDeleteTransaction = (transaction: FinanceTransaction) => {
     setCurrentTransaction(transaction);
     setShowDeleteModal(true);
   };
 
-  // Gestion du changement de date avec useCallback pour éviter les re-rendus inutiles
-  const handleDateFilter = useCallback(() => {
+  // Convertir les transactions Firebase en format adapté pour l'interface
+  const transactions = useMemo(() => {
+    return firebaseTransactions.map(transaction => {
+      // Mapper les types de transaction Firebase aux types de l'interface finances
+      const financeType = ['entree', 'credit'].includes(transaction.type) ? 'revenu' : 'depense';
+      
+      // Mapper les statuts
+      let financeStatut: 'complete' | 'en cours' | 'annulee';
+      switch (transaction.statut) {
+        case 'complete':
+          financeStatut = 'complete';
+          break;
+        case 'en cours':
+          financeStatut = 'en cours';
+          break;
+        case 'annulee':
+        case 'echouee':
+          financeStatut = 'annulee';
+          break;
+        default:
+          financeStatut = 'en cours';
+      }
+      
+      // Formater la date pour l'affichage
+      const date = transaction.dateTransaction instanceof Timestamp
+        ? transaction.dateTransaction.toDate().toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0];
+      
+      return {
+        ...transaction,
+        type: financeType,
+        statut: financeStatut,
+        date,
+        categorie: transaction.service || 'Autre',
+      } as FinanceTransaction;
+    });
+  }, [firebaseTransactions]);
+  
+  // Filtrage des transactions avec useMemo pour éviter les re-rendus inutiles
+  const filteredTransactions = useMemo(() => {
     let filtered = [...transactions];
     
     // Filtre par terme de recherche
     if (searchTerm.trim() !== '') {
       filtered = filtered.filter(transaction => 
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.categorie.toLowerCase().includes(searchTerm.toLowerCase())
+        (transaction.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (transaction.categorie || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -97,40 +144,41 @@ export default function FinancesPage() {
       });
     }
     
-    setFilteredTransactions(filtered);
+    return filtered;
   }, [transactions, searchTerm, typeFilter, dateRange]);
 
-  // Données fictives pour la démo
-  useEffect(() => {
-    // Simuler un chargement depuis une API
-    setTimeout(() => {
-      const mockData: Transaction[] = [
-        { id: '1', date: '2025-04-15', description: 'Paiement client A', montant: 5000, type: 'revenu', categorie: 'Ventes', statut: 'complete' },
-        { id: '2', date: '2025-04-10', description: 'Achat fournitures', montant: 1200, type: 'depense', categorie: 'Fournitures', statut: 'complete' },
-        { id: '3', date: '2025-04-05', description: 'Paiement client B', montant: 3500, type: 'revenu', categorie: 'Ventes', statut: 'complete' },
-        { id: '4', date: '2025-04-02', description: 'Loyer bureau', montant: 2000, type: 'depense', categorie: 'Locaux', statut: 'complete' },
-        { id: '5', date: '2025-03-28', description: 'Facture électricité', montant: 450, type: 'depense', categorie: 'Utilities', statut: 'complete' },
-        { id: '6', date: '2025-03-25', description: 'Paiement client C', montant: 7500, type: 'revenu', categorie: 'Ventes', statut: 'complete' },
-        { id: '7', date: '2025-03-20', description: 'Salaires employés', montant: 12000, type: 'depense', categorie: 'Salaires', statut: 'complete' },
-        { id: '8', date: '2025-03-15', description: 'Paiement client D', montant: 4200, type: 'revenu', categorie: 'Ventes', statut: 'en_attente' },
-        { id: '9', date: '2025-03-10', description: 'Maintenance équipement', montant: 800, type: 'depense', categorie: 'Maintenance', statut: 'complete' },
-        { id: '10', date: '2025-03-05', description: 'Remboursement client E', montant: 1500, type: 'depense', categorie: 'Remboursements', statut: 'complete' },
-        { id: '11', date: '2025-03-01', description: 'Paiement client F', montant: 6000, type: 'revenu', categorie: 'Ventes', statut: 'annulee' },
-        { id: '12', date: '2025-02-25', description: 'Achat matériel informatique', montant: 3500, type: 'depense', categorie: 'Équipement', statut: 'complete' },
-      ];
+  // Calcul des statistiques financières
+  const stats = useMemo(() => {
+    if (isLoading || transactions.length === 0) {
+      return {
+        totalRevenu: 0,
+        totalDepense: 0,
+        balance: 0,
+        transactionsCount: 0,
+        revenuCount: 0,
+        depenseCount: 0,
+        enAttenteCount: 0
+      };
+    }
+    
+    const totalRevenu = transactions
+      .filter(t => t.type === 'revenu')
+      .reduce((sum, t) => sum + t.montant, 0);
       
-      setTransactions(mockData);
-      setFilteredTransactions(mockData);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
-  
-  // Filtrage des transactions en fonction du terme de recherche et des filtres
-  useEffect(() => {
-    // Utilisation de handleDateFilter pour le filtrage
-    handleDateFilter();
-    setCurrentPage(1); // Réinitialiser à la première page après filtrage
-  }, [searchTerm, typeFilter, dateRange, transactions, handleDateFilter]);
+    const totalDepense = transactions
+      .filter(t => t.type === 'depense')
+      .reduce((sum, t) => sum + t.montant, 0);
+      
+    return {
+      totalRevenu,
+      totalDepense,
+      balance: totalRevenu - totalDepense,
+      transactionsCount: transactions.length,
+      revenuCount: transactions.filter(t => t.type === 'revenu').length,
+      depenseCount: transactions.filter(t => t.type === 'depense').length,
+      enAttenteCount: transactions.filter(t => t.statut === 'en cours').length
+    };
+  }, [transactions, isLoading]);
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -138,70 +186,137 @@ export default function FinancesPage() {
   const currentItems = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
-  // Calcul des totaux
-  const totalRevenus = filteredTransactions
-    .filter(t => t.type === 'revenu' && t.statut !== 'annulee')
-    .reduce((sum, t) => sum + t.montant, 0);
-  
-  const totalDepenses = filteredTransactions
-    .filter(t => t.type === 'depense' && t.statut !== 'annulee')
-    .reduce((sum, t) => sum + t.montant, 0);
-  
-  const solde = totalRevenus - totalDepenses;
-
   // Formulaire d'ajout de transaction
-  const handleSubmitAddTransaction = (e: React.FormEvent) => {
+  const handleSubmitAddTransaction = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    // Logique d'ajout de transaction
-    const newId = (transactions.length + 1).toString();
-    const form = e.currentTarget as HTMLFormElement;
+    const form = e.target as HTMLFormElement;
     
-    const newTransaction: Transaction = {
-      id: newId,
-      date: (form.querySelector('#date') as HTMLInputElement).value,
-      description: (form.querySelector('#description') as HTMLInputElement).value,
-      montant: parseFloat((form.querySelector('#montant') as HTMLInputElement).value),
-      type: (form.querySelector('#type') as HTMLSelectElement).value as 'revenu' | 'depense',
-      categorie: (form.querySelector('#categorie') as HTMLInputElement).value,
-      statut: 'complete',
-    };
-    
-    setTransactions([...transactions, newTransaction]);
-    setShowAddModal(false);
-  };
+    try {
+      // Préparer les données de la transaction
+      const type = (form.querySelector('#type') as HTMLSelectElement).value as 'revenu' | 'depense';
+      const montant = parseFloat((form.querySelector('#montant') as HTMLInputElement).value);
+      const description = (form.querySelector('#description') as HTMLInputElement).value;
+      const categorie = (form.querySelector('#categorie') as HTMLInputElement).value;
+      const statut = (form.querySelector('#statut') as HTMLSelectElement).value;
+      const date = (form.querySelector('#date') as HTMLInputElement).value;
+      
+      // Convertir le type de l'interface en type Firestore
+      const firestoreType = type === 'revenu' ? 'entree' : 'sortie';
+      
+      // Convertir le statut de l'interface en statut Firestore
+      let firestoreStatut: 'complete' | 'en cours' | 'annulee' | 'echouee';
+      switch (statut) {
+        case 'complete':
+          firestoreStatut = 'complete';
+          break;
+        case 'en_attente':
+          firestoreStatut = 'en cours';
+          break;
+        case 'annulee':
+          firestoreStatut = 'annulee';
+          break;
+        default:
+          firestoreStatut = 'en cours';
+      }
+      
+      // Ajouter la transaction à Firestore
+      await transactionService.create({
+        montant,
+        devise: 'GNF',
+        type: firestoreType as any,
+        statut: firestoreStatut,
+        dateTransaction: Timestamp.fromDate(new Date(date)),
+        utilisateurId: 'admin', // À remplacer par l'ID de l'utilisateur connecté
+        description,
+        service: categorie
+      });
+      
+      setShowAddModal(false);
+      
+      // Notification de succès (à implémenter)
+      console.log('Transaction ajoutée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la transaction:', error);
+      // Notification d'erreur (à implémenter)
+    }
+  }, []);
 
   // Formulaire d'édition de transaction
-  const handleSubmitEditTransaction = (e: React.FormEvent) => {
+  const handleSubmitEditTransaction = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentTransaction) return;
     
     const form = e.currentTarget as HTMLFormElement;
     
-    // Logique d'édition de transaction
-    const updatedTransaction: Transaction = {
-      ...currentTransaction,
-      date: (form.querySelector('#edit-date') as HTMLInputElement).value,
-      description: (form.querySelector('#edit-description') as HTMLInputElement).value,
-      montant: parseFloat((form.querySelector('#edit-montant') as HTMLInputElement).value),
-      type: (form.querySelector('#edit-type') as HTMLSelectElement).value as 'revenu' | 'depense',
-      categorie: (form.querySelector('#edit-categorie') as HTMLInputElement).value,
-      statut: (form.querySelector('#edit-statut') as HTMLSelectElement).value as 'complete' | 'en_attente' | 'annulee',
-    };
-    
-    setTransactions(transactions.map(t => t.id === currentTransaction.id ? updatedTransaction : t));
-    setShowEditModal(false);
-    setCurrentTransaction(null);
-  };
+    try {
+      // Préparer les données de la transaction
+      const type = (form.querySelector('#edit-type') as HTMLSelectElement).value as 'revenu' | 'depense';
+      const montant = parseFloat((form.querySelector('#edit-montant') as HTMLInputElement).value);
+      const description = (form.querySelector('#edit-description') as HTMLInputElement).value;
+      const categorie = (form.querySelector('#edit-categorie') as HTMLInputElement).value;
+      const statut = (form.querySelector('#edit-statut') as HTMLSelectElement).value;
+      const date = (form.querySelector('#edit-date') as HTMLInputElement).value;
+      
+      // Convertir le type de l'interface en type Firestore
+      const firestoreType = type === 'revenu' ? 'entree' : 'sortie';
+      
+      // Convertir le statut de l'interface en statut Firestore
+      let firestoreStatut: 'complete' | 'en cours' | 'annulee' | 'echouee';
+      switch (statut) {
+        case 'complete':
+          firestoreStatut = 'complete';
+          break;
+        case 'en_attente':
+          firestoreStatut = 'en cours';
+          break;
+        case 'annulee':
+          firestoreStatut = 'annulee';
+          break;
+        default:
+          firestoreStatut = 'en cours';
+      }
+      
+      // Mettre à jour la transaction dans Firestore
+      await transactionService.update(currentTransaction.id, {
+        montant,
+        devise: 'GNF',
+        type: firestoreType as any,
+        statut: firestoreStatut,
+        dateTransaction: Timestamp.fromDate(new Date(date)),
+        utilisateurId: 'admin', // À remplacer par l'ID de l'utilisateur connecté
+        description,
+        service: categorie
+      });
+      
+      setShowEditModal(false);
+      setCurrentTransaction(null);
+      
+      // Notification de succès (à implémenter)
+      console.log('Transaction mise à jour avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la transaction:', error);
+      // Notification d'erreur (à implémenter)
+    }
+  }, [currentTransaction]);
 
   // Suppression de transaction
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!currentTransaction) return;
     
-    // Logique de suppression de transaction
-    setTransactions(transactions.filter(t => t.id !== currentTransaction.id));
-    setShowDeleteModal(false);
-    setCurrentTransaction(null);
-  };
+    try {
+      // Supprimer la transaction de Firestore
+      await transactionService.delete(currentTransaction.id);
+      
+      setShowDeleteModal(false);
+      setCurrentTransaction(null);
+      
+      // Notification de succès (à implémenter)
+      console.log('Transaction supprimée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la transaction:', error);
+      // Notification d'erreur (à implémenter)
+    }
+  }, [currentTransaction]);
 
   return (
     <div className="p-6">
@@ -292,7 +407,7 @@ export default function FinancesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-[var(--zalama-text-secondary)]">Total Revenus</p>
-              <p className="text-2xl font-bold text-[var(--zalama-success)]">{totalRevenus.toLocaleString()} GNF</p>
+              <p className="text-2xl font-bold text-[var(--zalama-success)]">{stats.totalRevenu.toLocaleString()} GNF</p>
             </div>
             <div className="p-3 bg-[var(--zalama-success)]/10 rounded-full">
               <TrendingUp className="h-6 w-6 text-[var(--zalama-success)]" />
@@ -304,7 +419,7 @@ export default function FinancesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-[var(--zalama-text-secondary)]">Total Dépenses</p>
-              <p className="text-2xl font-bold text-[var(--zalama-danger)]">{totalDepenses.toLocaleString()} GNF</p>
+              <p className="text-2xl font-bold text-[var(--zalama-danger)]">{stats.totalDepense.toLocaleString()} GNF</p>
             </div>
             <div className="p-3 bg-[var(--zalama-danger)]/10 rounded-full">
               <TrendingDown className="h-6 w-6 text-[var(--zalama-danger)]" />
@@ -316,12 +431,12 @@ export default function FinancesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-[var(--zalama-text-secondary)]">Solde</p>
-              <p className={`text-2xl font-bold ${solde >= 0 ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-danger)]'}`}>
-                {solde.toLocaleString()} GNF
+              <p className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-danger)]'}`}>
+                {stats.balance.toLocaleString()} GNF
               </p>
             </div>
-            <div className={`p-3 ${solde >= 0 ? 'bg-[var(--zalama-success)]/10' : 'bg-[var(--zalama-danger)]/10'} rounded-full`}>
-              <DollarSign className={`h-6 w-6 ${solde >= 0 ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-danger)]'}`} />
+            <div className={`p-3 ${stats.balance >= 0 ? 'bg-[var(--zalama-success)]/10' : 'bg-[var(--zalama-danger)]/10'} rounded-full`}>
+              <DollarSign className={`h-6 w-6 ${stats.balance >= 0 ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-danger)]'}`} />
             </div>
           </div>
         </div>
@@ -338,17 +453,17 @@ export default function FinancesPage() {
               <div className="absolute inset-0 rounded-full overflow-hidden">
                 <div 
                   className="absolute top-0 left-0 bg-[var(--zalama-blue)] h-full" 
-                  style={{ width: `${(totalRevenus / (totalRevenus + totalDepenses || 1)) * 100}%` }}
+                  style={{ width: `${(stats.totalRevenu / (stats.totalRevenu + stats.totalDepense || 1)) * 100}%` }}
                 ></div>
                 <div 
                   className="absolute top-0 right-0 bg-[var(--zalama-danger)] h-full" 
-                  style={{ width: `${(totalDepenses / (totalRevenus + totalDepenses || 1)) * 100}%` }}
+                  style={{ width: `${(stats.totalDepense / (stats.totalRevenu + stats.totalDepense || 1)) * 100}%` }}
                 ></div>
               </div>
               <div className="absolute inset-0 flex items-center justify-center flex-col">
                 <PieChart className="h-10 w-10 text-[var(--zalama-text-secondary)] mb-2" />
                 <span className="text-sm font-medium text-[var(--zalama-text)]">
-                  {Math.round((totalRevenus / (totalRevenus + totalDepenses || 1)) * 100)}% / {Math.round((totalDepenses / (totalRevenus + totalDepenses || 1)) * 100)}%
+                  {Math.round((stats.totalRevenu / (stats.totalRevenu + stats.totalDepense || 1)) * 100)}% / {Math.round((stats.totalDepense / (stats.totalRevenu + stats.totalDepense || 1)) * 100)}%
                 </span>
               </div>
             </div>
@@ -601,18 +716,18 @@ export default function FinancesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <span className={transaction.type === 'revenu' ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-danger)]'}>
-                        {transaction.type === 'revenu' ? '+' : '-'} {transaction.montant.toLocaleString()} GNF
+                        {transaction.type === 'revenu' ? '+' : '-'} {(transaction.montant !== undefined ? transaction.montant : 0).toLocaleString()} GNF
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         transaction.statut === 'complete' 
                           ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
-                          : transaction.statut === 'en_attente'
+                          : transaction.statut === 'en cours'
                           ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                           : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
                       }`}>
-                        {transaction.statut === 'complete' ? 'Complété' : transaction.statut === 'en_attente' ? 'En attente' : 'Annulé'}
+                        {transaction.statut === 'complete' ? 'Complété' : transaction.statut === 'en cours' ? 'En cours' : 'Annulé'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

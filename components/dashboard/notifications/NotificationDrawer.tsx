@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
-import { notificationsMock } from './notificationService';
+import React, { useState, useEffect, useRef } from 'react';
 import { Notification } from './types';
 import NotificationHeader from './NotificationHeader';
-import NotificationList from './NotificationList';
 import NotificationFilters from './NotificationFilters';
+import NotificationList from './NotificationList';
+import { fetchUnreadNotifications, fetchNotificationsByType } from './notificationService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import NotificationFooter from './NotificationFooter';
 
 interface NotificationDrawerProps {
@@ -15,8 +17,41 @@ interface NotificationDrawerProps {
 
 export default function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
-  const [notifications, setNotifications] = React.useState<Notification[]>(notificationsMock);
-  const [filter, setFilter] = React.useState<string>('all');
+  const [filter, setFilter] = useState<string>('all');
+  const [loading, setLoading] = useState<boolean>(false);
+  const { notifications, setNotifications, markAsRead, markAllAsRead, refreshUnreadCount } = useNotifications();
+
+  // Charger les notifications depuis Firebase
+  useEffect(() => {
+    if (isOpen) {
+      loadNotifications();
+    }
+  }, [isOpen, filter]);
+  
+  // Fonction pour charger les notifications
+  const loadNotifications = async () => {
+    setLoading(true);
+    try {
+      let data: Notification[];
+      
+      if (filter === 'all') {
+        console.log('Chargement des notifications non lues');
+        data = await fetchUnreadNotifications();
+      } else {
+        console.log(`Chargement des notifications de type: ${filter}`);
+        data = await fetchNotificationsByType(filter);
+      }
+      
+      console.log('Notifications récupérées dans NotificationDrawer:', data.length, data);
+      setNotifications(data);
+      // Rafraîchir le compteur après avoir chargé les notifications
+      refreshUnreadCount();
+    } catch (error) {
+      console.error('Erreur lors du chargement des notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Fermer le drawer si on clique en dehors
   useEffect(() => {
@@ -48,28 +83,15 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
     };
   }, [isOpen]);
   
-  // Obtenir le nombre de notifications non lues
-  const unreadCount = notifications.filter(notification => !notification.read).length;
-  
-  // Marquer toutes les notifications comme lues
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(notification => ({
-      ...notification,
-      read: true
-    })));
-  };
-  
-  // Marquer une notification comme lue
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map(notification => 
-      notification.id === id ? { ...notification, read: true } : notification
-    ));
-  };
+  // Obtenir le nombre de notifications non lues pour l'affichage local
+  const localUnreadCount = notifications.filter((notification: Notification) => !notification.lue).length;
   
   // Filtrer les notifications
   const filteredNotifications = filter === 'all' 
     ? notifications 
-    : notifications.filter(notification => notification.type === filter);
+    : notifications.filter((notification: Notification) => notification.type === filter);
+    
+  console.log('Notifications filtrées à afficher:', filteredNotifications.length, filteredNotifications);
   
   return (
     <>
@@ -89,7 +111,7 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
         <div className="flex flex-col h-full">
           {/* En-tête */}
           <NotificationHeader 
-            unreadCount={unreadCount} 
+            unreadCount={localUnreadCount} 
             onClose={onClose} 
           />
           
@@ -102,7 +124,8 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
           {/* Liste des notifications */}
           <NotificationList 
             notifications={filteredNotifications} 
-            onMarkAsRead={markAsRead} 
+            onMarkAsRead={markAsRead}
+            loading={loading}
           />
           
           {/* Pied de page */}

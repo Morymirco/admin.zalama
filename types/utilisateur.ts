@@ -1,3 +1,5 @@
+import { Timestamp } from 'firebase/firestore';
+
 // Dans ListeUtilisateurs.tsx
 export interface Utilisateur {
   id: string;
@@ -17,7 +19,7 @@ export interface Utilisateur {
   niveauEtudes?: string;
   organization?: string;
   address?: string;
-  dateNaissance?: string;
+  dateNaissance?: Timestamp;
   sexe?: string;
   region?: string;
   note?: number;

@@ -14,8 +14,7 @@ import {
   ModaleSuppressionService
 } from '@/components/dashboard/services';
 
-// Import du type Service directement depuis le fichier de types
-import type { Service as UIService } from '@/types/service';
+// Le type UIService est maintenant importé depuis @/types/service
 
 // Importation des services Firebase
 import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
@@ -24,7 +23,7 @@ import salaryAdvanceService from '@/services/salaryAdvanceService';
 import transactionService from '@/services/transactionService';
 
 // Types
-import { Service, ServiceFormData } from '@/types/service';
+import { Service, ServiceFormData, UIService } from '@/types/service';
 import { SalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
 import { Transaction } from '@/types/transaction';
 

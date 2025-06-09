@@ -1,13 +1,7 @@
 import React from 'react';
 import { Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { Service as ServiceType } from '@/types/service';
-
-// Interface locale pour le composant - utiliser UIService pour la cohérence
-type UIService = Omit<ServiceType, 'createdAt'> & {
-  dateCreation?: string; // Optionnel pour la compatibilité avec l'ancien code
-  createdAt?: any; // Rendre createdAt optionnel
-}
+import { UIService } from '@/types/service';
 
 interface ListeServicesProps {
   services: UIService[];

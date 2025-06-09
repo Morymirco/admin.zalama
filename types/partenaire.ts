@@ -30,6 +30,7 @@ export interface Partenaire {
   logo?: string;
   secteur: string;
   description?: string;
+  statut?: string;
   siteWeb?: string;
   totalEmployes?: number;
   representant?: Representant;

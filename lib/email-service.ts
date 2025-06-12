@@ -8,30 +8,67 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  * @param email Adresse email du destinataire
  * @param displayName Nom complet de l'utilisateur
  * @param resetLink Lien de réinitialisation de mot de passe
+ * @param companyName Nom de l'entreprise
  * @returns Résultat de l'envoi
  */
-export async function sendPasswordResetEmail(email: string, displayName: string, resetLink: string) {
+export async function sendPasswordResetEmail(email: string, displayName: string, resetLink: string, companyName: string) {
   try {
-    // Utiliser le domaine resend.dev pour les tests
     const { data, error } = await resend.emails.send({
       from: 'Zalama <contact@zalamagn.com>',
       to: email,
       subject: 'Bienvenue chez Zalama - Configurez votre compte',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <img src="https://www.zalamagn.com/images/zalama-logo.svg" alt="Zalama Logo" style="max-width: 150px;">
-          </div>
-          <h2 style="color: #333; text-align: center;">Bienvenue chez Zalama, ${displayName}!</h2>
-          <p style="color: #555; line-height: 1.5;">Votre compte a été créé dans notre système. Pour commencer à utiliser la plateforme, veuillez configurer votre mot de passe en cliquant sur le lien ci-dessous :</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetLink}" style="background-color: #4A90E2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Configurer mon mot de passe</a>
-          </div>
-          <p style="color: #555; line-height: 1.5;">Ce lien est valable pendant 24 heures. Si vous n'avez pas demandé la création de ce compte, veuillez ignorer cet email.</p>
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #777; font-size: 12px; text-align: center;">
-            <p>© ${new Date().getFullYear()} Zalama. Tous droits réservés.</p>
-          </div>
-        </div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenue chez Zalama</title>
+</head>
+<body style="background-color: #ffffff; font-family: 'Roboto', Helvetica, sans-serif; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; min-height: 100%; margin: 20px auto; background-color: #ffffff; border: 4px solid #1e40af; border-radius: 16px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 15px; text-align: center; border-radius: 12px 12px 0 0;">
+        <span style="color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); display: inline-block; padding: 8px 16px; background-color: rgba(0,0,0,0.1); border-radius: 8px;">ZaLaMa</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px; background-color: #f9fafb;">
+        <h2 style="color: #1e3a8a; font-size: 30px; font-weight: 700; margin: 0 0 25px 0; border-bottom: 6px solid #3b82f6; padding-bottom: 12px; text-align: center; letter-spacing: 1px;">Bienvenue chez ZaLaMa, ${displayName}!</h2>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+              Votre compte a été créé dans notre système pour l'entreprise <span style="font-weight: bold; color: #1e40af;">${companyName}</span>. Pour commencer à utiliser la plateforme, veuillez configurer votre mot de passe en cliquant sur le bouton ci-dessous :
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: center; padding: 20px 0;">
+              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px; border: 1px solid #1e40af;">Configurer mon mot de passe</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; border: 1px solid #dbeafe;">
+              <span style="font-weight: bold; color: #1e40af;">Note :</span> Ce lien est valable pendant 24 heures. Si vous n'avez pas demandé la création de ce compte, veuillez ignorer cet email.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #1e40af; padding: 25px; text-align: center; font-size: 14px; color: #ffffff; border-radius: 0 0 12px 12px;">
+        <p style="margin: 0 0 15px 0; font-weight: 500;">ZaLaMa SAS - Plateforme de gestion</p>
+        <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); padding: 12px 30px; border-radius: 10px; border: 1px solid #ffffff;">
+              <a href="mailto:contact@zalamagn.com" style="color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">Contactez-nous</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
       `,
     });
 
@@ -46,47 +83,84 @@ export async function sendPasswordResetEmail(email: string, displayName: string,
     console.error('Erreur lors de l\'envoi de l\'email:', error);
     return false;
   }
-} 
+}
 
-// Envoyer un email de réinitialisation de mot de passe pour le RH
+/**
+ * Envoie un email de réinitialisation de mot de passe pour le RH
+ * @param email Adresse email du destinataire
+ * @param displayName Nom complet de l'utilisateur
+ * @param resetLink Lien de réinitialisation de mot de passe
+ * @param partenaireNom Nom du partenaire/entreprise
+ * @returns Résultat de l'envoi
+ */
 export async function sendPasswordResetEmailRH(email: string, displayName: string, resetLink: string, partenaireNom: string) {
   try {
-    // Utiliser le domaine resend.dev pour les tests
     const { data, error } = await resend.emails.send({
       from: 'Zalama <contact@zalamagn.com>',
       to: email,
       subject: 'Bienvenue sur l\'espace RH Zalama - Configurez votre compte',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <img src="https://www.zalamagn.com/images/zalama-logo.svg" alt="Zalama Logo" style="max-width: 150px;">
-          </div>
-          <h2 style="color: #333; text-align: center;">Bienvenue sur l'espace RH Zalama, ${displayName}!</h2>
-          <p style="color: #555; line-height: 1.5;">Votre compte administrateur RH pour <strong>${partenaireNom}</strong> a été créé dans notre système. En tant que responsable RH, vous aurez accès à :</p>
-          
-          <ul style="color: #555; line-height: 1.5;">
-            <li>La gestion des employés de votre entreprise</li>
-            <li>Le suivi des formations et certifications</li>
-            <li>Les tableaux de bord analytiques RH</li>
-            <li>La gestion des demandes de congés et absences</li>
-            <li>Les outils d'évaluation et de performance</li>
-          </ul>
-          
-          <p style="color: #555; line-height: 1.5;">Pour commencer à utiliser la plateforme, veuillez configurer votre mot de passe en cliquant sur le lien ci-dessous :</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetLink}" style="background-color: #4A90E2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Configurer mon mot de passe</a>
-          </div>
-          
-          <p style="color: #555; line-height: 1.5;">Ce lien est valable pendant 24 heures. Après avoir configuré votre mot de passe, vous pourrez vous connecter à l'espace RH Zalama et commencer à gérer les ressources humaines de votre entreprise.</p>
-          
-          <p style="color: #555; line-height: 1.5;">Si vous avez des questions ou besoin d'assistance, n'hésitez pas à contacter notre équipe support à <a href="mailto:support@zalamagn.com">support@zalamagn.com</a>.</p>
-          
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #777; font-size: 12px; text-align: center;">
-            <p>© ${new Date().getFullYear()} Zalama. Tous droits réservés.</p>
-            <p>Cet email a été envoyé à ${email}. Si vous n'avez pas demandé la création de ce compte, veuillez nous contacter immédiatement.</p>
-          </div>
-        </div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espace RH Zalama</title>
+</head>
+<body style="background-color: #ffffff; font-family: 'Roboto', Helvetica, sans-serif; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; min-height: 100%; margin: 20px auto; background-color: #ffffff; border: 4px solid #1e40af; border-radius: 16px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 15px; text-align: center; border-radius: 12px 12px 0 0;">
+        <span style="color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); display: inline-block; padding: 8px 16px; background-color: rgba(0,0,0,0.1); border-radius: 8px;">ZaLaMa</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px; background-color: #f9fafb;">
+        <h2 style="color: #1e3a8a; font-size: 30px; font-weight: 700; margin: 0 0 25px 0; border-bottom: 6px solid #3b82f6; padding-bottom: 12px; text-align: center; letter-spacing: 1px;">BIENVENUE SUR L'ESPACE RH ZaLaMa, ${partenaireNom}</h2>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+              Nous avons le plaisir de vous confirmer que votre entreprise a été intégrée avec succès au tableau de bord partenaire de ZaLaMa, conformément à l'accord de partenariat récemment conclu.
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+              Vous disposez d'un accès sécurisé à votre espace RH, vous permettant notamment de :
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Suivre en temps réel les demandes de vos employés</li>
+                <li style="margin-bottom: 8px;">Accéder aux statistiques d'utilisation en temps réel</li>
+                <li>Accéder aux rapports d'activité détaillés</li>
+              </ul>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: center; padding: 20px 0;">
+              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px; border: 1px solid #1e40af;">Configurer mon mot de passe</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; border: 1px solid #dbeafe;">
+              Merci pour votre confiance. Nous restons à votre disposition pour toute assistance.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #1e40af; padding: 25px; text-align: center; font-size: 14px; color: #ffffff; border-radius: 0 0 12px 12px;">
+        <p style="margin: 0 0 15px 0; font-weight: 500;">Zalama SAS - Espace Ressources Humaines</p>
+        <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); padding: 12px 30px; border-radius: 10px; border: 1px solid #ffffff;">
+              <a href="mailto:support@zalamagn.com" style="color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">Support RH</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
       `,
     });
 
@@ -102,29 +176,88 @@ export async function sendPasswordResetEmailRH(email: string, displayName: strin
     return false;
   }
 }
-//Envoie un email au responsable de l'entreprise  
+
+/**
+ * Envoie un email au responsable de l'entreprise
+ * @param email Adresse email du destinataire
+ * @param displayName Nom complet de l'utilisateur
+ * @param partenaireNom Nom de l'entreprise
+ * @param resetLink Lien de réinitialisation de mot de passe
+ * @returns Résultat de l'envoi
+ */
 export async function sendWelcomeEmailToResponsable(email: string, displayName: string, partenaireNom: string, resetLink: string) {
   try {
     const { data, error } = await resend.emails.send({
       from: 'Zalama <contact@zalamagn.com>',
       to: email,
-      subject: 'Bienvenue sur l\'espace d\'administration de votre entreprise - Configurez votre compte',
+      subject: 'Bienvenue sur l\'espace d\'administration de votre entreprise',
       html: `
-        <div>
-          <p>Bonjour ${displayName},</p>
-          <p>Vous avez été ajouté comme responsable de l'entreprise ${partenaireNom}.</p>
-          <p>Vous pouvez désormais accéder à l'espace d'administration Zalama en utilisant votre email et votre mot de passe.</p>
-          <p>Pour configurer votre mot de passe, veuillez cliquer sur le lien ci-dessous :</p>
-          <a href="${resetLink}" style="background-color: #4A90E2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Configurer mon mot de passe</a>
-
-        </div>
-
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #777; font-size: 12px; text-align: center;">
-            <p>© ${new Date().getFullYear()} Zalama. Tous droits réservés.</p>
-            <p>Cet email a été envoyé à ${email}. Si vous n'avez pas demandé la création de ce compte, veuillez nous contacter immédiatement.</p>
-          </div>  
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espace Administration</title>
+</head>
+<body style="background-color: #ffffff; font-family: 'Roboto', Helvetica, sans-serif; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; min-height: 100%; margin: 20px auto; background-color: #ffffff; border: 4px solid #1e40af; border-radius: 16px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 15px; text-align: center; border-radius: 12px 12px 0 0;">
+        <span style="color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); display: inline-block; padding: 8px 16px; background-color: rgba(0,0,0,0.1); border-radius: 8px;">Zalama</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px; background-color: #f9fafb;">
+        <h2 style="color: #1e3a8a; font-size: 30px; font-weight: 700; margin: 0 0 25px 0; border-bottom: 6px solid #3b82f6; padding-bottom: 12px; text-align: center; letter-spacing: 1px;">Bienvenue, ${displayName}!</h2>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+              Vous avez été désigné comme responsable de l'entreprise <strong style="color: #1e40af;">${partenaireNom}</strong> sur la plateforme Zalama.
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+              En tant qu'administrateur, vous aurez accès à toutes les fonctionnalités de gestion de votre entreprise, y compris la création de comptes utilisateurs, la gestion des accès et la configuration des paramètres organisationnels.
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: center; padding: 20px 0;">
+              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px; border: 1px solid #1e40af;">Configurer mon mot de passe</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; border: 1px solid #dbeafe;">
+              <span style="font-weight: bold; color: #1e40af;">Important :</span> Ce lien est valable 24 heures. Après activation, vous pourrez accéder à l'espace d'administration de votre entreprise.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #1e40af; padding: 25px; text-align: center; font-size: 14px; color: #ffffff; border-radius: 0 0 12px 12px;">
+        <p style="margin: 0 0 15px 0; font-weight: 500;">Zalama SAS - Espace Administration Entreprise</p>
+        <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); padding: 12px 30px; border-radius: 10px; border: 1px solid #ffffff;">
+              <a href="mailto:admin@zalamagn.com" style="color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">Support Administrateur</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
       `,
     });
+
+    if (error) {
+      console.error('Erreur Resend:', error);
+      return false;
+    }
+
+    console.log('Email responsable envoyé avec succès:', data);
+    return true;
   } catch (error) {
     console.error('Erreur lors de l\'envoi de l\'email au responsable:', error);
     return false;

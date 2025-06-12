@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
     const resetLink = await auth.generatePasswordResetLink(email);
     
     // Envoyer l'email avec le lien de réinitialisation via Resend
-    const emailSent = await sendPasswordResetEmail(email, displayName, resetLink);
+    const companyName = process.env.COMPANY_NAME || 'Votre entreprise';
+    const emailSent = await sendPasswordResetEmail(email, displayName, resetLink, companyName);
     
     // Envoyer un SMS si un numéro de téléphone est fourni
     let smsSent = false;

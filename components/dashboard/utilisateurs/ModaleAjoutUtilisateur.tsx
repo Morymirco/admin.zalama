@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 interface ModaleAjoutUtilisateurProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (formData: FormData) => Promise<void>;
 }
 
 const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
@@ -29,7 +29,11 @@ const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
           </button>
         </div>
         
-        <form onSubmit={onSubmit} className="p-5">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          onSubmit(formData);
+        }} className="p-5">
           <div className="space-y-4">
             {/* Type d'utilisateur */}
             <div>

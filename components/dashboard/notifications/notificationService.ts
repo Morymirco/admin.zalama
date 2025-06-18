@@ -1,75 +1,105 @@
 import { Notification } from './types';
+import { getUnreadNotifications, getNotificationsByType, getRecentNotifications } from '@/services/notificationService';
+import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-// Données factices pour les notifications
-export const notificationsMock: Notification[] = [
-  {
-    id: 1,
-    title: "Nouvelle entreprise inscrite",
-    message: "L'entreprise 'TechSolutions' vient de s'inscrire sur la plateforme.",
-    type: "info",
-    timestamp: new Date(2025, 4, 2, 14, 30),
-    read: false,
-    link: "/dashboard/entreprise/techsolutions"
-  },
-  {
-    id: 2,
-    title: "Alerte de sécurité",
-    message: "Tentative de connexion suspecte détectée depuis une adresse IP inconnue.",
-    type: "warning",
-    timestamp: new Date(2025, 4, 2, 10, 15),
-    read: false,
-    link: "/dashboard/settings"
-  },
-  {
-    id: 3,
-    title: "Objectif atteint",
-    message: "L'objectif mensuel d'inscriptions a été atteint avec 500 nouveaux utilisateurs.",
-    type: "success",
-    timestamp: new Date(2025, 4, 1, 18, 45),
-    read: false,
-    link: "/dashboard/performance"
-  },
-  {
-    id: 4,
-    title: "Erreur système",
-    message: "Une erreur est survenue lors de la génération des rapports quotidiens.",
-    type: "error",
-    timestamp: new Date(2025, 4, 1, 15, 20),
-    read: true,
-    link: "/dashboard/alertes"
-  },
-  {
-    id: 5,
-    title: "Mise à jour disponible",
-    message: "Une nouvelle version de la plateforme est disponible. Veuillez planifier la mise à jour.",
-    type: "info",
-    timestamp: new Date(2025, 4, 1, 11, 0),
-    read: true
-  },
-  {
-    id: 6,
-    title: "Nouveau partenaire",
-    message: "L'entreprise 'GlobalFinance' a rejoint notre programme de partenariat.",
-    type: "info",
-    timestamp: new Date(2025, 3, 30, 16, 30),
-    read: true,
-    link: "/dashboard/partenaires"
-  },
-  {
-    id: 7,
-    title: "Pic d'utilisation",
-    message: "Un pic d'utilisation a été détecté avec plus de 2000 utilisateurs simultanés.",
-    type: "warning",
-    timestamp: new Date(2025, 3, 30, 14, 0),
-    read: true,
-    link: "/dashboard/performance"
-  },
-  {
-    id: 8,
-    title: "Maintenance planifiée",
-    message: "Une maintenance est planifiée le 5 mai de 2h à 4h du matin.",
-    type: "info",
-    timestamp: new Date(2025, 3, 29, 15, 45),
-    read: true
+
+// Fonction pour récupérer les notifications non lues
+export const fetchUnreadNotifications = async (): Promise<Notification[]> => {
+  try {
+    console.log('Début de fetchUnreadNotifications');
+    // Récupérer toutes les notifications récentes (lues et non lues)
+    const allNotifications = await getRecentNotifications(50);
+    console.log('Notifications récupérées:', allNotifications.length, allNotifications);
+    return allNotifications;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des notifications:', error);
+    return [];
   }
-];
+};
+
+// Fonction pour récupérer uniquement le nombre de notifications non lues
+export const getUnreadNotificationsCount = async (): Promise<number> => {
+  try {
+    // Solution directe avec Firestore
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(notificationsRef, where('lue', '==', false));
+    const snapshot = await getDocs(q);
+    const count = snapshot.size;
+    console.log('Nombre de notifications non lues:', count);
+    return count;
+  } catch (error) {
+    console.error('Erreur lors du comptage des notifications non lues:', error);
+    
+    // Solution de secours si l'index n'est pas créé
+    try {
+      const allNotifications = await getRecentNotifications(50);
+      const unreadCount = allNotifications.filter(notification => !notification.lue).length;
+      console.log('Nombre de notifications non lues (méthode alternative):', unreadCount);
+      return unreadCount;
+    } catch (secondError) {
+      console.error('Erreur lors du comptage alternatif des notifications:', secondError);
+      return 0;
+    }
+  }
+};
+
+// Fonction pour récupérer les notifications par type
+export const fetchNotificationsByType = async (type: string): Promise<Notification[]> => {
+  try {
+    console.log(`Début de fetchNotificationsByType pour le type: ${type}`);
+    // Solution temporaire : récupérer toutes les notifications récentes et filtrer côté client
+    // En attendant que l'index soit créé
+    const allNotifications = await getRecentNotifications(100); // Augmenter la limite pour voir plus de notifications
+    console.log('Notifications récupérées:', allNotifications.length, allNotifications);
+    
+    const typedNotifications = allNotifications.filter(notification => notification.type === type);
+    console.log(`Notifications de type ${type}:`, typedNotifications.length);
+    
+    return typedNotifications;
+  } catch (error) {
+    console.error(`Erreur lors de la récupération des notifications de type ${type}:`, error);
+    return [];
+  }
+};
+
+// Fonction pour récupérer les notifications récentes
+export const fetchRecentNotifications = async (count: number = 5): Promise<Notification[]> => {
+  try {
+    return await getRecentNotifications(count);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des notifications récentes:', error);
+    return [];
+  }
+};
+
+// Fonction pour marquer une notification comme lue
+export const markNotificationAsRead = async (notificationId: string): Promise<boolean> => {
+  try {
+    const notificationRef = doc(db, 'notifications', notificationId);
+    await updateDoc(notificationRef, {
+      lue: true
+    });
+    return true;
+  } catch (error) {
+    console.error(`Erreur lors du marquage de la notification ${notificationId} comme lue:`, error);
+    return false;
+  }
+};
+
+// Fonction pour marquer toutes les notifications comme lues
+export const markAllNotificationsAsRead = async (notificationIds: string[]): Promise<boolean> => {
+  try {
+    const updatePromises = notificationIds.map(id => {
+      const notificationRef = doc(db, 'notifications', id);
+      return updateDoc(notificationRef, { lue: true });
+    });
+    
+    await Promise.all(updatePromises);
+    return true;
+  } catch (error) {
+    console.error('Erreur lors du marquage de toutes les notifications comme lues:', error);
+    return false;
+  }
+};
+

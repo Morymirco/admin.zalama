@@ -1,23 +1,7 @@
 import React from 'react';
 import { Users, Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Briefcase, GraduationCap, Building } from 'lucide-react';
 import Image from 'next/image';
-
-interface Utilisateur {
-  id: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone: string;
-  adresse: string;
-  type: 'Étudiant' | 'Salarié' | 'Entreprise';
-  statut: 'Actif' | 'Inactif' | 'En attente';
-  dateInscription: string;
-  photo: string;
-  organisation?: string;
-  poste?: string;
-  niveauEtudes?: string;
-  etablissement?: string;
-}
+import { Utilisateur } from '@/types/utilisateur';
 
 interface ListeUtilisateursProps {
   utilisateurs: Utilisateur[];
@@ -62,11 +46,11 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
   // Fonction pour obtenir l'icône en fonction du type d'utilisateur
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'Étudiant':
+      case 'etudiant':
         return <GraduationCap className="h-4 w-4" />;
-      case 'Salarié':
+      case 'salaries':
         return <Briefcase className="h-4 w-4" />;
-      case 'Entreprise':
+      case 'pension':
         return <Building className="h-4 w-4" />;
       default:
         return <Users className="h-4 w-4" />;
@@ -160,32 +144,32 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
                         <div className="h-10 w-10 flex-shrink-0">
                           <Image 
                             className="h-10 w-10 rounded-full object-cover" 
-                            src={utilisateur.photo || '/images/avatar-placeholder.png'} 
+                            src={utilisateur.photoURL || '/images/avatar-placeholder.png'} 
                             width={40}
                             height={40}
-                            alt={`${utilisateur.prenom} ${utilisateur.nom}`}
+                            alt={`${utilisateur.displayName}`}
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = '/images/avatar-placeholder.png';
                             }}
                           />
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-[var(--zalama-text)]">{utilisateur.prenom} {utilisateur.nom}</div>
-                          {utilisateur.type === 'Salarié' && utilisateur.poste && utilisateur.organisation && (
-                            <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.poste} - {utilisateur.organisation}</div>
+                          <div className="text-sm font-medium text-[var(--zalama-text)]">{utilisateur.displayName}</div>
+                          {utilisateur.type === 'salaries' && utilisateur.poste && utilisateur.departement && (
+                            <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.poste} - {utilisateur.departement}</div>
                           )}
-                          {utilisateur.type === 'Étudiant' && utilisateur.niveauEtudes && utilisateur.etablissement && (
+                          {utilisateur.type === 'etudiant' && utilisateur.niveauEtudes && utilisateur.etablissement && (
                             <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.niveauEtudes} - {utilisateur.etablissement}</div>
                           )}
-                          {utilisateur.type === 'Entreprise' && utilisateur.organisation && (
-                            <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.organisation}</div>
+                          {utilisateur.type === 'pension' && utilisateur.departement && (
+                            <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.departement}</div>
                           )}
                         </div>
                       </div>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap">
                       <div className="text-sm text-[var(--zalama-text)]">{utilisateur.email}</div>
-                      <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.telephone}</div>
+                      <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.phoneNumber}</div>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -196,12 +180,12 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
                       </div>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(utilisateur.statut)}`}>
-                        {utilisateur.statut}
+                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(utilisateur.active ? 'Actif' : 'Inactif')}`}>
+                        {utilisateur.active ? 'Actif' : 'Inactif'}
                       </span>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap text-sm text-[var(--zalama-text)]">
-                      {new Date(utilisateur.dateInscription).toLocaleDateString()}
+                      {new Date(utilisateur.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">

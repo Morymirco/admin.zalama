@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DollarSign, Users, ArrowUpCircle } from 'lucide-react';
+import { Timestamp } from 'firebase/firestore';
 
 // Importation des composants
 import {
@@ -13,17 +14,18 @@ import {
   ModaleSuppressionService
 } from '@/components/dashboard/services';
 
+// Le type UIService est maintenant importé depuis @/types/service
+
+// Importation des services Firebase
+import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
+import serviceService, { getAvailableServices, getCategoriesWithCount } from '@/services/serviceService';
+import salaryAdvanceService from '@/services/salaryAdvanceService';
+import transactionService from '@/services/transactionService';
+
 // Types
-interface Service {
-  id: string;
-  nom: string;
-  description: string;
-  categorie: string;
-  prix: number;
-  duree: string;
-  disponible: boolean;
-  dateCreation: string;
-}
+import { Service, ServiceFormData, UIService } from '@/types/service';
+import { SalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
+import { Transaction } from '@/types/transaction';
 
 interface DemandeStats {
   type: string;
@@ -38,8 +40,6 @@ interface DemandeStats {
 
 export default function ServicesPage() {
   // États
-  const [services, setServices] = useState<Service[]>([]);
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8);
@@ -47,97 +47,89 @@ export default function ServicesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentService, setCurrentService] = useState<Service | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [categorieFilter, setCategorieFilter] = useState<string>('toutes');
   const [statsLoading, setStatsLoading] = useState(true);
   const [demandeStats, setDemandeStats] = useState<DemandeStats[]>([]);
+  const [categories, setCategories] = useState<string[]>(['toutes']);
 
-  // Liste des catégories
-  const categories = ['toutes', 'Finance', 'Conseil', 'Marketing', 'RH', 'Technologie', 'Stratégie'];
+  // Utilisation de notre hook pour récupérer les services depuis Firestore
+  const { data: services, loading: isLoading } = useFirebaseCollection<Service>(serviceService);
+  
+  // Récupération des demandes d'avance sur salaire pour les statistiques
+  const { data: demandes, loading: loadingDemandes } = useFirebaseCollection<SalaryAdvanceRequest>(salaryAdvanceService);
+  
+  // Récupération des transactions pour les statistiques
+  const { data: transactions, loading: loadingTransactions } = useFirebaseCollection<Transaction>(transactionService);
 
-  // Données fictives pour la démo
-  useEffect(() => {
-    // Simuler un chargement depuis une API
-    setTimeout(() => {
-      const mockData: Service[] = [
-        { id: '1', nom: 'Demande d\'avance', description: 'Avance sur salaire pour les employés', categorie: 'Finance', prix: 15000, duree: '2 jours', disponible: true, dateCreation: '2025-01-15' },
-        { id: '2', nom: 'Prêt P2P', description: 'Prêt entre particuliers via la plateforme', categorie: 'Finance', prix: 25000, duree: '5 jours', disponible: true, dateCreation: '2025-01-20' },
-        { id: '3', nom: 'Paiement de salaire', description: 'Service de paiement anticipé de salaire', categorie: 'Finance', prix: 20000, duree: '3 jours', disponible: true, dateCreation: '2025-02-05' },
-        { id: '4', nom: 'Conseil financier', description: 'Consultation avec un conseiller financier', categorie: 'Conseil', prix: 50000, duree: '1 jour', disponible: true, dateCreation: '2025-02-10' },
-        { id: '5', nom: 'Marketing digital', description: 'Services de marketing pour entreprises', categorie: 'Marketing', prix: 300000, duree: '1 semaine', disponible: true, dateCreation: '2025-02-15' },
-        { id: '6', nom: 'Assistance fiscale', description: 'Conseil et optimisation fiscale', categorie: 'Finance', prix: 200000, duree: '2 jours', disponible: false, dateCreation: '2025-03-01' },
-        { id: '7', nom: 'Recrutement personnel', description: 'Service de recrutement et sélection de candidats', categorie: 'RH', prix: 350000, duree: '3 semaines', disponible: true, dateCreation: '2025-03-10' },
-        { id: '8', nom: 'Maintenance informatique', description: 'Service de maintenance des équipements informatiques', categorie: 'Technologie', prix: 100000, duree: '1 jour', disponible: true, dateCreation: '2025-03-15' },
-        { id: '9', nom: 'Formation leadership', description: 'Formation au leadership et management d\'équipe', categorie: 'RH', prix: 180000, duree: '2 jours', disponible: true, dateCreation: '2025-03-20' },
-        { id: '10', nom: 'Conseil stratégique', description: 'Consultation sur la stratégie d\'entreprise', categorie: 'Stratégie', prix: 400000, duree: '1 semaine', disponible: true, dateCreation: '2025-04-01' },
-      ];
-      
-      setServices(mockData);
-      setFilteredServices(mockData);
-      setIsLoading(false);
-    }, 1000);
-
-    // Données fictives pour les statistiques des demandes
-    setTimeout(() => {
-      const statsMockData: DemandeStats[] = [
-        {
-          type: 'Demandes d\'avance',
-          nombre: 156,
-          approuvees: 124,
-          enCours: 22,
-          refusees: 10,
-          delaiMoyen: 12, // heures
-          tendance: 'hausse',
-          icon: <DollarSign className="h-6 w-6 text-[var(--zalama-blue)]" />
-        },
-        {
-          type: 'Prêts P2P',
-          nombre: 89,
-          approuvees: 65,
-          enCours: 18,
-          refusees: 6,
-          delaiMoyen: 24, // heures
-          tendance: 'stable',
-          icon: <Users className="h-6 w-6 text-[var(--zalama-success)]" />
-        },
-        {
-          type: 'Paiements de salaire',
-          nombre: 210,
-          approuvees: 195,
-          enCours: 12,
-          refusees: 3,
-          delaiMoyen: 8, // heures
-          tendance: 'hausse',
-          icon: <ArrowUpCircle className="h-6 w-6 text-[var(--zalama-warning)]" />
-        }
-      ];
-      
-      setDemandeStats(statsMockData);
-      setStatsLoading(false);
-    }, 1500);
-  }, []);
-
-  // Filtrage des services
-  useEffect(() => {
-    let result = [...services];
-    
-    // Filtre par recherche
-    if (searchTerm) {
-      result = result.filter(service => 
+  // Filtrer les services en fonction de la recherche et de la catégorie
+  const filteredServices = useMemo(() => {
+    return services.filter(service => {
+      const matchesSearch = searchTerm === '' || 
         service.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.categorie.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+        service.description.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCategory = categorieFilter === 'toutes' || service.categorie === categorieFilter;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [services, searchTerm, categorieFilter]);
+
+  // Récupérer les catégories uniques à partir des services
+  useEffect(() => {
+    if (!isLoading && services.length > 0) {
+      const uniqueCategories = ['toutes', ...new Set(services.map(service => service.categorie))];
+      setCategories(uniqueCategories);
     }
-    
-    // Filtre par catégorie
-    if (categorieFilter !== 'toutes') {
-      result = result.filter(service => service.categorie === categorieFilter);
+  }, [services, isLoading]);
+
+  // Calculer les statistiques des demandes
+  useEffect(() => {
+    if (!loadingDemandes && !loadingTransactions) {
+      // Statistiques pour les avances sur salaire
+      const avancesStats: DemandeStats = {
+        type: 'Avances sur salaire',
+        nombre: demandes.length,
+        approuvees: demandes.filter(d => d.statut === 'approuvée').length,
+        enCours: demandes.filter(d => d.statut === 'en attente').length,
+        refusees: demandes.filter(d => d.statut === 'rejetée').length,
+        delaiMoyen: 24, // À calculer à partir des timestamps
+        tendance: demandes.length > 100 ? 'hausse' as const : 'stable' as const,
+        icon: <DollarSign className="h-5 w-5" />
+      };
+      
+      // Statistiques pour les transactions financières
+      const transactionsStats: DemandeStats = {
+        type: 'Transactions',
+        nombre: transactions.length,
+        approuvees: transactions.filter(t => t.statut === 'complete' || t.statut === 'EFFECTUEE').length,
+        enCours: transactions.filter(t => t.statut === 'en cours').length,
+        refusees: transactions.filter(t => t.statut === 'annulee' || t.statut === 'echouee').length,
+        delaiMoyen: 12, // À calculer à partir des timestamps
+        tendance: transactions.length > 80 ? 'hausse' as const : 'stable' as const,
+        icon: <Users className="h-5 w-5" />
+      };
+      
+      // Statistiques pour les services financiers
+      const servicesFinanciers: DemandeStats = {
+        type: 'Services financiers',
+        nombre: services.filter(s => s.categorie === 'Finance').length,
+        approuvees: services.filter(s => s.categorie === 'Finance' && s.disponible).length,
+        enCours: 0,
+        refusees: services.filter(s => s.categorie === 'Finance' && !s.disponible).length,
+        delaiMoyen: 0,
+        tendance: services.filter(s => s.categorie === 'Finance').length > 5 ? 'hausse' as const : 'stable' as const,
+        icon: <ArrowUpCircle className="h-5 w-5" />
+      };
+      
+      setDemandeStats([avancesStats, transactionsStats, servicesFinanciers]);
+      setStatsLoading(false);
     }
-    
-    setFilteredServices(result);
-    setCurrentPage(1); // Réinitialiser la pagination lors du filtrage
-  }, [searchTerm, categorieFilter, services]);
+  }, [demandes, transactions, services, loadingDemandes, loadingTransactions, isLoading]);
+
+  // Réinitialiser la pagination lors du filtrage
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categorieFilter]);
 
   // Handlers
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,80 +151,104 @@ export default function ServicesPage() {
     setShowAddModal(true);
   };
 
-  const handleEditService = (service: Service) => {
-    setCurrentService(service);
+  const handleEditService = (service: UIService) => {
+    // Convertir UIService en Service pour la cohérence interne
+    const serviceWithCreatedAt: Service = {
+      ...service,
+      createdAt: service.createdAt || Timestamp.now() // Utiliser createdAt s'il existe, sinon utiliser maintenant
+    };
+    setCurrentService(serviceWithCreatedAt);
     setShowEditModal(true);
   };
 
-  const handleDeleteService = (service: Service) => {
-    setCurrentService(service);
+  const handleDeleteService = (service: UIService) => {
+    // Convertir UIService en Service pour la cohérence interne
+    const serviceWithCreatedAt: Service = {
+      ...service,
+      createdAt: service.createdAt || Timestamp.now() // Utiliser createdAt s'il existe, sinon utiliser maintenant
+    };
+    setCurrentService(serviceWithCreatedAt);
     setShowDeleteModal(true);
   };
 
-  const handleSubmitAddService = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitAddService = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
     const form = e.currentTarget;
     
-    // Génération d'un ID unique
-    const newId = Date.now().toString();
-    
-    const newService: Service = {
-      id: newId,
-      nom: (form.querySelector('#nom') as HTMLInputElement).value,
-      description: (form.querySelector('#description') as HTMLTextAreaElement).value,
-      categorie: (form.querySelector('#categorie') as HTMLInputElement).value,
-      prix: parseFloat((form.querySelector('#prix') as HTMLInputElement).value),
-      duree: (form.querySelector('#duree') as HTMLInputElement).value,
-      disponible: (form.querySelector('#disponible') as HTMLInputElement).checked,
-      dateCreation: new Date().toISOString().split('T')[0],
-    };
-    
-    setServices([...services, newService]);
-    setFilteredServices([...services, newService]);
-    setShowAddModal(false);
-    
-    // Notification de succès (à implémenter)
-    console.log('Service ajouté avec succès:', newService);
-  };
+    try {
+      // Préparer les données du nouveau service
+      const serviceData = {
+        nom: (form.querySelector('#add-nom') as HTMLInputElement).value,
+        description: (form.querySelector('#add-description') as HTMLTextAreaElement).value,
+        categorie: (form.querySelector('#add-categorie') as HTMLInputElement).value,
+        pourcentageMax: parseFloat((form.querySelector('#add-pourcentage') as HTMLInputElement).value),
+        duree: (form.querySelector('#add-duree') as HTMLInputElement).value,
+        disponible: (form.querySelector('#add-disponible') as HTMLInputElement).checked,
+        createdAt: Timestamp.now(), // Ajouter le timestamp de création
+      };
+      
+      // Ajouter le service à Firestore
+      await serviceService.create(serviceData);
+      
+      setShowAddModal(false);
+      
+      // Notification de succès (à implémenter)
+      console.log('Service ajouté avec succès');
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du service:', error);
+      // Notification d'erreur (à implémenter)
+    }
+  }, []);
 
-  const handleSubmitEditService = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitEditService = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentService) return;
     
     const form = e.currentTarget;
     
-    const updatedService: Service = {
-      ...currentService,
-      nom: (form.querySelector('#edit-nom') as HTMLInputElement).value,
-      description: (form.querySelector('#edit-description') as HTMLTextAreaElement).value,
-      categorie: (form.querySelector('#edit-categorie') as HTMLInputElement).value,
-      prix: parseFloat((form.querySelector('#edit-prix') as HTMLInputElement).value),
-      duree: (form.querySelector('#edit-duree') as HTMLInputElement).value,
-      disponible: (form.querySelector('#edit-disponible') as HTMLInputElement).checked,
-    };
-    
-    const updatedServices = services.map(s => s.id === currentService.id ? updatedService : s);
-    setServices(updatedServices);
-    setFilteredServices(updatedServices);
-    setShowEditModal(false);
-    setCurrentService(null);
-    
-    // Notification de succès (à implémenter)
-    console.log('Service mis à jour avec succès:', updatedService);
-  };
+    try {
+      // Préparer les données mises à jour
+      const updatedData = {
+        nom: (form.querySelector('#edit-nom') as HTMLInputElement).value,
+        description: (form.querySelector('#edit-description') as HTMLTextAreaElement).value,
+        categorie: (form.querySelector('#edit-categorie') as HTMLInputElement).value,
+        pourcentageMax: parseFloat((form.querySelector('#edit-pourcentage') as HTMLInputElement).value),
+        duree: (form.querySelector('#edit-duree') as HTMLInputElement).value,
+        disponible: (form.querySelector('#edit-disponible') as HTMLInputElement).checked,
+      };
+      
+      // Mettre à jour le service dans Firestore
+      await serviceService.update(currentService.id, updatedData);
+      
+      setShowEditModal(false);
+      setCurrentService(null);
+      
+      // Notification de succès (à implémenter)
+      console.log('Service mis à jour avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du service:', error);
+      // Notification d'erreur (à implémenter)
+    }
+  }, [currentService]);
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!currentService) return;
     
-    const updatedServices = services.filter(s => s.id !== currentService.id);
-    setServices(updatedServices);
-    setFilteredServices(updatedServices);
-    setShowDeleteModal(false);
-    setCurrentService(null);
-    
-    // Notification de succès (à implémenter)
-    console.log('Service supprimé avec succès:', currentService);
-  };
+    try {
+      // Supprimer le service de Firestore
+      await serviceService.delete(currentService.id);
+      
+      setShowDeleteModal(false);
+      setCurrentService(null);
+      
+      // Notification de succès (à implémenter)
+      console.log('Service supprimé avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la suppression du service:', error);
+      // Notification d'erreur (à implémenter)
+    }
+  }, [currentService]);
 
   return (
     <div className="p-6">

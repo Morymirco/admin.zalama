@@ -1,16 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-
-interface Service {
-  id: string;
-  nom: string;
-  description: string;
-  categorie: string;
-  prix: number;
-  duree: string;
-  disponible: boolean;
-  dateCreation: string;
-}
+import { Service } from '@/types/service';
 
 interface ModaleSuppressionServiceProps {
   isOpen: boolean;

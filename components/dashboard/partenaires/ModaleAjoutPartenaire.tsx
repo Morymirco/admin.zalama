@@ -1,396 +1,544 @@
-import React, { useState, useRef } from 'react';
-import { X, Upload } from 'lucide-react';
+"use client";
+import React, { useState } from 'react';
+import { usePartners } from '@/hooks/useDatabase';
+import { Partner } from '@/lib/supabase';
+import { X, Save, Building, User, Mail, Phone, Globe, MapPin, AlertCircle } from 'lucide-react';
+import Notification, { NotificationType } from '@/components/ui/Notification';
 
 interface ModaleAjoutPartenaireProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  types: string[];
+  onSuccess?: () => void;
 }
 
-const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
-  isOpen,
-  onClose,
-  onSubmit,
-  types
-}) => {
-  // États pour le logo
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string>('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: ModaleAjoutPartenaireProps) {
+  const { createPartner } = usePartners();
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    type: NotificationType;
+    title: string;
+    message?: string;
+  }>({
+    show: false,
+    type: 'info',
+    title: ''
+  });
 
-  // Gestion du téléchargement du logo
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setLogoFile(file);
-      
-      // Créer un aperçu du logo
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setLogoPreview(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  // État du formulaire
+  const [formData, setFormData] = useState({
+    nom: '',
+    type: '',
+    secteur: '',
+    description: '',
+    nom_representant: '',
+    email_representant: '',
+    telephone_representant: '',
+    nom_rh: '',
+    email_rh: '',
+    telephone_rh: '',
+    rccm: '',
+    nif: '',
+    email: '',
+    telephone: '',
+    adresse: '',
+    site_web: ''
+  });
+
+  // Types de partenaires disponibles
+  const typesPartenaires = [
+    'Université',
+    'Entreprise',
+    'Organisation',
+    'Institution',
+    'Centre de formation',
+    'Agence',
+    'Association'
+  ];
+
+  // Secteurs d'activité
+  const secteurs = [
+    'Technologie',
+    'Éducation',
+    'Santé',
+    'Finance',
+    'Commerce',
+    'Industrie',
+    'Services',
+    'Marketing',
+    'Consultation',
+    'Formation',
+    'Recherche',
+    'Autre'
+  ];
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  // Gestion du clic sur le bouton de téléchargement
-  const handleLogoClick = () => {
-    fileInputRef.current?.click();
+  const showNotification = (type: NotificationType, title: string, message?: string) => {
+    setNotification({
+      show: true,
+      type,
+      title,
+      message
+    });
   };
 
-
-  
-  // Gestion de la soumission du formulaire
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setLoading(true);
+
     try {
-      // Collecte des données du formulaire
-      const form = e.currentTarget;
-      const formData = {
-        // Informations sur l'entreprise
-        nom: (form.querySelector('#nom') as HTMLInputElement)?.value || '',
-        type: (form.querySelector('#type') as HTMLSelectElement)?.value || '',
-        domaine: (form.querySelector('#domaine') as HTMLInputElement)?.value || '',
-        description: (form.querySelector('#description') as HTMLTextAreaElement)?.value || '',
-        
-        // Représentant
-        nomRepresentant: (form.querySelector('#nomRepresentant') as HTMLInputElement)?.value || '',
-        emailRepresentant: (form.querySelector('#emailRepresentant') as HTMLInputElement)?.value || '',
-        telephoneRepresentant: (form.querySelector('#telephoneRepresentant') as HTMLInputElement)?.value || '',
-        
-        // Responsable RH
-        nomRH: (form.querySelector('#nomRH') as HTMLInputElement)?.value || '',
-        emailRH: (form.querySelector('#emailRH') as HTMLInputElement)?.value || '',
-        telephoneRH: (form.querySelector('#telephoneRH') as HTMLInputElement)?.value || '',
-        
-        // Informations légales et contact
-        rccm: (form.querySelector('#rccm') as HTMLInputElement)?.value || '',
-        nif: (form.querySelector('#nif') as HTMLInputElement)?.value || '',
-        email: (form.querySelector('#email') as HTMLInputElement)?.value || '',
-        telephone: (form.querySelector('#telephone') as HTMLInputElement)?.value || '',
-        adresse: (form.querySelector('#adresse') as HTMLInputElement)?.value || '',
-        siteWeb: (form.querySelector('#siteWeb') as HTMLInputElement)?.value || '',
-        
-        // Autres informations
-        dateAdhesion: (form.querySelector('#dateAdhesion') as HTMLInputElement)?.value || '',
-        actif: (form.querySelector('#actif') as HTMLInputElement)?.checked || false,
-        
-        // Logo
-        logo: logoFile
+      // Validation des champs obligatoires
+      if (!formData.nom || !formData.type || !formData.secteur || !formData.email) {
+        throw new Error('Veuillez remplir tous les champs obligatoires');
+      }
+
+      // Validation email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Adresse email invalide');
+      }
+
+      // Préparation des données
+      const partnerData: Partial<Partner> = {
+        nom: formData.nom,
+        type: formData.type,
+        secteur: formData.secteur,
+        description: formData.description || undefined,
+        nom_representant: formData.nom_representant || undefined,
+        email_representant: formData.email_representant || undefined,
+        telephone_representant: formData.telephone_representant || undefined,
+        nom_rh: formData.nom_rh || undefined,
+        email_rh: formData.email_rh || undefined,
+        telephone_rh: formData.telephone_rh || undefined,
+        rccm: formData.rccm || undefined,
+        nif: formData.nif || undefined,
+        email: formData.email,
+        telephone: formData.telephone || undefined,
+        adresse: formData.adresse || undefined,
+        site_web: formData.site_web || undefined,
+        actif: true
       };
+
+      await createPartner(partnerData);
       
-      // Stockage temporaire des données
-      (window as any).formData = formData;
+      // Afficher notification de succès
+      showNotification('success', 'Partenaire créé avec succès', 'Le nouveau partenaire a été ajouté à la base de données.');
       
-      // Appel de la fonction onSubmit passée en props
-      onSubmit(e);
-    } catch (error) {
-      console.error('Erreur lors de la soumission du formulaire:', error);
-      alert('Une erreur est survenue lors de la soumission du formulaire. Veuillez réessayer.');
+      // Réinitialiser le formulaire
+      setFormData({
+        nom: '',
+        type: '',
+        secteur: '',
+        description: '',
+        nom_representant: '',
+        email_representant: '',
+        telephone_representant: '',
+        nom_rh: '',
+        email_rh: '',
+        telephone_rh: '',
+        rccm: '',
+        nif: '',
+        email: '',
+        telephone: '',
+        adresse: '',
+        site_web: ''
+      });
+
+      // Fermer la modal après un délai
+      setTimeout(() => {
+        onSuccess?.();
+        onClose();
+      }, 1500);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création du partenaire';
+      showNotification('error', 'Erreur', errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[var(--zalama-card)] rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-5 border-b border-[var(--zalama-border)]">
-          <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Ajouter un nouveau partenaire</h3>
-          <button 
-            onClick={onClose}
-            className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        
-        <form onSubmit={handleFormSubmit} className="p-5">
-            <div className="space-y-6">
-              {/* Section Logo et Nom */}
-              <div className="flex gap-6">
-                {/* Logo upload */}
-                <div className="w-32">
-                  <label className="block text-sm font-medium text-[var(--zalama-text)] mb-2">Logo</label>
-                  <div 
-                    onClick={handleLogoClick}
-                    className="w-32 h-32 border-2 border-dashed border-[var(--zalama-border)] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[var(--zalama-bg-lighter)] transition-colors overflow-hidden"
-                  >
-                    {logoPreview ? (
-                      <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain" />
-                    ) : (
-                      <>
-                        <Upload className="h-8 w-8 text-[var(--zalama-text-secondary)] mb-2" />
-                        <span className="text-xs text-center text-[var(--zalama-text-secondary)]">
-                          Cliquez pour télécharger
-                        </span>
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      id="logo"
-                      ref={fileInputRef}
-                      accept="image/*"
-                      onChange={handleLogoChange}
-                      className="hidden"
-                    />
-                  </div>
-                </div>
-                
-                {/* Nom et type */}
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom de l'entreprise</label>
-                    <input
-                      type="text"
-                      id="nom"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Nom de l'entreprise"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="type" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Type</label>
-                      <select
-                        id="type"
-                        required
-                        className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      >
-                        <option value="">Sélectionner un type</option>
-                        {types.filter(type => type !== 'tous').map(type => (
-                          <option key={type} value={type}>{type}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="domaine" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Domaine d'activité</label>
-                      <input
-                        type="text"
-                        id="domaine"
-                        required
-                        className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                        placeholder="Domaine d'activité"
-                      />
-                    </div>
-                  </div>
-                </div>
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-[var(--zalama-bg)] rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)] bg-[var(--zalama-card)] rounded-t-xl">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-gradient-to-br from-[var(--zalama-blue)] to-[var(--zalama-blue-dark)] rounded-xl shadow-lg">
+                <Building className="h-7 w-7 text-white" />
               </div>
-              
-              {/* Section Représentant */}
               <div>
-                <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3">Représentant</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label htmlFor="nomRepresentant" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom du représentant</label>
-                    <input
-                      type="text"
-                      id="nomRepresentant"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Nom complet"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="emailRepresentant" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email</label>
-                    <input
-                      type="email"
-                      id="emailRepresentant"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Email du représentant"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="telephoneRepresentant" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone</label>
-                    <input
-                      type="tel"
-                      id="telephoneRepresentant"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Numéro de téléphone"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Section Responsable RH */}
-              <div>
-                <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3">Responsable RH</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label htmlFor="nomRH" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom du responsable RH</label>
-                    <input
-                      type="text"
-                      id="nomRH"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Nom complet"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="emailRH" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email</label>
-                    <input
-                      type="email"
-                      id="emailRH"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Email du responsable RH"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="telephoneRH" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone</label>
-                    <input
-                      type="tel"
-                      id="telephoneRH"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Numéro de téléphone"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Section Informations légales */}
-              <div>
-                <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3">Informations légales et contact</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="rccm" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">RCCM</label>
-                    <input
-                      type="text"
-                      id="rccm"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Numéro RCCM"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="nif" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">NIF</label>
-                    <input
-                      type="text"
-                      id="nif"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Numéro NIF"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email professionnel</label>
-                    <input
-                      type="email"
-                      id="email"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Email de contact"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone</label>
-                    <input
-                      type="tel"
-                      id="telephone"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                      placeholder="Numéro de téléphone"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-3">
-                  <label htmlFor="adresse" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Adresse</label>
-                  <input
-                    type="text"
-                    id="adresse"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Adresse complète"
-                  />
-                </div>
-                
-                <div className="mt-3">
-                  <label htmlFor="siteWeb" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Site Web</label>
-                  <input
-                    type="text"
-                    id="siteWeb"
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="www.exemple.com"
-                  />
-                </div>
-              </div>
-              
-              {/* Section Autres informations */}
-              <div>
-                <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3">Autres informations</h4>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="dateAdhesion" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Date d'adhésion</label>
-                    <input
-                      type="date"
-                      id="dateAdhesion"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    />
-                  </div>
-                  <div className="flex items-center pt-6">
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        id="actif"
-                        className="sr-only peer"
-                        defaultChecked
-                      />
-                      <div className="relative w-10 h-5 bg-[var(--zalama-bg-lighter)] rounded-full transition peer-checked:bg-[var(--zalama-success)]/20">
-                        <div className="dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition peer-checked:left-5 peer-checked:bg-[var(--zalama-success)]"></div>
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-[var(--zalama-text)]">Actif</span>
-                    </label>
-                  </div>
-                </div>
-                
-                <div className="mt-3">
-                  <label htmlFor="description" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Description</label>
-                  <textarea
-                    id="description"
-                    required
-                    rows={4}
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Objectifs, rôle, etc."
-                  ></textarea>
-                </div>
-              </div>
-              
-              {/* Boutons de soumission */}
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
-                >
-                  Enregistrer le partenaire
-                </button>
+                <h2 className="text-2xl font-bold text-[var(--zalama-text)]">Ajouter un partenaire</h2>
+                <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
+                  Remplissez les informations du nouveau partenaire
+                </p>
               </div>
             </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-[var(--zalama-bg-light)] rounded-lg transition-colors"
+            >
+              <X className="h-6 w-6 text-[var(--zalama-text-secondary)]" />
+            </button>
+          </div>
 
-export default ModaleAjoutPartenaire;
+          {/* Formulaire */}
+          <form onSubmit={handleSubmit} className="p-8 space-y-8">
+            {/* Informations générales */}
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
+                <Building className="h-5 w-5 text-[var(--zalama-blue)]" />
+                <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations générales</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Nom du partenaire *
+                  </label>
+                  <input
+                    type="text"
+                    name="nom"
+                    value={formData.nom}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="Nom de l'organisation"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Type *
+                  </label>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    required
+                  >
+                    <option value="">Sélectionner un type</option>
+                    {typesPartenaires.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Secteur d'activité *
+                  </label>
+                  <select
+                    name="secteur"
+                    value={formData.secteur}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    required
+                  >
+                    <option value="">Sélectionner un secteur</option>
+                    {secteurs.map(secteur => (
+                      <option key={secteur} value={secteur}>{secteur}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Email principal *
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                      placeholder="contact@entreprise.com"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                  placeholder="Description de l'organisation..."
+                />
+              </div>
+            </div>
+
+            {/* Informations de contact */}
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
+                <Phone className="h-5 w-5 text-[var(--zalama-blue)]" />
+                <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations de contact</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Téléphone
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="tel"
+                      name="telephone"
+                      value={formData.telephone}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                      placeholder="+224 123 456 789"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Site web
+                  </label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="url"
+                      name="site_web"
+                      value={formData.site_web}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                      placeholder="https://www.entreprise.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Adresse
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="text"
+                      name="adresse"
+                      value={formData.adresse}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                      placeholder="Adresse complète..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Représentant */}
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
+                <User className="h-5 w-5 text-[var(--zalama-blue)]" />
+                <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Représentant principal</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Nom complet
+                  </label>
+                  <input
+                    type="text"
+                    name="nom_representant"
+                    value={formData.nom_representant}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="Nom du représentant"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email_representant"
+                    value={formData.email_representant}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="email@entreprise.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Téléphone
+                  </label>
+                  <input
+                    type="tel"
+                    name="telephone_representant"
+                    value={formData.telephone_representant}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="+224 123 456 789"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Responsable RH */}
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
+                <User className="h-5 w-5 text-[var(--zalama-blue)]" />
+                <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Responsable RH</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Nom complet
+                  </label>
+                  <input
+                    type="text"
+                    name="nom_rh"
+                    value={formData.nom_rh}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="Nom du responsable RH"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email_rh"
+                    value={formData.email_rh}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="rh@entreprise.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    Téléphone
+                  </label>
+                  <input
+                    type="tel"
+                    name="telephone_rh"
+                    value={formData.telephone_rh}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="+224 123 456 789"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Informations légales */}
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
+                <Building className="h-5 w-5 text-[var(--zalama-blue)]" />
+                <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations légales</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    RCCM
+                  </label>
+                  <input
+                    type="text"
+                    name="rccm"
+                    value={formData.rccm}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="Numéro RCCM"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                    NIF
+                  </label>
+                  <input
+                    type="text"
+                    name="nif"
+                    value={formData.nif}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    placeholder="Numéro NIF"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Note sur les champs obligatoires */}
+            <div className="flex items-start space-x-3 p-4 bg-[var(--zalama-bg-light)] rounded-lg border border-[var(--zalama-border)]">
+              <AlertCircle className="h-5 w-5 text-[var(--zalama-blue)] mt-0.5" />
+              <div className="text-sm text-[var(--zalama-text-secondary)]">
+                <p className="font-medium text-[var(--zalama-text)]">Champs obligatoires</p>
+                <p>Les champs marqués d'un astérisque (*) sont obligatoires pour créer un partenaire.</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-4 pt-6 border-t border-[var(--zalama-border)]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)] transition-all font-medium"
+                disabled={loading}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-[var(--zalama-blue)] to-[var(--zalama-blue-dark)] text-white rounded-lg hover:shadow-lg transition-all flex items-center space-x-2 disabled:opacity-50 font-medium"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Création en cours...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Créer le partenaire</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Notification */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={() => setNotification(prev => ({ ...prev, show: false }))}
+      />
+    </>
+  );
+}

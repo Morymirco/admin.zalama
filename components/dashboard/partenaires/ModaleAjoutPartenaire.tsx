@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { usePartners } from '@/hooks/useDatabase';
 import { Partner } from '@/lib/supabase';
-import { X, Save, Building, User, Mail, Phone, Globe, MapPin, AlertCircle } from 'lucide-react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { X, Save, Building, User, Mail, Phone, Globe, MapPin, AlertCircle, Image, Calendar, Users, DollarSign, Check } from 'lucide-react';
 import Notification, { NotificationType } from '@/components/ui/Notification';
 
 interface ModaleAjoutPartenaireProps {
@@ -13,6 +14,7 @@ interface ModaleAjoutPartenaireProps {
 
 export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: ModaleAjoutPartenaireProps) {
   const { createPartner } = usePartners();
+  const supabase = createClientComponentClient();
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{
     show: boolean;
@@ -25,7 +27,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
     title: ''
   });
 
-  // État du formulaire
+  // État du formulaire avec le champ logo de type File
   const [formData, setFormData] = useState({
     nom: '',
     type: '',
@@ -42,7 +44,12 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
     email: '',
     telephone: '',
     adresse: '',
-    site_web: ''
+    site_web: '',
+    logo: null as File | null,
+    date_adhesion: '',
+    actif: true,
+    nombre_employes: '',
+    salaire_net_total: '',
   });
 
   // Types de partenaires disponibles
@@ -72,11 +79,21 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
     'Autre'
   ];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setFormData(prev => ({
+      ...prev,
+      logo: file,
     }));
   };
 
@@ -105,6 +122,26 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
         throw new Error('Adresse email invalide');
       }
 
+      // Validation du fichier logo
+      let logoUrl: string | undefined;
+      if (formData.logo) {
+        const fileExt = formData.logo.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const { data, error } = await supabase.storage
+          .from('logos')
+          .upload(`public/${fileName}`, formData.logo);
+        
+        if (error) {
+          throw new Error('Erreur lors du téléchargement du logo');
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('logos')
+          .getPublicUrl(`public/${fileName}`);
+        
+        logoUrl = publicUrlData.publicUrl;
+      }
+
       // Préparation des données
       const partnerData: Partial<Partner> = {
         nom: formData.nom,
@@ -123,14 +160,17 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
         telephone: formData.telephone || undefined,
         adresse: formData.adresse || undefined,
         site_web: formData.site_web || undefined,
-        actif: true
+        logo_url: logoUrl || undefined,
+        date_adhesion: formData.date_adhesion ? new Date(formData.date_adhesion).toISOString() : undefined,
+        actif: formData.actif,
+        nombre_employes: formData.nombre_employes ? parseInt(formData.nombre_employes) : undefined,
+        salaire_net_total: formData.salaire_net_total ? parseFloat(formData.salaire_net_total) : undefined,
       };
 
       await createPartner(partnerData);
-      
-      // Afficher notification de succès
+
       showNotification('success', 'Partenaire créé avec succès', 'Le nouveau partenaire a été ajouté à la base de données.');
-      
+
       // Réinitialiser le formulaire
       setFormData({
         nom: '',
@@ -148,10 +188,14 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
         email: '',
         telephone: '',
         adresse: '',
-        site_web: ''
+        site_web: '',
+        logo: null,
+        date_adhesion: '',
+        actif: true,
+        nombre_employes: '',
+        salaire_net_total: '',
       });
 
-      // Fermer la modal après un délai
       setTimeout(() => {
         onSuccess?.();
         onClose();
@@ -169,7 +213,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50  flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-[var(--zalama-bg)] shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-dark)]">
@@ -195,12 +239,12 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
           {/* Formulaire */}
           <form onSubmit={handleSubmit} className="p-8 space-y-8 bg-[var(--zalama-bg-dark)]">
             {/* Informations générales */}
-            <div className="space-y-6  p-6 rounded-lg">
+            <div className="space-y-6 p-6 rounded-lg">
               <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
                 <Building className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations générales</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
@@ -270,6 +314,38 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
+                    Logo
+                  </label>
+                  <div className="relative">
+                    <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="file"
+                      name="logo"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="w-full pl-12 pr-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
+                    Date d'adhésion
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="date"
+                      name="date_adhesion"
+                      value={formData.date_adhesion}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -293,7 +369,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 <Phone className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations de contact</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
@@ -354,7 +430,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 <User className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Représentant principal</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
@@ -406,7 +482,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 <User className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Responsable RH</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
@@ -458,7 +534,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 <Building className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations légales</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
@@ -486,6 +562,66 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                     className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
                     placeholder="Numéro NIF"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Autres informations */}
+            <div className="space-y-6 bg-[var(--zalama-bg-dark)] p-6 rounded-lg">
+              <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
+                <Users className="h-5 w-5 text-[var(--zalama-blue)]" />
+                <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Autres informations</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
+                    Nombre d'employés
+                  </label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="number"
+                      name="nombre_employes"
+                      value={formData.nombre_employes}
+                      onChange={handleInputChange}
+                      min="0"
+                      className="w-full pl-12 pr-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
+                    Salaire net total
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="number"
+                      name="salaire_net_total"
+                      value={formData.salaire_net_total}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0"
+                      className="w-full pl-12 pr-4 py-3 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] transition-all"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    name="actif"
+                    checked={formData.actif}
+                    onChange={handleInputChange}
+                    className="h-5 w-5 text-[var(--zalama-blue)] border-[var(--zalama-border)] rounded focus:ring-[var(--zalama-blue)]"
+                  />
+                  <label className="text-sm font-semibold text-[var(--zalama-text)]">
+                    Partenaire actif
+                  </label>
                 </div>
               </div>
             </div>

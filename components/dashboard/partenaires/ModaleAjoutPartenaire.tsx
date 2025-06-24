@@ -169,10 +169,10 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-[var(--zalama-bg)] rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-black bg-opacity-50  flex items-center justify-center z-50 p-4">
+        <div className="bg-[var(--zalama-bg)] shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)] bg-[var(--zalama-card)] rounded-t-xl">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-dark)]">
             <div className="flex items-center space-x-4">
               <div className="p-3 bg-gradient-to-br from-[var(--zalama-blue)] to-[var(--zalama-blue-dark)] rounded-xl shadow-lg">
                 <Building className="h-7 w-7 text-white" />
@@ -186,16 +186,16 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-[var(--zalama-bg-light)] rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--zalama-bg-lighter)] rounded-lg transition-colors"
             >
               <X className="h-6 w-6 text-[var(--zalama-text-secondary)]" />
             </button>
           </div>
 
           {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          <form onSubmit={handleSubmit} className="p-8 space-y-8 bg-[var(--zalama-bg-dark)]">
             {/* Informations générales */}
-            <div className="space-y-6">
+            <div className="space-y-6  p-6 rounded-lg">
               <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
                 <Building className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations générales</h3>
@@ -203,8 +203,8 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
-                    Nom du partenaire *
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
+                    Nom du partenaire <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -218,8 +218,8 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
-                    Type *
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
+                    Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="type"
@@ -236,8 +236,8 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
-                    Secteur d'activité *
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
+                    Secteur d'activité <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="secteur"
@@ -254,8 +254,8 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
-                    Email principal *
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
+                    Email principal <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--zalama-text-secondary)]" />
@@ -288,7 +288,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
             </div>
 
             {/* Informations de contact */}
-            <div className="space-y-6">
+            <div className="space-y-6 bg-[var(--zalama-bg-dark)] p-6 rounded-lg">
               <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
                 <Phone className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations de contact</h3>
@@ -313,7 +313,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
                     Site web
                   </label>
                   <div className="relative">
@@ -330,7 +330,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
                     Adresse
                   </label>
                   <div className="relative">
@@ -349,7 +349,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
             </div>
 
             {/* Représentant */}
-            <div className="space-y-6">
+            <div className="space-y-6 bg-[var(--zalama-bg-dark)] p-6 rounded-lg">
               <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
                 <User className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Représentant principal</h3>
@@ -401,7 +401,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
             </div>
 
             {/* Responsable RH */}
-            <div className="space-y-6">
+            <div className="space-y-6 bg-[var(--zalama-bg-dark)] p-6 rounded-lg">
               <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
                 <User className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Responsable RH</h3>
@@ -453,7 +453,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
             </div>
 
             {/* Informations légales */}
-            <div className="space-y-6">
+            <div className="space-y-6 bg-[var(--zalama-bg-dark)] p-6 rounded-lg">
               <div className="flex items-center space-x-3 pb-2 border-b border-[var(--zalama-border)]">
                 <Building className="h-5 w-5 text-[var(--zalama-blue)]" />
                 <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Informations légales</h3>
@@ -461,7 +461,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
                     RCCM
                   </label>
                   <input
@@ -475,7 +475,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-3">
+                  <label className="block text-sm font-semibold text-[var(--zalama-text)] mb-2">
                     NIF
                   </label>
                   <input
@@ -491,7 +491,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
             </div>
 
             {/* Note sur les champs obligatoires */}
-            <div className="flex items-start space-x-3 p-4 bg-[var(--zalama-bg-light)] rounded-lg border border-[var(--zalama-border)]">
+            <div className="flex items-start space-x-3 p-4 bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)]">
               <AlertCircle className="h-5 w-5 text-[var(--zalama-blue)] mt-0.5" />
               <div className="text-sm text-[var(--zalama-text-secondary)]">
                 <p className="font-medium text-[var(--zalama-text)]">Champs obligatoires</p>
@@ -512,7 +512,7 @@ export default function ModaleAjoutPartenaire({ isOpen, onClose, onSuccess }: Mo
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-3 bg-gradient-to-r from-[var(--zalama-blue)] to-[var(--zalama-blue-dark)] text-white rounded-lg hover:shadow-lg transition-all flex items-center space-x-2 disabled:opacity-50 font-medium"
+                className="px-6 py-3 bg-gradient-to-r from-[var(--zalama-blue)] to-[var(--zalama-blue-dark)] text-white bg-blue-600 rounded-lg hover:shadow-lg transition-all flex items-center space-x-2 disabled:opacity-50 font-medium"
               >
                 {loading ? (
                   <>

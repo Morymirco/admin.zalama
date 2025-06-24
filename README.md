@@ -1,36 +1,208 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ZaLaMa Admin Dashboard
 
-## Getting Started
+Un dashboard administratif moderne pour la gestion des partenaires, utilisateurs, services et finances de ZaLaMa.
 
-First, run the development server:
+## 🚀 Installation Rapide
 
+### Prérequis
+- Node.js 16+ 
+- Compte Supabase
+- Git
+
+### 1. Cloner le projet
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <URL_DU_REPO>
+cd admin.zalama
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Installer les dépendances
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Configuration des variables d'environnement
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Option A : Configuration automatique (Recommandée)**
+```bash
+node scripts/setup-env.js
+```
 
-## Learn More
+**Option B : Configuration manuelle**
+Créez un fichier `.env.local` à la racine du projet :
 
-To learn more about Next.js, take a look at the following resources:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://mspmrzlqhwpdkkburjiw.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0
+SUPABASE_SERVICE_ROLE_KEY=votre_cle_service_role_ici
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**📖 Guide complet :** [SETUP_ENV.md](./SETUP_ENV.md)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Vérifier la configuration
+```bash
+node scripts/check-env.js
+```
 
-## Deploy on Vercel
+### 5. Configurer la base de données
+1. Exécutez le schéma SQL dans Supabase SQL Editor
+2. Créez l'utilisateur admin :
+```bash
+node scripts/create-admin.js
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 6. Démarrer l'application
+```bash
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+L'application sera accessible sur `http://localhost:3000`
+
+**Identifiants par défaut :**
+- Email : `admin@zalama.com`
+- Mot de passe : `admin123`
+
+## 🏗️ Architecture
+
+```
+admin.zalama/
+├── app/                    # Pages Next.js 13+ (App Router)
+├── components/             # Composants React réutilisables
+│   ├── dashboard/         # Composants spécifiques au dashboard
+│   ├── layout/           # Composants de mise en page
+│   └── ui/               # Composants UI de base
+├── hooks/                 # Hooks React personnalisés
+├── lib/                   # Utilitaires et services
+│   └── services/         # Services Supabase
+├── contexts/              # Contextes React
+├── styles/                # Styles globaux
+├── supabase/              # Scripts et schémas Supabase
+└── scripts/               # Scripts utilitaires
+```
+
+## 🎨 Design System
+
+L'application utilise un design system personnalisé "ZaLaMa" avec :
+- **Couleurs** : Variables CSS personnalisées
+- **Typographie** : Hiérarchie claire et lisible
+- **Composants** : Interface moderne et cohérente
+- **Responsive** : Adaptation mobile et desktop
+
+## 📊 Fonctionnalités
+
+### 🔐 Authentification
+- Connexion sécurisée avec Supabase Auth
+- Gestion des sessions utilisateur
+- Protection des routes
+
+### 👥 Gestion des Utilisateurs
+- Liste des utilisateurs
+- Ajout/Modification/Suppression
+- Filtres et recherche
+- Statistiques
+
+### 🤝 Gestion des Partenaires
+- Liste des partenaires
+- Ajout de nouveaux partenaires
+- Informations détaillées (contact, RH, légales)
+- Filtres par type et statut
+
+### 👨‍💼 Gestion des Employés
+- Employés par partenaire
+- Informations personnelles et professionnelles
+- Types de contrats
+- Salaires
+
+### 🛠️ Gestion des Services
+- Catalogue de services
+- Catégorisation
+- Prix et disponibilité
+- Images et descriptions
+
+### ⚠️ Système d'Alertes
+- Alertes critiques, importantes, informatives
+- Assignation et suivi
+- Résolution et historique
+
+### 💰 Gestion Financière
+- Transactions financières
+- Types : Débloqué, Récupéré, Revenu, Remboursement
+- Suivi des montants
+- Statuts de validation
+
+### 📈 Performance
+- Métriques de performance
+- Graphiques et visualisations
+- Suivi des objectifs
+- Rapports
+
+### 🔔 Notifications
+- Système de notifications en temps réel
+- Types : Information, Alerte, Succès, Erreur
+- Gestion des lectures
+
+## 🛠️ Technologies
+
+- **Frontend** : Next.js 13+, React 18, TypeScript
+- **Styling** : Tailwind CSS, CSS Variables
+- **Backend** : Supabase (PostgreSQL, Auth, Storage)
+- **Graphiques** : Recharts
+- **Icônes** : Lucide React
+- **État** : React Hooks, Context API
+
+## 📁 Structure de la Base de Données
+
+### Tables Principales
+- `users` - Utilisateurs du système
+- `partners` - Organisations partenaires
+- `employees` - Employés des partenaires
+- `services` - Services proposés
+- `alerts` - Système d'alertes
+- `financial_transactions` - Transactions financières
+- `performance_metrics` - Métriques de performance
+- `notifications` - Notifications utilisateur
+
+## 🔧 Scripts Utilitaires
+
+### Vérification de la configuration
+```bash
+node scripts/check-env.js
+```
+
+### Création de l'admin
+```bash
+node scripts/create-admin.js
+```
+
+## 🚀 Déploiement
+
+### Vercel (Recommandé)
+1. Connectez votre repo GitHub à Vercel
+2. Configurez les variables d'environnement
+3. Déployez automatiquement
+
+### Autres plateformes
+- Netlify
+- Railway
+- DigitalOcean App Platform
+
+## 🔒 Sécurité
+
+- **RLS** : Row Level Security activé
+- **Auth** : Authentification Supabase
+- **Validation** : Validation côté client et serveur
+- **HTTPS** : Obligatoire en production
+
+## 📞 Support
+
+Pour toute question ou problème :
+1. Consultez le guide [SETUP_ENV.md](./SETUP_ENV.md)
+2. Vérifiez les logs de l'application
+3. Contactez l'équipe de développement
+
+## 📄 Licence
+
+Ce projet est propriétaire de ZaLaMa.
+
+---
+
+**Développé avec ❤️ pour ZaLaMa**

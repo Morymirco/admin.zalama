@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup:supabase": "node scripts/setup-supabase-env.js",
+    "check:supabase": "node scripts/check-supabase-env.js",
+    "setup:db": "node scripts/setup-supabase-db.js",
+    "migrate:test": "npm run dev & echo 'Test de migration disponible sur http://localhost:3000/dashboard/migration-test'"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
@@ -29,6 +33,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
     "firebase": "^11.7.1",
     "firebase-admin": "^13.3.0",
     "leaflet": "^1.9.4",

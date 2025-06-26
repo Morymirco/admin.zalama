@@ -1,11 +1,11 @@
 import React from 'react';
-import { Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Calendar, DollarSign } from 'lucide-react';
 
 import { UIService } from '@/types/service';
 
 interface ListeServicesProps {
   services: UIService[];
-  filteredServices: UIService[];
+  filteredServices?: UIService[];
   searchTerm: string;
   categorieFilter: string;
   categories: string[];
@@ -21,9 +21,8 @@ interface ListeServicesProps {
 }
 
 const ListeServices: React.FC<ListeServicesProps> = ({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   services,
-  filteredServices,
+  filteredServices = [],
   searchTerm,
   categorieFilter,
   categories,
@@ -37,11 +36,14 @@ const ListeServices: React.FC<ListeServicesProps> = ({
   onEditClick,
   onDeleteClick
 }) => {
+  // Utiliser filteredServices s'il est défini, sinon utiliser services
+  const servicesToDisplay = filteredServices || services || [];
+  
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredServices.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  const currentItems = servicesToDisplay.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(servicesToDisplay.length / itemsPerPage);
 
   return (
     <>
@@ -91,7 +93,7 @@ const ListeServices: React.FC<ListeServicesProps> = ({
             <RefreshCw className="h-8 w-8 animate-spin text-[var(--zalama-blue)]" />
             <span className="ml-2 text-[var(--zalama-text)]">Chargement...</span>
           </div>
-        ) : filteredServices.length === 0 ? (
+        ) : servicesToDisplay.length === 0 ? (
           <div className="col-span-full py-12 text-center">
             <p className="text-[var(--zalama-text-secondary)]">Aucun service trouvé</p>
           </div>
@@ -110,20 +112,43 @@ const ListeServices: React.FC<ListeServicesProps> = ({
                   </span>
                 </div>
                 
-                <p className="text-[var(--zalama-text-secondary)] text-sm mb-4 line-clamp-2">{service.description}</p>
+                <p className="text-[var(--zalama-text-secondary)] text-sm mb-4 line-clamp-3">{service.description}</p>
                 
-                <div className="flex flex-col space-y-2 mb-4">
-                  <div className="flex justify-between">
+                <div className="flex flex-col space-y-3 mb-4">
+                  <div className="flex justify-between items-center">
                     <span className="text-[var(--zalama-text-secondary)] text-sm">Catégorie:</span>
                     <span className="text-[var(--zalama-text)] text-sm font-medium">{service.categorie}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--zalama-text-secondary)] text-sm">Pourcentage:</span>
-                    <span className="text-[var(--zalama-text)] text-sm font-medium">{(service.pourcentageMax !== undefined ? service.pourcentageMax : 0).toLocaleString()} %</span>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-[var(--zalama-text-secondary)] text-sm flex items-center">
+                      <DollarSign className="h-3 w-3 mr-1" />
+                      Frais:
+                    </span>
+                    <span className="text-[var(--zalama-text)] text-sm font-medium">{service.fraisAttribues ? `${service.fraisAttribues.toLocaleString()} FG` : 'N/A'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--zalama-text-secondary)] text-sm">Durée:</span>
-                    <span className="text-[var(--zalama-text)] text-sm font-medium">{service.duree}</span>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-[var(--zalama-text-secondary)] text-sm flex items-center">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Créé le:
+                    </span>
+                    <span className="text-[var(--zalama-text)] text-sm font-medium">
+                      {service.createdAt ? 
+                        service.createdAt.toDate ? 
+                          service.createdAt.toDate().toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          }) : 
+                          new Date(service.createdAt).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })
+                        : 'N/A'
+                      }
+                    </span>
                   </div>
                 </div>
                 

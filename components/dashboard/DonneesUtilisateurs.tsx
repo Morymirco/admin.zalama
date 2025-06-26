@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Star, MapPin } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import dynamic from 'next/dynamic';
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
-import userService from '@/services/userService';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { userService } from '@/services/userService';
 import { Utilisateur } from '@/types/utilisateur';
 import demographieService, { getUtilisateursParAge, getUtilisateursParRegion, getUtilisateursParType, getNoteMoyenne } from '@/services/demographieService';
 
@@ -21,7 +21,7 @@ const GuineaMap = dynamic(() => import('./GuineaMap'), {
 
 export default function DonneesUtilisateurs() {
   // Utiliser notre hook pour récupérer les utilisateurs
-  const { data: utilisateurs, loading: loadingUtilisateurs } = useFirebaseCollection<Utilisateur>(userService);
+  const { data: utilisateurs, loading: loadingUtilisateurs } = useSupabaseCollection<Utilisateur>(userService);
   
   // États pour les statistiques démographiques
   const [ageStats, setAgeStats] = useState<{

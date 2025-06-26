@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Users, Briefcase, GraduationCap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Plus, Filter } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+// Importation des composants
 import {
   StatistiquesUtilisateurs,
   ResumeUtilisateurs,
@@ -10,89 +13,38 @@ import {
   ModaleEditionUtilisateur,
   ModaleSuppressionUtilisateur
 } from '@/components/dashboard/utilisateurs';
-import { collection, getDocs, query, orderBy, Timestamp, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+
+// Importation du hook Supabase
+import { useSupabaseUsers } from '@/hooks/useSupabaseUsers';
 import { Utilisateur } from '@/types/utilisateur';
 
-
-
-
 export default function UtilisateursPage() {
-  // États
-  const [utilisateurs, setUtilisateurs] = useState<Utilisateur[]>([]);
-  const [filteredUtilisateurs, setFilteredUtilisateurs] = useState<Utilisateur[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('tous');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  // Utilisation du hook Supabase pour les utilisateurs
+  const {
+    filteredUsers: filteredUtilisateurs,
+    isLoading,
+    stats,
+    statsLoading,
+    searchTerm,
+    typeFilter,
+    currentPage,
+    totalPages,
+    setSearchTerm,
+    setTypeFilter,
+    setCurrentPage,
+    createUser,
+    updateUser,
+    deleteUser
+  } = useSupabaseUsers(10);
+
+  // États pour les modales
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentUtilisateur, setCurrentUtilisateur] = useState<Utilisateur | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showStats, setShowStats] = useState(true);
 
-  
-
-
- // Remplacer le useEffect de chargement des données
-useEffect(() => {
-  const fetchUtilisateurs = async () => {
-    try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, orderBy('displayName'));
-      const querySnapshot = await getDocs(q);
-      
-      const usersData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Utilisateur[];
-      
-      setUtilisateurs(usersData);
-      setFilteredUtilisateurs(usersData);
-    } catch (error) {
-      console.error("Erreur lors du chargement des utilisateurs:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  fetchUtilisateurs();
-}, []);
-  // Filtrage des utilisateurs en fonction du terme de recherche et du type
-// Dans app/dashboard/(dashboard)/utilisateurs/page.tsx
-
-// Mettez à jour la partie filtrage des utilisateurs
-useEffect(() => {
-  let filtered = [...utilisateurs];
-  
-  // Filtrage par terme de recherche
-  if (searchTerm.trim() !== '') {
-    filtered = filtered.filter(user => 
-      (user.displayName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.poste?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.departement?.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }
-  
-  // Filtrage par type
-  if (typeFilter !== 'tous') {
-    filtered = filtered.filter(user => {
-      // Normalisation des types pour la comparaison
-      const userType = user.type?.toLowerCase();
-      const filterType = typeFilter.toLowerCase();
-      return userType === filterType;
-    });
-  }
-  
-  setFilteredUtilisateurs(filtered);
-  setCurrentPage(1); // Réinitialiser à la première page après filtrage
-}, [searchTerm, typeFilter, utilisateurs]);
-
-// Types d'utilisateurs disponibles
-const types = ['tous', 'etudiant', 'salaries', 'pension'];
+  // Types d'utilisateurs disponibles
+  const types = ['tous', 'etudiant', 'salaries', 'pension'];
 
   // Handlers
   const handlePageChange = (pageNumber: number) => {
@@ -121,148 +73,161 @@ const types = ['tous', 'etudiant', 'salaries', 'pension'];
     setShowDeleteModal(true);
   };
 
-  // Toggle des statistiques
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const toggleStats = () => {
-    setShowStats(!showStats);
+  // Formulaire d'ajout d'utilisateur
+  const handleSubmitAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    try {
+      const form = e.currentTarget;
+      
+      const userData = {
+        displayName: (form.querySelector('#displayName') as HTMLInputElement)?.value || '',
+        email: (form.querySelector('#email') as HTMLInputElement)?.value || '',
+        phoneNumber: (form.querySelector('#phoneNumber') as HTMLInputElement)?.value || '',
+        role: (form.querySelector('#role') as HTMLSelectElement)?.value || 'user',
+        poste: (form.querySelector('#poste') as HTMLInputElement)?.value || '',
+        departement: (form.querySelector('#departement') as HTMLInputElement)?.value || '',
+        active: (form.querySelector('#active') as HTMLInputElement)?.checked || false,
+        type: (form.querySelector('#type') as HTMLSelectElement)?.value || '',
+        partenaireId: (form.querySelector('#partenaireId') as HTMLInputElement)?.value || '',
+        photoURL: (form.querySelector('#photoURL') as HTMLInputElement)?.value || '',
+        etablissement: (form.querySelector('#etablissement') as HTMLInputElement)?.value || '',
+        niveauEtudes: (form.querySelector('#niveauEtudes') as HTMLSelectElement)?.value || '',
+      };
+
+      await createUser(userData);
+      
+      setShowAddModal(false);
+      toast.success('Utilisateur ajouté avec succès');
+      
+    } catch (error) {
+      console.error("Erreur lors de l'ajout de l'utilisateur:", error);
+      toast.error('Erreur lors de l\'ajout de l\'utilisateur');
+    }
   };
 
-  // Formulaire d'ajout d'utilisateur
-  // Ajout d'un nouvel utilisateur
-const handleSubmitAddUser = async (formData: FormData) => {
-  try {
-    const newUser: Partial<Utilisateur> = {
-      displayName: formData.get('displayName') as string,
-      email: formData.get('email') as string,
-      phoneNumber: formData.get('phoneNumber') as string,
-      role: formData.get('role') as Utilisateur['role'],
-      poste: formData.get('poste') as string,
-      departement: formData.get('departement') as string,
-      active: formData.get('active') === 'true',
-      type: formData.get('type') as string,
-      partenaireId: formData.get('partenaireId') as string,
-      photoURL: formData.get('photoURL') as string || '',
-      etablissement: formData.get('etablissement') as string || '',
-      niveauEtudes: formData.get('niveauEtudes') as string || '',
-      createdAt: Timestamp.now()
-    };
-
-    // Ajouter le document à Firestore
-    const docRef = await addDoc(collection(db, 'users'), newUser);
-    
-    // Mettre à jour l'état local
-    setUtilisateurs(prev => [...prev, { id: docRef.id, ...newUser } as Utilisateur]);
-    setShowAddModal(false);
-  } catch (error) {
-    console.error("Erreur lors de l'ajout de l'utilisateur:", error);
-  }
-};
-
   // Formulaire d'édition d'utilisateur
-  const handleSubmitEditUser = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitEditUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentUtilisateur) return;
     
-    const formData = new FormData(e.currentTarget);
-    
-    // Mise à jour de l'utilisateur
-    const updatedUser: Utilisateur = {
-      ...currentUtilisateur,
-      displayName: formData.get('displayName') as string,
-      email: formData.get('email') as string,
-      phoneNumber: formData.get('phoneNumber') as string,
-      role: formData.get('role') as Utilisateur['role'],
-      poste: formData.get('poste') as string,
-      departement: formData.get('departement') as string,
-      active: formData.get('active') === 'true',
-      type: formData.get('type') as string,
-      createdAt: Timestamp.now(),
-    };
-    
-    // Mise à jour des champs spécifiques au type d'utilisateur
-    if (updatedUser.type === 'Étudiant') {
-      updatedUser.niveauEtudes = formData.get('niveauEtudes') as string;
-      updatedUser.etablissement = formData.get('etablissement') as string;
-   
-    } else if (updatedUser.type === 'Salarié') {
-      updatedUser.partenaireId = formData.get('partenaireId') as string;
-      updatedUser.poste = formData.get('poste') as string;
-   
-    } else if (updatedUser.type === 'Entreprise') {
-      updatedUser.partenaireId = formData.get('partenaireId') as string;
-      updatedUser.departement = formData.get('departement') as string;
-     
+    try {
+      const form = e.currentTarget;
+      
+      const userData = {
+        displayName: (form.querySelector('#edit-displayName') as HTMLInputElement)?.value || '',
+        email: (form.querySelector('#edit-email') as HTMLInputElement)?.value || '',
+        phoneNumber: (form.querySelector('#edit-phoneNumber') as HTMLInputElement)?.value || '',
+        role: (form.querySelector('#edit-role') as HTMLSelectElement)?.value || 'user',
+        poste: (form.querySelector('#edit-poste') as HTMLInputElement)?.value || '',
+        departement: (form.querySelector('#edit-departement') as HTMLInputElement)?.value || '',
+        active: (form.querySelector('#edit-active') as HTMLInputElement)?.checked || false,
+        type: (form.querySelector('#edit-type') as HTMLSelectElement)?.value || '',
+        partenaireId: (form.querySelector('#edit-partenaireId') as HTMLInputElement)?.value || '',
+        etablissement: (form.querySelector('#edit-etablissement') as HTMLInputElement)?.value || '',
+        niveauEtudes: (form.querySelector('#edit-niveauEtudes') as HTMLSelectElement)?.value || '',
+      };
+
+      await updateUser(currentUtilisateur.id, userData);
+      
+      setShowEditModal(false);
+      setCurrentUtilisateur(null);
+      toast.success('Utilisateur mis à jour avec succès');
+      
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de l'utilisateur:", error);
+      toast.error('Erreur lors de la mise à jour de l\'utilisateur');
     }
-    
-    // Mise à jour de la liste des utilisateurs
-    setUtilisateurs(utilisateurs.map(user => user.id === updatedUser.id ? updatedUser : user));
-    setShowEditModal(false);
   };
 
-  // Confirmation de suppression d'utilisateur
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!currentUtilisateur) return;
     
-    // Suppression de l'utilisateur
-    setUtilisateurs(utilisateurs.filter(user => user.id !== currentUtilisateur.id));
-    setShowDeleteModal(false);
+    try {
+      await deleteUser(currentUtilisateur.id);
+      
+      setShowDeleteModal(false);
+      setCurrentUtilisateur(null);
+      toast.success('Utilisateur supprimé avec succès');
+      
+    } catch (error) {
+      console.error("Erreur lors de la suppression de l'utilisateur:", error);
+      toast.error('Erreur lors de la suppression de l\'utilisateur');
+    }
   };
 
+  // Calculer les éléments de la page courante
+  const startIndex = (currentPage - 1) * 10;
+  const endIndex = startIndex + 10;
+  const currentItems = (filteredUtilisateurs || []).slice(startIndex, endIndex);
+
   return (
-    <div className="p-4">
+    <div className="p-6">
+      {/* En-tête avec recherche et filtres */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Utilisateurs</h1>
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+            <input
+              type="text"
+              placeholder="Rechercher un utilisateur..."
+              className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+              value={searchTerm}
+              onChange={handleSearch}
+            />
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+            <select
+              value={typeFilter}
+              onChange={(e) => handleTypeFilterChange(e.target.value)}
+              className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+            >
+              {types.map((type) => (
+                <option key={type} value={type}>
+                  {type === 'tous' ? 'Tous les types' : type}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <button
+            onClick={handleAddUser}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </button>
+        </div>
+      </div>
+
+      {/* Section des statistiques */}
+      <StatistiquesUtilisateurs 
+        stats={stats}
+        isLoading={statsLoading}
+      />
       
-      {/* Statistiques */}
-      {showStats && (
-        <StatistiquesUtilisateurs 
-          statistiques={[
-            {
-              type: 'Tous les utilisateurs',
-              nombre: utilisateurs.length,
-              nouveauxCeMois: 5,
-              actifs: utilisateurs.filter(u => u.active === true).length,
-              inactifs: utilisateurs.filter(u => u.active === false).length,
-              tendance: 'hausse',
-              icon: <Users className="h-6 w-6 text-[var(--zalama-blue)]" />
-            },
-            {
-              type: 'Salariés',
-              nombre: utilisateurs.filter(u => u.type === 'salaries').length,
-              nouveauxCeMois: 2,
-              actifs: utilisateurs.filter(u => u.type === 'salaries' && u.active === true).length,
-              inactifs: utilisateurs.filter(u => u.type === 'salaries' && u.active === false).length,
-              tendance: 'stable',
-              icon: <Briefcase className="h-6 w-6 text-[var(--zalama-warning)]" />
-            },
-            {
-              type: 'Étudiants',
-              nombre: utilisateurs.filter(u => u.type === 'etudiant').length,
-              nouveauxCeMois: 3,
-              actifs: utilisateurs.filter(u => u.type === 'etudiant' && u.active === true).length,
-              inactifs: utilisateurs.filter(u => u.type === 'etudiant' && u.active === false).length,
-              tendance: 'hausse',
-              icon: <GraduationCap className="h-6 w-6 text-[var(--zalama-success)]" />
-            }
-          ]}
-          isLoading={isLoading}
-        />
-      )}
-      
-      {/* Résumé */}
-      <ResumeUtilisateurs
-        totalUtilisateurs={utilisateurs.length}
-        utilisateursActifs={utilisateurs.filter(u => u.active === true).length}
-        nouveauxUtilisateurs={5}
+      {/* Résumé des utilisateurs */}
+      <ResumeUtilisateurs 
+        totalUtilisateurs={filteredUtilisateurs.length}
+        utilisateursActifs={filteredUtilisateurs.filter(u => u.active).length}
+        utilisateursInactifs={filteredUtilisateurs.filter(u => !u.active).length}
+        isLoading={isLoading}
       />
       
       {/* Liste des utilisateurs */}
-      <ListeUtilisateurs
-        utilisateurs={utilisateurs}
-        filteredUtilisateurs={filteredUtilisateurs}
+      <ListeUtilisateurs 
+        utilisateurs={currentItems}
+        filteredUtilisateurs={filteredUtilisateurs || []}
         searchTerm={searchTerm}
         typeFilter={typeFilter}
         types={types}
         currentPage={currentPage}
-        itemsPerPage={itemsPerPage}
+        itemsPerPage={10}
         isLoading={isLoading}
         onSearch={handleSearch}
         onTypeFilterChange={handleTypeFilterChange}
@@ -273,25 +238,37 @@ const handleSubmitAddUser = async (formData: FormData) => {
       />
       
       {/* Modales */}
-      <ModaleAjoutUtilisateur
+      <ModaleAjoutUtilisateur 
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSubmit={handleSubmitAddUser}
+        types={types.filter(t => t !== 'tous')}
       />
       
-      <ModaleEditionUtilisateur
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onSubmit={handleSubmitEditUser}
-        utilisateur={currentUtilisateur}
-      />
+      {showEditModal && currentUtilisateur && (
+        <ModaleEditionUtilisateur 
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setCurrentUtilisateur(null);
+          }}
+          onSubmit={handleSubmitEditUser}
+          utilisateur={currentUtilisateur}
+          types={types.filter(t => t !== 'tous')}
+        />
+      )}
       
-      <ModaleSuppressionUtilisateur
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleConfirmDelete}
-        utilisateur={currentUtilisateur}
-      />
+      {showDeleteModal && currentUtilisateur && (
+        <ModaleSuppressionUtilisateur 
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setCurrentUtilisateur(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          utilisateur={currentUtilisateur}
+        />
+      )}
     </div>
   );
 }

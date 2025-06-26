@@ -2,19 +2,15 @@
 
 import React from 'react';
 import { AlertTriangle, Shield, Activity, TrendingUp, Bell } from 'lucide-react';
-import { orderBy, limit, Timestamp } from 'firebase/firestore';
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
-import notificationService from '@/services/notificationService';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { notificationService } from '@/services/notificationService';
 import { Notification } from '@/types/notification';
 
 // Interface déplacée vers types/notification.ts
 
 export default function AlertesRisques() {
   // Utiliser notre hook pour récupérer les notifications récentes
-  const { data: notifications, loading, error } = useFirebaseCollection<Notification>(
-    notificationService,
-    [orderBy('dateCreation', 'desc'), limit(3)]
-  );
+  const { data: notifications, loading, error } = useSupabaseCollection<Notification>(notificationService);
 
   const markAsRead = async (id: string) => {
     try {
@@ -37,9 +33,10 @@ export default function AlertesRisques() {
     }
   };
 
-  const formatDate = (timestamp: Timestamp) => {
-    if (!timestamp?.toDate) return '';
-    return new Date(timestamp.toDate()).toLocaleString('fr-FR', {
+  const formatDate = (timestamp: string | Date) => {
+    if (!timestamp) return '';
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return date.toLocaleString('fr-FR', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',

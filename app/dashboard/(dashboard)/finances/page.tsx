@@ -8,7 +8,7 @@ import {
 import { Timestamp, serverTimestamp } from 'firebase/firestore';
 
 // Services Firebase
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
 import transactionService, { 
   getTransactionsByDateRange,
   getTransactionsByType,
@@ -39,7 +39,7 @@ export default function FinancesPage() {
   const [typeFilter, setTypeFilter] = useState<'tous' | 'revenu' | 'depense'>('tous');
   
   // Utilisation du hook pour récupérer les transactions depuis Firestore
-  const { data: firebaseTransactions, loading: isLoading } = useFirebaseCollection<Transaction>(transactionService);
+  const { data: firebaseTransactions, loading: isLoading } = useSupabaseCollection<Transaction>(transactionService);
 
   // Handlers
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {

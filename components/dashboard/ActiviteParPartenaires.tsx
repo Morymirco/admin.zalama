@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { where, Timestamp } from 'firebase/firestore';
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
-import partenaireService from '@/services/partenaireService';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { partenaireService } from '@/services/partenaireService';
 import { Partenaire } from '@/types/partenaire';
 
 // Interfaces déplacées vers types/partenaire.ts
 
 export default function ActiviteParPartenaires() {
   // Utiliser notre hook pour récupérer tous les partenaires
-  const { data: partenaires, loading, error } = useFirebaseCollection<Partenaire>(partenaireService);
+  const { data: partenaires, loading, error } = useSupabaseCollection<Partenaire>(partenaireService);
 
   // Calculer les statistiques à partir des données des partenaires
   const stats = useMemo(() => {
@@ -33,26 +32,24 @@ export default function ActiviteParPartenaires() {
     
     // Compter les nouveaux partenaires du mois
     const nouveauxPartenaires = partenaires.filter(p => {
-      if (!p.dateCreation) return false;
-      const dateCreation = p.dateCreation instanceof Timestamp 
-        ? p.dateCreation.toDate() 
-        : new Date(p.dateCreation);
+      if (!p.created_at) return false;
+      const dateCreation = new Date(p.created_at);
       return dateCreation >= firstDayOfMonth;
     }).length;
 
     // Calculer le nombre total d'employés et préparer les données du graphique
     const employesParEntreprise = partenaires
-      .filter(p => p.totalEmployes && p.totalEmployes > 0) // Ne garder que les partenaires avec des employés
-      .sort((a, b) => (b.totalEmployes || 0) - (a.totalEmployes || 0)) // Trier par nombre d'employés décroissant
+      .filter(p => p.nombre_employes && p.nombre_employes > 0) // Ne garder que les partenaires avec des employés
+      .sort((a, b) => (b.nombre_employes || 0) - (a.nombre_employes || 0)) // Trier par nombre d'employés décroissant
       .slice(0, 5) // Prendre les 5 premiers
       .map(p => ({
         nom: p.nom,
-        count: p.totalEmployes || 0,
+        count: p.nombre_employes || 0,
         pourcentage: 0 // Sera calculé après
       }));
       
     // Calculer le total des employés pour tous les partenaires
-    const totalEmployes = partenaires.reduce((sum, p) => sum + (p.totalEmployes || 0), 0);
+    const totalEmployes = partenaires.reduce((sum, p) => sum + (p.nombre_employes || 0), 0);
     
     // Calculer le pourcentage de chaque entreprise par rapport au total des entreprises affichées
     const totalEmployesAffiches = employesParEntreprise.reduce((sum, p) => sum + p.count, 0);

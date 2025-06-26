@@ -13,8 +13,8 @@ import {
 } from '@/components/dashboard/alertes';
 
 // Services Firebase
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
-import alerteService from '@/services/alerteService';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { alerteService } from '@/services/alerteService';
 
 // Types
 import { Alerte } from '@/types/alerte';
@@ -38,7 +38,7 @@ export default function AlertesPage() {
   const [currentAlerte, setCurrentAlerte] = useState<AlerteUI | null>(null);
   
   // Utilisation du hook pour récupérer les alertes depuis Firestore
-  const { data: firebaseAlertes, loading: isLoading } = useFirebaseCollection<Alerte>(alerteService);
+  const { data: firebaseAlertes, loading: isLoading } = useSupabaseCollection<Alerte>(alerteService);
 
   // Types et statuts disponibles
   const types = ['tous', 'Critique', 'Importante', 'Information'];

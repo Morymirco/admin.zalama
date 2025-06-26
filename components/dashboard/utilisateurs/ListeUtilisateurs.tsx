@@ -8,7 +8,7 @@ interface ListeUtilisateursProps {
   filteredUtilisateurs: Utilisateur[];
   searchTerm: string;
   typeFilter: string;
-  types: string[];
+  types?: string[];
   currentPage: number;
   itemsPerPage: number;
   isLoading: boolean;
@@ -37,11 +37,27 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
   onEditClick,
   onDeleteClick
 }) => {
+  // Vérification de sécurité pour toutes les props critiques
+  const safeFilteredUtilisateurs = filteredUtilisateurs || [];
+  const safeTypes = types || ['tous', 'etudiant', 'salaries', 'pension'];
+  const safeSearchTerm = searchTerm || '';
+  const safeTypeFilter = typeFilter || 'tous';
+  const safeCurrentPage = currentPage || 1;
+  const safeItemsPerPage = itemsPerPage || 10;
+  
+  // Vérification des handlers
+  const safeOnSearch = onSearch || (() => {});
+  const safeOnTypeFilterChange = onTypeFilterChange || (() => {});
+  const safeOnPageChange = onPageChange || (() => {});
+  const safeOnAddClick = onAddClick || (() => {});
+  const safeOnEditClick = onEditClick || (() => {});
+  const safeOnDeleteClick = onDeleteClick || (() => {});
+  
   // Pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredUtilisateurs.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredUtilisateurs.length / itemsPerPage);
+  const indexOfLastItem = safeCurrentPage * safeItemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - safeItemsPerPage;
+  const currentItems = safeFilteredUtilisateurs.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(safeFilteredUtilisateurs.length / safeItemsPerPage);
 
   // Fonction pour obtenir l'icône en fonction du type d'utilisateur
   const getTypeIcon = (type: string) => {
@@ -80,8 +96,8 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
             type="text"
             placeholder="Rechercher..."
             className="w-full pl-10 pr-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-            value={searchTerm}
-            onChange={onSearch}
+            value={safeSearchTerm}
+            onChange={safeOnSearch}
           />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-[var(--zalama-text-secondary)]" />
         </div>
@@ -89,7 +105,7 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
         <div className="flex flex-wrap gap-2">
           <button 
             className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
-            onClick={onAddClick}
+            onClick={safeOnAddClick}
           >
             <Plus className="h-4 w-4" />
             Ajouter
@@ -98,11 +114,11 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
           <div className="flex items-center">
             <span className="mr-2 text-[var(--zalama-text)]">Type:</span>
             <select 
-              value={typeFilter}
-              onChange={(e) => onTypeFilterChange(e.target.value)}
+              value={safeTypeFilter}
+              onChange={(e) => safeOnTypeFilterChange(e.target.value)}
               className="px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
             >
-              {types.map(type => (
+              {safeTypes.map(type => (
                 <option key={type} value={type}>
                   {type === 'tous' ? 'Tous les types' : type}
                 </option>
@@ -119,7 +135,7 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
             <RefreshCw className="h-8 w-8 animate-spin text-[var(--zalama-blue)]" />
             <span className="ml-2 text-[var(--zalama-text)]">Chargement...</span>
           </div>
-        ) : filteredUtilisateurs.length === 0 ? (
+        ) : safeFilteredUtilisateurs.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-[var(--zalama-text-secondary)]">Aucun utilisateur trouvé</p>
           </div>
@@ -190,13 +206,13 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
                     <td className="px-2 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
                         <button 
-                          onClick={() => onEditClick(utilisateur)}
+                          onClick={() => safeOnEditClick(utilisateur)}
                           className="p-2 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button 
-                          onClick={() => onDeleteClick(utilisateur)}
+                          onClick={() => safeOnDeleteClick(utilisateur)}
                           className="p-2 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -216,10 +232,10 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
         <div className="flex justify-center mt-6">
           <div className="flex gap-1">
             <button
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
+              onClick={() => safeOnPageChange(safeCurrentPage - 1)}
+              disabled={safeCurrentPage === 1}
               className={`p-2 rounded ${
-                currentPage === 1 
+                safeCurrentPage === 1 
                   ? 'text-[var(--zalama-text-secondary)] cursor-not-allowed' 
                   : 'text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)]'
               }`}
@@ -230,9 +246,9 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <button
                 key={page}
-                onClick={() => onPageChange(page)}
+                onClick={() => safeOnPageChange(page)}
                 className={`px-3 py-1 rounded ${
-                  currentPage === page 
+                  safeCurrentPage === page 
                     ? 'bg-[var(--zalama-blue)] text-white' 
                     : 'text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)]'
                 }`}
@@ -242,10 +258,10 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
             ))}
             
             <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => safeOnPageChange(safeCurrentPage + 1)}
+              disabled={safeCurrentPage === totalPages}
               className={`p-2 rounded ${
-                currentPage === totalPages 
+                safeCurrentPage === totalPages 
                   ? 'text-[var(--zalama-text-secondary)] cursor-not-allowed' 
                   : 'text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)]'
               }`}

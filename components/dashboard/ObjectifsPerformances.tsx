@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Target, Award, Clock } from 'lucide-react';
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
-import objectifsService, { 
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { objectifsService, 
   getObjectifsMensuels, 
   getTauxCroissanceMensuel, 
   getPerformancesEquipe, 

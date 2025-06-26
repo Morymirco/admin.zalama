@@ -66,6 +66,20 @@ const ModaleEditionService: React.FC<ModaleEditionServiceProps> = ({
               </div>
               
               <div>
+                <label htmlFor="edit-frais" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Frais attribués (FG)</label>
+                <input
+                  type="number"
+                  id="edit-frais"
+                  required
+                  min="0"
+                  defaultValue={service.fraisAttribues || 0}
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <label htmlFor="edit-pourcentage" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Pourcentage (%)</label>
                 <input
                   type="number"
@@ -76,9 +90,7 @@ const ModaleEditionService: React.FC<ModaleEditionServiceProps> = ({
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+              
               <div>
                 <label htmlFor="edit-duree" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Durée</label>
                 <input
@@ -89,7 +101,9 @@ const ModaleEditionService: React.FC<ModaleEditionServiceProps> = ({
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center">
                 <label className="flex items-center cursor-pointer">
                   <input

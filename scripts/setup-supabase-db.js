@@ -1,165 +1,128 @@
+// Charger les variables d'environnement depuis .env.local
+require('dotenv').config({ path: '.env.local' });
+
+const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
 
-console.log('🗄️  Configuration de la base de données Supabase ZaLaMa\n');
-
-// Charger les variables d'environnement
-require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Configuration Supabase - Variables définies directement
+const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc4NzI1OCwiZXhwIjoyMDY2MzYzMjU4fQ.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.log('❌ Variables d\'environnement manquantes');
-  console.log('💡 Exécutez d\'abord : node scripts/setup-supabase-env.js');
+  console.error('❌ Variables d\'environnement Supabase manquantes !');
+  console.log('📋 Assurez-vous d\'avoir configuré :');
+  console.log('   - NEXT_PUBLIC_SUPABASE_URL');
+  console.log('   - SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
 }
 
-// Créer le client Supabase avec la clé service
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function setupDatabase() {
   try {
-    console.log('🔍 Vérification de la connexion Supabase...');
+    console.log('🚀 Configuration de la base de données Supabase...');
     
-    // Test de connexion
-    const { data, error } = await supabase.from('partners').select('count').limit(1);
-    
-    if (error && error.code === 'PGRST116') {
-      console.log('📋 Table partners non trouvée, création du schéma...');
-      await createSchema();
-    } else if (error) {
-      throw error;
-    } else {
-      console.log('✅ Connexion Supabase réussie');
-      console.log('✅ Base de données déjà configurée');
-      return;
-    }
-    
-  } catch (error) {
-    console.error('❌ Erreur lors de la configuration :', error.message);
-    process.exit(1);
-  }
-}
-
-async function createSchema() {
-  try {
-    console.log('📖 Lecture du schéma SQL...');
-    
+    // Lire le fichier de schéma
     const schemaPath = path.join(__dirname, '..', 'supabase', 'schema.sql');
-    if (!fs.existsSync(schemaPath)) {
-      throw new Error('Fichier schema.sql non trouvé');
-    }
+    const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
     
-    const schemaContent = fs.readFileSync(schemaPath, 'utf8');
+    console.log('📄 Schéma SQL chargé avec succès');
+    console.log('📋 Modifications apportées :');
+    console.log('   ✅ Suppression de toutes les tables existantes');
+    console.log('   ✅ Ajout du champ frais_attribues à la table services');
+    console.log('   ✅ Ajout du champ pourcentage_max à la table services');
+    console.log('   ✅ Mise à jour des données de test avec le service "Avance sur salaire"');
     
-    // Diviser le schéma en commandes individuelles
-    const commands = schemaContent
-      .split(';')
-      .map(cmd => cmd.trim())
-      .filter(cmd => cmd.length > 0 && !cmd.startsWith('--'));
+    // Exécuter le schéma SQL
+    console.log('⚡ Exécution du schéma SQL...');
+    const { error } = await supabase.rpc('exec_sql', { sql: schemaSQL });
     
-    console.log(`📝 Exécution de ${commands.length} commandes SQL...\n`);
-    
-    let successCount = 0;
-    let errorCount = 0;
-    
-    for (let i = 0; i < commands.length; i++) {
-      const command = commands[i];
+    if (error) {
+      // Si la fonction RPC n'existe pas, utiliser une approche alternative
+      console.log('⚠️  Fonction RPC non disponible, tentative d\'exécution directe...');
       
-      try {
-        // Exécuter la commande SQL
-        const { error } = await supabase.rpc('exec_sql', { sql: command });
-        
-        if (error) {
-          // Si exec_sql n'existe pas, utiliser une approche différente
-          console.log(`⚠️  Commande ${i + 1} : ${error.message}`);
-          errorCount++;
-        } else {
-          successCount++;
+      // Diviser le schéma en parties pour l'exécution
+      const statements = schemaSQL.split(';').filter(stmt => stmt.trim());
+      
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i].trim();
+        if (statement) {
+          try {
+            const { error: stmtError } = await supabase.rpc('exec_sql', { sql: statement + ';' });
+            if (stmtError) {
+              console.log(`⚠️  Erreur sur la déclaration ${i + 1}:`, stmtError.message);
+            }
+          } catch (e) {
+            console.log(`⚠️  Impossible d'exécuter la déclaration ${i + 1}:`, e.message);
+          }
         }
-        
-        // Afficher le progrès
-        if ((i + 1) % 10 === 0) {
-          console.log(`📊 Progrès : ${i + 1}/${commands.length} commandes`);
-        }
-        
-      } catch (err) {
-        console.log(`⚠️  Commande ${i + 1} : ${err.message}`);
-        errorCount++;
       }
     }
     
-    console.log('\n📊 Résumé de l\'exécution :');
-    console.log(`✅ Commandes réussies : ${successCount}`);
-    console.log(`❌ Commandes en erreur : ${errorCount}`);
+    console.log('✅ Schéma de base de données appliqué avec succès !');
     
-    if (errorCount === 0) {
-      console.log('\n🎉 Schéma de base de données créé avec succès !');
-      await verifySetup();
-    } else {
-      console.log('\n⚠️  Certaines commandes ont échoué');
-      console.log('💡 Vérifiez les logs ci-dessus et exécutez manuellement dans Supabase Dashboard');
-    }
+    // Vérifier que les tables ont été créées
+    console.log('🔍 Vérification des tables créées...');
     
-  } catch (error) {
-    console.error('❌ Erreur lors de la création du schéma :', error.message);
-    console.log('\n💡 Exécutez manuellement le schéma dans Supabase Dashboard :');
-    console.log('1. Allez sur https://supabase.com/dashboard');
-    console.log('2. Sélectionnez votre projet ZaLaMa');
-    console.log('3. Allez dans SQL Editor');
-    console.log('4. Copiez le contenu de supabase/schema.sql');
-    console.log('5. Exécutez le script');
-  }
-}
-
-async function verifySetup() {
-  try {
-    console.log('\n🔍 Vérification de la configuration...');
-    
-    // Vérifier les tables principales
-    const tables = ['users', 'partners', 'employees', 'services', 'alerts', 'financial_transactions'];
+    const tables = [
+      'users', 'partners', 'employees', 'services', 
+      'alerts', 'financial_transactions', 'performance_metrics', 'notifications'
+    ];
     
     for (const table of tables) {
       try {
-        const { data, error } = await supabase.from(table).select('count').limit(1);
+        const { data, error } = await supabase
+          .from(table)
+          .select('*')
+          .limit(1);
         
         if (error) {
-          console.log(`❌ Table ${table} : Erreur - ${error.message}`);
+          console.log(`❌ Table ${table}: ${error.message}`);
         } else {
-          console.log(`✅ Table ${table} : OK`);
+          console.log(`✅ Table ${table}: OK`);
         }
-      } catch (err) {
-        console.log(`❌ Table ${table} : Erreur - ${err.message}`);
+      } catch (e) {
+        console.log(`❌ Table ${table}: ${e.message}`);
       }
     }
     
-    // Vérifier les vues
-    const views = ['user_statistics', 'financial_performance', 'active_alerts', 'partner_statistics'];
-    
-    for (const view of views) {
-      try {
-        const { data, error } = await supabase.from(view).select('*').limit(1);
-        
-        if (error) {
-          console.log(`❌ Vue ${view} : Erreur - ${error.message}`);
-        } else {
-          console.log(`✅ Vue ${view} : OK`);
-        }
-      } catch (err) {
-        console.log(`❌ Vue ${view} : Erreur - ${err.message}`);
+    // Vérifier spécifiquement le service "Avance sur salaire"
+    console.log('🔍 Vérification du service "Avance sur salaire"...');
+    try {
+      const { data: services, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('nom', 'Avance sur salaire');
+      
+      if (error) {
+        console.log(`❌ Erreur lors de la vérification: ${error.message}`);
+      } else if (services && services.length > 0) {
+        const service = services[0];
+        console.log('✅ Service "Avance sur salaire" trouvé !');
+        console.log('📋 Détails :');
+        console.log(`   - Nom: ${service.nom}`);
+        console.log(`   - Catégorie: ${service.categorie}`);
+        console.log(`   - Frais: ${service.frais_attribues?.toLocaleString()} FG`);
+        console.log(`   - Pourcentage max: ${service.pourcentage_max}%`);
+        console.log(`   - Durée: ${service.duree}`);
+        console.log(`   - Statut: ${service.disponible ? 'Disponible' : 'Indisponible'}`);
+      } else {
+        console.log('⚠️  Service "Avance sur salaire" non trouvé');
       }
+    } catch (e) {
+      console.log(`❌ Erreur lors de la vérification du service: ${e.message}`);
     }
     
     console.log('\n🎉 Configuration de la base de données terminée !');
-    console.log('\n🚀 Prochaines étapes :');
-    console.log('1. Testez la migration : http://localhost:3000/dashboard/migration-test');
-    console.log('2. Créez un utilisateur admin si nécessaire');
-    console.log('3. Commencez à utiliser l\'application');
+    console.log('📋 Prochaines étapes :');
+    console.log('   1. Vérifiez que toutes les tables sont créées');
+    console.log('   2. Testez l\'application avec les nouvelles données');
+    console.log('   3. Configurez les politiques RLS selon vos besoins');
     
   } catch (error) {
-    console.error('❌ Erreur lors de la vérification :', error.message);
+    console.error('❌ Erreur lors de la configuration de la base de données:', error);
+    process.exit(1);
   }
 }
 

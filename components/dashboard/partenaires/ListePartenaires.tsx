@@ -77,6 +77,7 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
                 <div className="absolute -bottom-10 left-4">
                   <div className="w-20 h-20 rounded-xl bg-white shadow-md flex items-center justify-center p-1">
                     <Image 
+                      priority
                       src={partenaire.logo} 
                       alt={`Logo ${partenaire.nom}`}
                       height={80}
@@ -84,7 +85,7 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
                       className="max-w-full max-h-full object-contain"
                       onError={(e) => {
                         // Fallback si l'image ne charge pas
-                        (e.target as HTMLImageElement).src = '/images/partners/default.png';
+                        (e.target as HTMLImageElement).src = '/images/partners/default.svg';
                       }}
                     />
                   </div>

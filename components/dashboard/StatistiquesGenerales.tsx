@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { where, orderBy, Timestamp } from 'firebase/firestore';
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
-import userService from '@/services/userService';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { userService } from '@/services/userService';
 import { Utilisateur } from '@/types/utilisateur';
 
 interface UserStats {
@@ -16,7 +15,7 @@ interface UserStats {
 
 export default function StatistiquesGenerales() {
   // Utiliser notre hook pour récupérer tous les utilisateurs
-  const { data: users, loading, error } = useFirebaseCollection<Utilisateur>(userService);
+  const { data: users, loading, error } = useSupabaseCollection<Utilisateur>(userService);
 
   // Calculer les statistiques à partir des données utilisateurs
   const stats = useMemo(() => {
@@ -38,14 +37,12 @@ export default function StatistiquesGenerales() {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
     // Calculer le nombre d'utilisateurs actifs
-    const activeUsers = users.filter(user => user.active).length;
+    const activeUsers = users.filter(user => user.actif).length;
     
     // Calculer le nombre de nouveaux utilisateurs ce mois-ci
     const newUsersThisMonth = users.filter(user => {
-      if (!user.createdAt) return false;
-      const createdAt = user.createdAt instanceof Timestamp 
-        ? user.createdAt.toDate() 
-        : new Date(user.createdAt);
+      if (!user.created_at) return false;
+      const createdAt = new Date(user.created_at);
       return createdAt >= firstDayOfMonth;
     }).length;
     

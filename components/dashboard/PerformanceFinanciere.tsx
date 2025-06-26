@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, BarChart3 } from 'lucide-react';
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
 import financeService, { getMontantTotal, getMontantDebloque, getMontantRecupere, getRevenusGeneres, getTauxRemboursement } from '@/services/financeService';
 import { Transaction } from '@/types/transaction';
 
 export default function PerformanceFinanciere() {
   // Utiliser notre hook pour récupérer les transactions
-  const { data: transactions, loading: loadingTransactions } = useFirebaseCollection<Transaction>(financeService);
+  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection<Transaction>(financeService);
   
   // États pour les statistiques financières
   const [stats, setStats] = useState({

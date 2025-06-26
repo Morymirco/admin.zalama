@@ -1,9 +1,7 @@
 "use client";
 
-import { db } from '@/lib/firebase';
-import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Building, Filter, Globe, Plus, Search, Users } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 // Importation des composants
@@ -16,22 +14,11 @@ import {
   StatistiquesPartenaires
 } from '@/components/dashboard/partenaires';
 
+// Importation du hook Supabase
+import { useSupabasePartners } from '@/hooks/useSupabasePartners';
+
 // Types
-interface Partenaire {
-  id: string;
-  nom: string;
-  type: string;
-  secteur: string;
-  description: string;
-  adresse: string;
-  email: string;
-  telephone: string;
-  siteWeb: string;
-  logo: string;
-  datePartenariat: string;
-  actif: boolean;
-  dateCreation?: any;
-}
+import { Partenaire } from '@/types/partenaire';
 
 interface StatistiquePartenaire {
   type: string;
@@ -44,9 +31,7 @@ interface StatistiquePartenaire {
 }
 
 export default function PartenairesPage() {
-  // États
-  const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
-  const [filteredPartenaires, setFilteredPartenaires] = useState<Partenaire[]>([]);
+  // États locaux
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
@@ -54,128 +39,38 @@ export default function PartenairesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentPartenaire, setCurrentPartenaire] = useState<Partenaire | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<string>('tous');
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [statistiques, setStatistiques] = useState<StatistiquePartenaire[]>([]);
+
+  // Utilisation du hook Supabase
+  const {
+    partenaires,
+    loading: isLoading,
+    error,
+    statistiques,
+    createPartenaire,
+    updatePartenaire,
+    deletePartenaire,
+    searchPartenaires,
+    filterByType,
+    loadStatistiques
+  } = useSupabasePartners();
 
   // Liste des types de partenaires
-  const types = ['tous', 'Entreprise', 'Institution financière', 'ONG', 'Gouvernement', 'Université'];
+  const types = ['tous', 'Entreprise', 'Institution', 'Organisation'];
 
-  // Récupération des partenaires depuis Firestore
-  useEffect(() => {
-    const fetchPartenaires = async () => {
-      setIsLoading(true);
-      try {
-        const partenairesRef = collection(db, 'partenaires');
-        const snapshot = await getDocs(partenairesRef);
-        
-        const partenairesList = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Partenaire[];
-        
-        setPartenaires(partenairesList);
-        setFilteredPartenaires(partenairesList);
-        
-        // Calculer les statistiques
-        calculateStatistics(partenairesList);
-      } catch (error) {
-        console.error("Erreur lors de la récupération des partenaires:", error);
-        toast.error("Impossible de charger les partenaires");
-      } finally {
-        setIsLoading(false);
-        setStatsLoading(false);
-      }
-    };
-    
-    fetchPartenaires();
-  }, []);
-
-  // Calcul des statistiques
-  const calculateStatistics = (data: Partenaire[]) => {
-    // Grouper par type
-    const typeGroups: Record<string, Partenaire[]> = {};
-    data.forEach(partenaire => {
-      if (!typeGroups[partenaire.type]) {
-        typeGroups[partenaire.type] = [];
-      }
-      typeGroups[partenaire.type].push(partenaire);
+  // Filtrer les partenaires en fonction de la recherche et du type
+  const filteredPartenaires = useMemo(() => {
+    return partenaires.filter(partenaire => {
+      const matchesSearch = searchTerm === '' || 
+        partenaire.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        partenaire.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        partenaire.secteur.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesType = typeFilter === 'tous' || partenaire.type === typeFilter;
+      
+      return matchesSearch && matchesType;
     });
-    
-    // Créer les statistiques
-    const stats: StatistiquePartenaire[] = [
-      {
-        type: 'Entreprises',
-        nombre: typeGroups['Entreprise']?.length || 0,
-        nouveauxCeMois: countNewThisMonth(typeGroups['Entreprise'] || []),
-        actifs: countActive(typeGroups['Entreprise'] || []),
-        inactifs: (typeGroups['Entreprise']?.length || 0) - countActive(typeGroups['Entreprise'] || []),
-        tendance: 'hausse',
-        icon: <Building className="h-6 w-6 text-[var(--zalama-blue)]" />
-      },
-      {
-        type: 'Institutions financières',
-        nombre: typeGroups['Institution financière']?.length || 0,
-        nouveauxCeMois: countNewThisMonth(typeGroups['Institution financière'] || []),
-        actifs: countActive(typeGroups['Institution financière'] || []),
-        inactifs: (typeGroups['Institution financière']?.length || 0) - countActive(typeGroups['Institution financière'] || []),
-        tendance: 'stable',
-        icon: <Users className="h-6 w-6 text-[var(--zalama-success)]" />
-      },
-      {
-        type: 'Autres partenaires',
-        nombre: data.length - (typeGroups['Entreprise']?.length || 0) - (typeGroups['Institution financière']?.length || 0),
-        nouveauxCeMois: countNewThisMonth(data.filter(p => p.type !== 'Entreprise' && p.type !== 'Institution financière')),
-        actifs: countActive(data.filter(p => p.type !== 'Entreprise' && p.type !== 'Institution financière')),
-        inactifs: data.filter(p => p.type !== 'Entreprise' && p.type !== 'Institution financière').length - countActive(data.filter(p => p.type !== 'Entreprise' && p.type !== 'Institution financière')),
-        tendance: 'hausse',
-        icon: <Globe className="h-6 w-6 text-[var(--zalama-warning)]" />
-      }
-    ];
-    
-    setStatistiques(stats);
-  };
-  
-  // Compter les partenaires créés ce mois-ci
-  const countNewThisMonth = (partenaires: Partenaire[]) => {
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    return partenaires.filter(p => {
-      if (!p.dateCreation) return false;
-      const creationDate = p.dateCreation.toDate ? p.dateCreation.toDate() : new Date(p.dateCreation);
-      return creationDate >= firstDayOfMonth;
-    }).length;
-  };
-  
-  // Compter les partenaires actifs
-  const countActive = (partenaires: Partenaire[]) => {
-    return partenaires.filter(p => p.actif).length;
-  };
-
-  // Filtrage des partenaires
-  useEffect(() => {
-    let filtered = [...partenaires];
-    
-    // Filtre par type
-    if (typeFilter !== 'tous') {
-      filtered = filtered.filter(partenaire => partenaire.type === typeFilter);
-    }
-    
-    // Filtre par recherche
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(partenaire => 
-        partenaire.nom.toLowerCase().includes(term) ||
-        partenaire.secteur.toLowerCase().includes(term) ||
-        partenaire.email.toLowerCase().includes(term)
-      );
-    }
-    
-    setFilteredPartenaires(filtered);
-    setCurrentPage(1); // Réinitialiser la pagination
-  }, [searchTerm, typeFilter, partenaires]);
+  }, [partenaires, searchTerm, typeFilter]);
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -183,15 +78,82 @@ export default function PartenairesPage() {
   const currentItems = filteredPartenaires.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredPartenaires.length / itemsPerPage);
 
-  // Handlers pour les filtres
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
+  // Calculer les statistiques
+  const statistiquesCalculées = useMemo(() => {
+    const totalPartenaires = partenaires.length;
+    const partenairesActifs = partenaires.filter(p => p.actif).length;
+    const partenairesInactifs = totalPartenaires - partenairesActifs;
+    
+    // Calculer les nouveaux partenaires ce mois
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nouveauxCeMois = partenaires.filter(p => {
+      const dateCreation = new Date(p.created_at);
+      return dateCreation >= firstDayOfMonth;
+    }).length;
 
-  const handleTypeFilterChange = (type: string) => {
-    setTypeFilter(type);
+    // Déterminer la tendance
+    const tendance = nouveauxCeMois > 5 ? 'hausse' as const : 
+                    nouveauxCeMois > 2 ? 'stable' as const : 'baisse' as const;
+
+    return [
+      {
+        type: 'Entreprises',
+        nombre: partenaires.filter(p => p.type === 'Entreprise').length,
+        nouveauxCeMois: partenaires.filter(p => p.type === 'Entreprise' && new Date(p.created_at) >= firstDayOfMonth).length,
+        actifs: partenaires.filter(p => p.type === 'Entreprise' && p.actif).length,
+        inactifs: partenaires.filter(p => p.type === 'Entreprise' && !p.actif).length,
+        tendance,
+        icon: <Building className="h-5 w-5" />
+      },
+      {
+        type: 'Institutions',
+        nombre: partenaires.filter(p => p.type === 'Institution').length,
+        nouveauxCeMois: partenaires.filter(p => p.type === 'Institution' && new Date(p.created_at) >= firstDayOfMonth).length,
+        actifs: partenaires.filter(p => p.type === 'Institution' && p.actif).length,
+        inactifs: partenaires.filter(p => p.type === 'Institution' && !p.actif).length,
+        tendance,
+        icon: <Globe className="h-5 w-5" />
+      },
+      {
+        type: 'Organisations',
+        nombre: partenaires.filter(p => p.type === 'Organisation').length,
+        nouveauxCeMois: partenaires.filter(p => p.type === 'Organisation' && new Date(p.created_at) >= firstDayOfMonth).length,
+        actifs: partenaires.filter(p => p.type === 'Organisation' && p.actif).length,
+        inactifs: partenaires.filter(p => p.type === 'Organisation' && !p.actif).length,
+        tendance,
+        icon: <Users className="h-5 w-5" />
+      }
+    ];
+  }, [partenaires]);
+
+  // Réinitialiser la pagination lors du filtrage
+  useEffect(() => {
     setCurrentPage(1);
-  };
+  }, [searchTerm, typeFilter]);
+
+  // Afficher les erreurs
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  // Handlers
+  const handleSearch = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (value.trim()) {
+      await searchPartenaires(value);
+    }
+  }, [searchPartenaires]);
+
+  const handleTypeFilterChange = useCallback(async (type: string) => {
+    setTypeFilter(type);
+    if (type !== 'tous') {
+      await filterByType(type);
+    }
+  }, [filterByType]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -212,268 +174,268 @@ export default function PartenairesPage() {
     setShowDeleteModal(true);
   };
 
-  const handleSubmitAddPartenaire = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitAddPartenaire = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     try {
-      // Récupération des données du formulaire depuis window.formData
+      // Récupérer les données du formulaire depuis window.formData (défini dans la modale)
       const formData = (window as any).formData;
       
       if (!formData) {
-        console.error('Aucune donnée de formulaire trouvée');
-        toast.error('Une erreur est survenue lors de la soumission du formulaire');
-        return;
+        throw new Error('Données du formulaire non trouvées');
       }
-      
-      // Afficher un toast de chargement
-      const loadingToast = toast.loading('Ajout du partenaire en cours...');
-      
-      // Création du nouvel objet partenaire avec les données du formulaire
-      const newPartenaireData = {
+
+      // Créer le partenaire avec Supabase
+      const result = await createPartenaire({
         nom: formData.nom,
         type: formData.type,
-        secteur: formData.domaine,
+        secteur: formData.secteur,
         description: formData.description,
-        adresse: formData.adresse,
+        
+        // Représentant
+        nom_representant: formData.nom_representant,
+        email_representant: formData.email_representant,
+        telephone_representant: formData.telephone_representant,
+        
+        // Responsable RH
+        nom_rh: formData.nom_rh,
+        email_rh: formData.email_rh,
+        telephone_rh: formData.telephone_rh,
+        
+        // Informations légales
+        rccm: formData.rccm,
+        nif: formData.nif,
+        
+        // Contact
         email: formData.email,
         telephone: formData.telephone,
-        siteWeb: formData.siteWeb || '',
-        logo: formData.logo || '/images/partners/default.png', // Utiliser le logo uploadé
-        datePartenariat: formData.dateAdhesion || new Date().toISOString().split('T')[0],
+        adresse: formData.adresse,
+        site_web: formData.site_web,
+        
+        // Autres informations
+        logo_url: formData.logo_url,
         actif: formData.actif,
-        dateCreation: serverTimestamp(),
-        // Informations supplémentaires
-        representant: {
-          nom: formData.nomRepresentant || '',
-          email: formData.emailRepresentant || '',
-          telephone: formData.telephoneRepresentant || ''
-        },
-        rh: {
-          nom: formData.nomRH || '',
-          email: formData.emailRH || '',
-          telephone: formData.telephoneRH || ''
-        },
-        infoLegales: {
-          rccm: formData.rccm || '',
-          nif: formData.nif || ''
-        }
-      };
-      
-      // Ajout du document à Firestore
-      const partenairesRef = collection(db, 'partenaires');
-      const docRef = await addDoc(partenairesRef, newPartenaireData);
-      
-      // Ajout du nouveau partenaire à l'état local avec l'ID généré
-      const newPartenaire: Partenaire = {
-        id: docRef.id,
-        ...newPartenaireData
-      } as Partenaire;
-      
-      const updatedPartenaires = [...partenaires, newPartenaire];
-      setPartenaires(updatedPartenaires);
-      setFilteredPartenaires(updatedPartenaires);
-      
-      // Recalculer les statistiques
-      calculateStatistics(updatedPartenaires);
-      
-      // Créer un compte RH si les informations sont disponibles
-      if (formData.emailRH && formData.nomRH) {
-        try {
-          console.log("Tentative de création du compte RH pour:", formData.emailRH);
-          
-          // Vérifier si le numéro de téléphone est valide avant de l'envoyer
-          let phoneNumber = null;
-          if (formData.telephoneRH && formData.telephoneRH.trim() !== '') {
-            // Ne pas envoyer le numéro de téléphone s'il est trop court
-            if (formData.telephoneRH.replace(/\D/g, '').length >= 8) {
-              phoneNumber = formData.telephoneRH;
-            } else {
-              console.warn("Numéro de téléphone trop court, il ne sera pas utilisé");
-            }
-          }
-          
-          const rhResponse = await fetch('/api/auth/create-rh', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: formData.emailRH,
-              displayName: formData.nomRH,
-              partenaireId: docRef.id,
-              phoneNumber: phoneNumber,
-              poste: formData.posteRH || 'Responsable RH',
-              departement: 'Ressources Humaines'
-            }),
+        nombre_employes: 0,
+        salaire_net_total: 0
+      });
+
+      // Afficher le toast principal de succès
+      toast.success(`Partenaire "${result.partenaire.nom}" ajouté avec succès !`);
+
+      // Afficher les toasts pour les SMS
+      if (result.smsResults) {
+        // SMS au représentant
+        if (result.smsResults.representant.success) {
+          toast.success(`✅ ${result.smsResults.representant.message}`, {
+            duration: 4000,
+            icon: '📱'
           });
-          
-          if (!rhResponse.ok) {
-            const errorData = await rhResponse.json();
-            throw new Error(`Erreur API: ${errorData.error} (${errorData.code})`);
-          }
-          
-          const rhData = await rhResponse.json();
-          
-          if (rhData.success) {
-            console.log('Compte RH créé avec succès:', rhData);
-            toast.success('Compte RH créé et invitation envoyée');
-            
-            // Si vous avez un lien de réinitialisation en mode développement
-            if (rhData.resetLink) {
-              console.log('Lien de réinitialisation:', rhData.resetLink);
-            }
-          } else {
-            throw new Error(rhData.error || 'Erreur inconnue');
-          }
-        } catch (rhError: any) {
-          console.error('Erreur lors de la création du compte RH:', rhError);
-          toast.error(`Impossible de créer le compte RH: ${rhError.message || 'Erreur inconnue'}`);
+        } else if (result.smsResults.representant.error) {
+          toast.error(`❌ ${result.smsResults.representant.error}`, {
+            duration: 4000,
+            icon: '📱'
+          });
+        }
+
+        // SMS au responsable RH
+        if (result.smsResults.rh.success) {
+          toast.success(`✅ ${result.smsResults.rh.message}`, {
+            duration: 4000,
+            icon: '👥'
+          });
+        } else if (result.smsResults.rh.error) {
+          toast.error(`❌ ${result.smsResults.rh.error}`, {
+            duration: 4000,
+            icon: '👥'
+          });
+        }
+
+        // SMS de notification admin
+        if (result.smsResults.admin.success) {
+          toast.success(`✅ ${result.smsResults.admin.message}`, {
+            duration: 3000,
+            icon: '🔔'
+          });
+        } else if (result.smsResults.admin.error) {
+          toast.error(`❌ ${result.smsResults.admin.error}`, {
+            duration: 3000,
+            icon: '🔔'
+          });
+        }
+
+        // Résumé des SMS
+        const smsSuccessCount = [
+          result.smsResults.representant.success,
+          result.smsResults.rh.success,
+          result.smsResults.admin.success
+        ].filter(Boolean).length;
+
+        const totalSMS = 3;
+        
+        if (smsSuccessCount === totalSMS) {
+          toast.success(`🎉 Tous les SMS (${totalSMS}) ont été envoyés avec succès !`, {
+            duration: 5000,
+            icon: '🎉'
+          });
+        } else if (smsSuccessCount > 0) {
+          toast.warning(`⚠️ ${smsSuccessCount}/${totalSMS} SMS envoyés avec succès`, {
+            duration: 5000,
+            icon: '⚠️'
+          });
+        } else {
+          toast.error(`❌ Aucun SMS n'a pu être envoyé`, {
+            duration: 5000,
+            icon: '❌'
+          });
         }
       }
 
-      // Créer un compte responsable si les informations sont disponibles
-      if (formData.emailRepresentant && formData.nomRepresentant) {
-        try {
-          console.log("Tentative de création du compte responsable pour:", formData.emailRepresentant);
-          
-          // Valider et formater le numéro de téléphone côté client
-          let phoneNumber = null;
-          if (formData.telephoneRepresentant && formData.telephoneRepresentant.trim() !== '') {
-            // Nettoyer le numéro
-            const cleaned = formData.telephoneRepresentant.replace(/\D/g, '');
-            
-            // Vérifier la longueur
-            if (cleaned.length >= 8 && cleaned.length <= 15) {
-              phoneNumber = cleaned;
-            } else {
-              console.warn("Numéro de téléphone invalide (longueur):", cleaned);
-            }
-          }
-          
-          const responsableResponse = await fetch('/api/auth/create-responsable', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: formData.emailRepresentant,
-              displayName: formData.nomRepresentant,
-              partenaireId: docRef.id,
-              phoneNumber: phoneNumber, // Numéro validé ou null
-              poste: formData.posteRepresentant || 'Responsable'
-            }),
-          });
-          
-          if (!responsableResponse.ok) {
-            const errorData = await responsableResponse.json();
-            throw new Error(`Erreur API: ${errorData.error} (${errorData.code})`);
-          }
-          
-          const responsableData = await responsableResponse.json();
-          
-          if (responsableData.success) {
-            console.log('Compte responsable créé avec succès:', responsableData);
-            toast.success('Compte responsable créé et invitation envoyée');
-            
-            // Si vous avez un lien de réinitialisation en mode développement
-            if (responsableData.resetLink) {
-              console.log('Lien de réinitialisation pour le responsable:', responsableData.resetLink);
-            }
-          } else {
-            throw new Error(responsableData.error || 'Erreur inconnue');
-          }
-        } catch (responsableError: any) {
-          console.error('Erreur lors de la création du compte responsable:', responsableError);
-          toast.error(`Impossible de créer le compte responsable: ${responsableError.message || 'Erreur inconnue'}`);
-        }
-      }
-      
-      // // Envoyer des notifications aux RH et au responsable
-      // await envoyerNotificationsPartenaire(newPartenaire);
-      
-      // Fermer la modale
       setShowAddModal(false);
       
-      // Notification de succès
-      toast.dismiss(loadingToast);
-      toast.success('Partenaire ajouté avec succès!');
-      
-      // Nettoyage des données temporaires
+      // Nettoyer les données temporaires
       delete (window as any).formData;
+      
     } catch (error) {
       console.error('Erreur lors de l\'ajout du partenaire:', error);
-      toast.error('Une erreur est survenue lors de l\'ajout du partenaire');
+      toast.error('Erreur lors de l\'ajout du partenaire');
     }
-  };
+  }, [createPartenaire]);
 
-  const handleSubmitEditPartenaire = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitEditPartenaire = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
     if (!currentPartenaire) return;
     
-    const form = e.currentTarget;
-    
-    const updatedPartenaire: Partenaire = {
-      ...currentPartenaire,
-      nom: (form.querySelector('#edit-nom') as HTMLInputElement).value,
-      type: (form.querySelector('#edit-type') as HTMLSelectElement).value,
-      secteur: (form.querySelector('#edit-secteur') as HTMLInputElement).value,
-      description: (form.querySelector('#edit-description') as HTMLTextAreaElement).value,
-      adresse: (form.querySelector('#edit-adresse') as HTMLInputElement).value,
-      email: (form.querySelector('#edit-email') as HTMLInputElement).value,
-      telephone: (form.querySelector('#edit-telephone') as HTMLInputElement).value,
-      siteWeb: (form.querySelector('#edit-siteWeb') as HTMLInputElement).value,
-      actif: (form.querySelector('#edit-actif') as HTMLInputElement).checked,
-    };
-    
-    const updatedPartenaires = partenaires.map(p => p.id === currentPartenaire.id ? updatedPartenaire : p);
-    setPartenaires(updatedPartenaires);
-    setFilteredPartenaires(updatedPartenaires);
-    setShowEditModal(false);
-    setCurrentPartenaire(null);
-    
-    // Notification de succès (à implémenter)
-    console.log('Partenaire mis à jour avec succès:', updatedPartenaire);
-  };
+    try {
+      const formData = (window as any).formData;
+      
+      if (!formData) {
+        throw new Error('Données du formulaire non trouvées');
+      }
 
-  const handleConfirmDelete = () => {
+      // Mettre à jour le partenaire
+      await updatePartenaire(currentPartenaire.id, {
+        nom: formData.nom,
+        type: formData.type,
+        secteur: formData.secteur,
+        description: formData.description,
+        
+        // Représentant
+        nom_representant: formData.nom_representant,
+        email_representant: formData.email_representant,
+        telephone_representant: formData.telephone_representant,
+        
+        // Responsable RH
+        nom_rh: formData.nom_rh,
+        email_rh: formData.email_rh,
+        telephone_rh: formData.telephone_rh,
+        
+        // Informations légales
+        rccm: formData.rccm,
+        nif: formData.nif,
+        
+        // Contact
+        email: formData.email,
+        telephone: formData.telephone,
+        adresse: formData.adresse,
+        site_web: formData.site_web,
+        
+        // Autres informations
+        logo_url: formData.logo_url,
+        actif: formData.actif
+      });
+
+      toast.success('Partenaire mis à jour avec succès !');
+      setShowEditModal(false);
+      setCurrentPartenaire(null);
+      
+      // Nettoyer les données temporaires
+      delete (window as any).formData;
+      
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du partenaire:', error);
+      toast.error('Erreur lors de la mise à jour du partenaire');
+    }
+  }, [updatePartenaire, currentPartenaire]);
+
+  const handleConfirmDeletePartenaire = useCallback(async () => {
     if (!currentPartenaire) return;
     
-    const updatedPartenaires = partenaires.filter(p => p.id !== currentPartenaire.id);
-    setPartenaires(updatedPartenaires);
-    setFilteredPartenaires(updatedPartenaires);
-    setShowDeleteModal(false);
-    setCurrentPartenaire(null);
-    
-    // Notification de succès (à implémenter)
-    console.log('Partenaire supprimé avec succès:', currentPartenaire);
-  };
+    try {
+      await deletePartenaire(currentPartenaire.id);
+      toast.success('Partenaire supprimé avec succès !');
+      setShowDeleteModal(false);
+      setCurrentPartenaire(null);
+    } catch (error) {
+      console.error('Erreur lors de la suppression du partenaire:', error);
+      toast.error('Erreur lors de la suppression du partenaire');
+    }
+  }, [deletePartenaire, currentPartenaire]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Partenaires</h1>
+    <div className="p-4 md:p-6">
+      {/* En-tête de la page */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Gestion des Partenaires</h1>
+          <p className="text-[var(--zalama-text-secondary)]">
+            Gérez vos partenaires et leurs informations
+          </p>
+        </div>
+        <button
+          onClick={handleAddPartenaire}
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors mt-4 md:mt-0"
+        >
+          <Plus className="h-4 w-4" />
+          Ajouter un partenaire
+        </button>
+      </div>
+
+      {/* Statistiques */}
+      <div className="mb-6">
+        {/* Résumé des partenaires */}
+        <ResumePartenaires 
+          totalPartenaires={partenaires.length}
+          partenairesActifs={partenaires.filter(p => p.actif).length}
+          partenairesInactifs={partenaires.filter(p => !p.actif).length}
+          nouveauxCeMois={partenaires.filter(p => {
+            const now = new Date();
+            const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            return new Date(p.created_at) >= firstDayOfMonth;
+          }).length}
+          isLoading={isLoading}
+        />
         
-        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-          {/* Barre de recherche */}
-          <div className="relative w-full md:w-64">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+        {/* Statistiques détaillées par type */}
+        <StatistiquesPartenaires 
+          statistiques={statistiquesCalculées} 
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Filtres et recherche */}
+      <div className="bg-[var(--zalama-card)] rounded-xl p-4 border border-[var(--zalama-border)] mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Recherche */}
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--zalama-text-secondary)]" />
+              <input
+                type="text"
+                placeholder="Rechercher un partenaire..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:border-[var(--zalama-blue)] focus:outline-none"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Rechercher un partenaire..."
-              value={searchTerm}
-              onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
-            />
           </div>
-          
+
           {/* Filtre par type */}
-          <div className="relative w-full md:w-auto">
+          <div className="flex gap-2">
             <select
               value={typeFilter}
               onChange={(e) => handleTypeFilterChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
+              className="px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:border-[var(--zalama-blue)] focus:outline-none"
             >
               {types.map((type) => (
                 <option key={type} value={type}>
@@ -481,38 +443,12 @@ export default function PartenairesPage() {
                 </option>
               ))}
             </select>
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Filter className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
-            </div>
           </div>
-          
-          {/* Bouton d'ajout */}
-          <button
-            onClick={handleAddPartenaire}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Ajouter
-          </button>
         </div>
       </div>
 
-      {/* Section des statistiques */}
-      <StatistiquesPartenaires 
-        statistiques={statistiques} 
-        isLoading={statsLoading} 
-      />
-      
-      {/* Résumé des partenaires */}
-      <ResumePartenaires 
-        totalPartenaires={filteredPartenaires.length}
-        partenairesActifs={filteredPartenaires.filter(p => p.actif).length}
-        partenairesInactifs={filteredPartenaires.filter(p => !p.actif).length}
-        isLoading={isLoading}
-      />
-      
       {/* Liste des partenaires */}
-      <ListePartenaires 
+      <ListePartenaires
         partenaires={currentItems}
         onEdit={handleEditPartenaire}
         onDelete={handleDeletePartenaire}
@@ -521,43 +457,36 @@ export default function PartenairesPage() {
         onPageChange={handlePageChange}
         isLoading={isLoading}
       />
-      
+
       {/* Modales */}
-      <ModaleAjoutPartenaire 
+      <ModaleAjoutPartenaire
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSubmit={handleSubmitAddPartenaire}
         types={types.filter(t => t !== 'tous')}
       />
-      
-      {showEditModal && currentPartenaire && (
-        <ModaleEditionPartenaire 
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setCurrentPartenaire(null);
-          }}
-          onSubmit={handleSubmitEditPartenaire}
-          partenaire={currentPartenaire}
-          types={types.filter(t => t !== 'tous')}
-        />
-      )}
-      
-      {showDeleteModal && currentPartenaire && (
-        <ModaleSuppressionPartenaire 
-          isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setCurrentPartenaire(null);
-          }}
-          onConfirm={handleConfirmDelete}
-          partenaire={currentPartenaire}
-        />
-      )}
+
+      <ModaleEditionPartenaire
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setCurrentPartenaire(null);
+        }}
+        onSubmit={handleSubmitEditPartenaire}
+        partenaire={currentPartenaire}
+        types={types.filter(t => t !== 'tous')}
+      />
+
+      <ModaleSuppressionPartenaire
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setCurrentPartenaire(null);
+        }}
+        onConfirm={handleConfirmDeletePartenaire}
+        partenaire={currentPartenaire}
+      />
     </div>
   );
-}
-function envoyerNotificationsPartenaire(newPartenaire: Partenaire) {
-  throw new Error('Function not implemented.');
 }
 

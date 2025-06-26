@@ -2,17 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Wallet, LineChart, BarChart, CheckCircle, XCircle, Clock, Activity } from 'lucide-react';
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
-import transactionService from '@/services/transactionService';
-import salaryAdvanceService from '@/services/salaryAdvanceService';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { transactionService } from '@/services/transactionService';
+import { salaryAdvanceService } from '@/services/salaryAdvanceService';
 import { Transaction } from '@/types/transaction';
 import { SalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
 import serviceActivityService, { getTransactionsParService, getDemandeStats, ServiceActivity, DemandeStats } from '@/services/serviceActivityService';
 
 export default function ActiviteParService() {
   // Utiliser nos hooks pour récupérer les transactions et demandes
-  const { data: transactions, loading: loadingTransactions } = useFirebaseCollection<Transaction>(transactionService);
-  const { data: demandes, loading: loadingDemandes } = useFirebaseCollection<SalaryAdvanceRequest>(salaryAdvanceService);
+  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection<Transaction>(transactionService);
+  const { data: demandes, loading: loadingDemandes } = useSupabaseCollection<SalaryAdvanceRequest>(salaryAdvanceService);
   
   // États pour les statistiques d'activité par service
   const [servicesActivity, setServicesActivity] = useState<ServiceActivity[]>([]);

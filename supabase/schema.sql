@@ -2,6 +2,29 @@
 -- SCHEMA COMPLET ZALAMA ADMIN - SUPABASE
 -- =====================================================
 
+-- Supprimer toutes les tables existantes (ordre inverse des dépendances)
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS performance_metrics CASCADE;
+DROP TABLE IF EXISTS financial_transactions CASCADE;
+DROP TABLE IF EXISTS alerts CASCADE;
+DROP TABLE IF EXISTS employees CASCADE;
+DROP TABLE IF EXISTS services CASCADE;
+DROP TABLE IF EXISTS partners CASCADE;
+DROP TABLE IF EXISTS admin_users CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- Supprimer tous les types ENUM existants
+DROP TYPE IF EXISTS notification_type CASCADE;
+DROP TYPE IF EXISTS transaction_status CASCADE;
+DROP TYPE IF EXISTS transaction_type CASCADE;
+DROP TYPE IF EXISTS alert_status CASCADE;
+DROP TYPE IF EXISTS alert_type CASCADE;
+DROP TYPE IF EXISTS employee_contract_type CASCADE;
+DROP TYPE IF EXISTS employee_gender CASCADE;
+DROP TYPE IF EXISTS user_status CASCADE;
+DROP TYPE IF EXISTS user_type CASCADE;
+DROP TYPE IF EXISTS admin_role CASCADE;
+
 -- Types ENUM
 CREATE TYPE user_type AS ENUM ('Étudiant', 'Salarié', 'Entreprise');
 CREATE TYPE user_status AS ENUM ('Actif', 'Inactif', 'En attente');
@@ -12,9 +35,25 @@ CREATE TYPE alert_status AS ENUM ('Résolue', 'En cours', 'Nouvelle');
 CREATE TYPE transaction_type AS ENUM ('Débloqué', 'Récupéré', 'Revenu', 'Remboursement');
 CREATE TYPE transaction_status AS ENUM ('En attente', 'Validé', 'Rejeté', 'Annulé');
 CREATE TYPE notification_type AS ENUM ('Information', 'Alerte', 'Succès', 'Erreur');
+CREATE TYPE admin_role AS ENUM ('admin', 'user', 'rh', 'responsable');
 
 -- =====================================================
--- TABLE: users
+-- TABLE: admin_users (Utilisateurs d'administration)
+-- =====================================================
+CREATE TABLE admin_users (
+  id UUID PRIMARY KEY, -- Utilise l'ID de Supabase Auth
+  email VARCHAR(255) UNIQUE NOT NULL,
+  display_name VARCHAR(200) NOT NULL,
+  role admin_role NOT NULL DEFAULT 'user',
+  partenaire_id UUID, -- Référence vers partners si l'utilisateur est lié à un partenaire
+  active BOOLEAN DEFAULT true,
+  last_login TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- TABLE: users (Utilisateurs finaux)
 -- =====================================================
 CREATE TABLE users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -99,14 +138,15 @@ CREATE TABLE employees (
 );
 
 -- =====================================================
--- TABLE: services
+-- TABLE: services (MISE À JOUR AVEC fraisAttribues)
 -- =====================================================
 CREATE TABLE services (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   nom VARCHAR(200) NOT NULL,
   description TEXT,
   categorie VARCHAR(100) NOT NULL,
-  prix DECIMAL(10,2) NOT NULL,
+  frais_attribues DECIMAL(10,2), -- Nouveau champ pour les frais en FG
+  pourcentage_max DECIMAL(5,2), -- Pourcentage maximum
   duree VARCHAR(50),
   disponible BOOLEAN DEFAULT true,
   image_url VARCHAR(500),
@@ -125,7 +165,7 @@ CREATE TABLE alerts (
   type alert_type NOT NULL,
   statut alert_status NOT NULL DEFAULT 'Nouvelle',
   source VARCHAR(100),
-  assigne_a UUID REFERENCES users(id),
+  assigne_a UUID REFERENCES admin_users(id),
   date_creation TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   date_resolution TIMESTAMP WITH TIME ZONE,
   priorite INTEGER DEFAULT 1,
@@ -171,7 +211,7 @@ CREATE TABLE performance_metrics (
 -- =====================================================
 CREATE TABLE notifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES admin_users(id) ON DELETE CASCADE,
   titre VARCHAR(200) NOT NULL,
   message TEXT,
   type notification_type NOT NULL DEFAULT 'Information',
@@ -181,87 +221,114 @@ CREATE TABLE notifications (
 );
 
 -- =====================================================
--- INDEXES POUR LES PERFORMANCES
+-- INDEXES
 -- =====================================================
+
+-- Index pour admin_users
+CREATE INDEX idx_admin_users_email ON admin_users(email);
+CREATE INDEX idx_admin_users_role ON admin_users(role);
+CREATE INDEX idx_admin_users_active ON admin_users(active);
+CREATE INDEX idx_admin_users_partenaire_id ON admin_users(partenaire_id);
+
+-- Index pour users
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_type ON users(type);
 CREATE INDEX idx_users_statut ON users(statut);
 CREATE INDEX idx_users_date_inscription ON users(date_inscription);
 
+-- Index pour partners
 CREATE INDEX idx_partners_nom ON partners(nom);
 CREATE INDEX idx_partners_type ON partners(type);
 CREATE INDEX idx_partners_actif ON partners(actif);
 
+-- Index pour employees
 CREATE INDEX idx_employees_partner_id ON employees(partner_id);
 CREATE INDEX idx_employees_actif ON employees(actif);
 
+-- Index pour services
 CREATE INDEX idx_services_categorie ON services(categorie);
 CREATE INDEX idx_services_disponible ON services(disponible);
+CREATE INDEX idx_services_frais_attribues ON services(frais_attribues);
 
+-- Index pour alerts
 CREATE INDEX idx_alerts_type ON alerts(type);
 CREATE INDEX idx_alerts_statut ON alerts(statut);
 CREATE INDEX idx_alerts_date_creation ON alerts(date_creation);
 
+-- Index pour financial_transactions
 CREATE INDEX idx_financial_transactions_date ON financial_transactions(date_transaction);
 CREATE INDEX idx_financial_transactions_type ON financial_transactions(type);
 CREATE INDEX idx_financial_transactions_statut ON financial_transactions(statut);
 
+-- Index pour performance_metrics
 CREATE INDEX idx_performance_metrics_date ON performance_metrics(date_mesure);
 CREATE INDEX idx_performance_metrics_categorie ON performance_metrics(categorie);
 
+-- Index pour notifications
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_lu ON notifications(lu);
 CREATE INDEX idx_notifications_date_creation ON notifications(date_creation);
 
 -- =====================================================
--- VUES POUR LES STATISTIQUES
+-- VUES
 -- =====================================================
 
--- Vue pour les statistiques utilisateurs
+-- Vue des statistiques utilisateurs
 CREATE VIEW user_statistics AS
 SELECT 
   COUNT(*) as total_users,
-  COUNT(*) FILTER (WHERE statut = 'Actif') as active_users,
-  COUNT(*) FILTER (WHERE statut = 'Inactif') as inactive_users,
-  COUNT(*) FILTER (WHERE date_inscription >= NOW() - INTERVAL '30 days') as new_users_month,
-  COUNT(*) FILTER (WHERE type = 'Étudiant') as students,
-  COUNT(*) FILTER (WHERE type = 'Salarié') as employees,
-  COUNT(*) FILTER (WHERE type = 'Entreprise') as companies
+  COUNT(CASE WHEN actif = true THEN 1 END) as active_users,
+  COUNT(CASE WHEN actif = false THEN 1 END) as inactive_users,
+  COUNT(CASE WHEN type = 'Étudiant' THEN 1 END) as students,
+  COUNT(CASE WHEN type = 'Salarié' THEN 1 END) as employees,
+  COUNT(CASE WHEN type = 'Entreprise' THEN 1 END) as companies
 FROM users;
 
--- Vue pour les statistiques financières
+-- Vue des performances financières
 CREATE VIEW financial_performance AS
 SELECT 
-  SUM(montant) FILTER (WHERE type = 'Revenu') as total_revenue,
-  SUM(montant) FILTER (WHERE type = 'Débloqué') as total_disbursed,
-  SUM(montant) FILTER (WHERE type = 'Récupéré') as total_recovered,
-  COUNT(*) as total_transactions,
-  COUNT(*) FILTER (WHERE statut = 'Validé') as validated_transactions
-FROM financial_transactions;
+  DATE_TRUNC('month', date_transaction) as month,
+  SUM(CASE WHEN type = 'Revenu' THEN montant ELSE 0 END) as revenue,
+  SUM(CASE WHEN type = 'Débloqué' THEN montant ELSE 0 END) as disbursed,
+  SUM(CASE WHEN type = 'Récupéré' THEN montant ELSE 0 END) as recovered,
+  COUNT(*) as total_transactions
+FROM financial_transactions
+GROUP BY DATE_TRUNC('month', date_transaction)
+ORDER BY month DESC;
 
--- Vue pour les alertes actives
+-- Vue des alertes actives
 CREATE VIEW active_alerts AS
 SELECT 
-  COUNT(*) as total_alerts,
-  COUNT(*) FILTER (WHERE type = 'Critique') as critical_alerts,
-  COUNT(*) FILTER (WHERE type = 'Importante') as important_alerts,
-  COUNT(*) FILTER (WHERE statut = 'Nouvelle') as new_alerts,
-  COUNT(*) FILTER (WHERE statut = 'En cours') as in_progress_alerts
-FROM alerts;
+  a.*,
+  au.display_name as assigned_to_name
+FROM alerts a
+LEFT JOIN admin_users au ON a.assigne_a = au.id
+WHERE a.statut IN ('Nouvelle', 'En cours')
+ORDER BY a.priorite DESC, a.date_creation DESC;
 
--- Vue pour les statistiques partenaires
+-- Vue des statistiques partenaires
 CREATE VIEW partner_statistics AS
 SELECT 
   COUNT(*) as total_partners,
-  COUNT(*) FILTER (WHERE actif = true) as active_partners,
-  COUNT(*) FILTER (WHERE actif = false) as inactive_partners,
-  COUNT(*) FILTER (WHERE date_adhesion >= NOW() - INTERVAL '30 days') as new_partners_month,
+  COUNT(CASE WHEN actif = true THEN 1 END) as active_partners,
+  COUNT(CASE WHEN actif = false THEN 1 END) as inactive_partners,
   SUM(nombre_employes) as total_employees,
-  AVG(nombre_employes) as avg_employees_per_partner
+  AVG(nombre_employes) as avg_employees_per_partner,
+  SUM(salaire_net_total) as total_salary
 FROM partners;
 
+-- Vue des statistiques services
+CREATE VIEW service_statistics AS
+SELECT 
+  COUNT(*) as total_services,
+  COUNT(CASE WHEN disponible = true THEN 1 END) as available_services,
+  COUNT(CASE WHEN disponible = false THEN 1 END) as unavailable_services,
+  AVG(frais_attribues) as avg_fees,
+  SUM(frais_attribues) as total_fees
+FROM services;
+
 -- =====================================================
--- FONCTIONS ET TRIGGERS
+-- TRIGGERS ET FONCTIONS
 -- =====================================================
 
 -- Fonction pour mettre à jour updated_at
@@ -273,62 +340,99 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers pour mettre à jour updated_at automatiquement
+-- Triggers pour admin_users
+CREATE TRIGGER trigger_update_admin_users_updated_at
+  BEFORE UPDATE ON admin_users
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Triggers pour users
 CREATE TRIGGER trigger_update_users_updated_at
   BEFORE UPDATE ON users
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Triggers pour partners
 CREATE TRIGGER trigger_update_partners_updated_at
   BEFORE UPDATE ON partners
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Triggers pour employees
 CREATE TRIGGER trigger_update_employees_updated_at
   BEFORE UPDATE ON employees
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Triggers pour services
 CREATE TRIGGER trigger_update_services_updated_at
   BEFORE UPDATE ON services
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Triggers pour alerts
 CREATE TRIGGER trigger_update_alerts_updated_at
   BEFORE UPDATE ON alerts
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Triggers pour financial_transactions
 CREATE TRIGGER trigger_update_financial_transactions_updated_at
   BEFORE UPDATE ON financial_transactions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- Fonction pour créer une alerte automatiquement
+-- =====================================================
+-- FONCTIONS MÉTIER
+-- =====================================================
+
+-- Fonction pour créer une alerte
 CREATE OR REPLACE FUNCTION create_alert(
   p_titre VARCHAR(200),
   p_description TEXT,
   p_type alert_type,
-  p_source VARCHAR(100) DEFAULT NULL,
-  p_assigne_a UUID DEFAULT NULL
+  p_source VARCHAR(100),
+  p_assigne_a UUID DEFAULT NULL,
+  p_priorite INTEGER DEFAULT 1
 )
 RETURNS UUID AS $$
 DECLARE
-  alert_id UUID;
+  v_alert_id UUID;
 BEGIN
-  INSERT INTO alerts (titre, description, type, source, assigne_a)
-  VALUES (p_titre, p_description, p_type, p_source, p_assigne_a)
-  RETURNING id INTO alert_id;
+  INSERT INTO alerts (titre, description, type, source, assigne_a, priorite)
+  VALUES (p_titre, p_description, p_type, p_source, p_assigne_a, p_priorite)
+  RETURNING id INTO v_alert_id;
   
-  RETURN alert_id;
+  RETURN v_alert_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Fonction pour calculer les statistiques partenaires
+CREATE OR REPLACE FUNCTION calculate_partner_stats(p_partner_id UUID)
+RETURNS TABLE (
+  total_employees INTEGER,
+  active_employees INTEGER,
+  total_salary DECIMAL(15,2),
+  avg_salary DECIMAL(10,2)
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    COUNT(*)::INTEGER as total_employees,
+    COUNT(CASE WHEN e.actif = true THEN 1 END)::INTEGER as active_employees,
+    COALESCE(SUM(e.salaire_net), 0) as total_salary,
+    COALESCE(AVG(e.salaire_net), 0) as avg_salary
+  FROM employees e
+  WHERE e.partner_id = p_partner_id;
 END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
--- POLITIQUES RLS (Row Level Security)
+-- POLITIQUES RLS (Row Level Security) - CORRIGÉES
 -- =====================================================
 
 -- Activer RLS sur toutes les tables
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
@@ -338,54 +442,40 @@ ALTER TABLE financial_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
--- Politiques pour les utilisateurs (exemple - à adapter selon vos besoins)
-CREATE POLICY "Users can view their own data" ON users
-  FOR SELECT USING (auth.uid()::text = id::text);
+-- Politiques simplifiées pour admin_users (éviter la récursion)
+CREATE POLICY "Users can view their own profile" ON admin_users
+  FOR SELECT USING (id = auth.uid());
 
-CREATE POLICY "Users can update their own data" ON users
-  FOR UPDATE USING (auth.uid()::text = id::text);
+CREATE POLICY "Users can update their own profile" ON admin_users
+  FOR UPDATE USING (id = auth.uid());
 
--- Politiques pour les partenaires (lecture publique, écriture admin)
-CREATE POLICY "Partners are viewable by everyone" ON partners
-  FOR SELECT USING (true);
+-- Politiques pour les autres tables (accès complet pour les utilisateurs authentifiés)
+CREATE POLICY "Authenticated users have full access to users" ON users
+  FOR ALL USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Partners can be created by authenticated users" ON partners
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users have full access to partners" ON partners
+  FOR ALL USING (auth.role() = 'authenticated');
 
--- Politiques pour les employés
-CREATE POLICY "Employees are viewable by everyone" ON employees
-  FOR SELECT USING (true);
+CREATE POLICY "Authenticated users have full access to employees" ON employees
+  FOR ALL USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Employees can be created by authenticated users" ON employees
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users have full access to services" ON services
+  FOR ALL USING (auth.role() = 'authenticated');
 
--- Politiques pour les services
-CREATE POLICY "Services are viewable by everyone" ON services
-  FOR SELECT USING (true);
+CREATE POLICY "Authenticated users have full access to alerts" ON alerts
+  FOR ALL USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Services can be created by authenticated users" ON services
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users have full access to financial_transactions" ON financial_transactions
+  FOR ALL USING (auth.role() = 'authenticated');
 
--- Politiques pour les alertes
-CREATE POLICY "Alerts are viewable by authenticated users" ON alerts
-  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users have full access to performance_metrics" ON performance_metrics
+  FOR ALL USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Alerts can be created by authenticated users" ON alerts
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
--- Politiques pour les transactions financières
-CREATE POLICY "Financial transactions are viewable by authenticated users" ON financial_transactions
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Financial transactions can be created by authenticated users" ON financial_transactions
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
--- Politiques pour les notifications
 CREATE POLICY "Users can view their own notifications" ON notifications
-  FOR SELECT USING (auth.uid()::text = user_id::text);
+  FOR SELECT USING (user_id = auth.uid());
 
-CREATE POLICY "Notifications can be created by authenticated users" ON notifications
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can manage notifications" ON notifications
+  FOR ALL USING (auth.role() = 'authenticated');
 
 -- =====================================================
 -- DONNÉES DE TEST
@@ -397,11 +487,15 @@ INSERT INTO partners (nom, type, secteur, description, email, telephone, actif) 
 ('EduPlus', 'Institution', 'Éducation', 'Institution éducative de premier plan', 'info@eduplus.com', '+1234567891', true),
 ('HealthCare Solutions', 'Organisation', 'Santé', 'Organisation de santé innovante', 'contact@healthcare.com', '+1234567892', true);
 
--- Insérer quelques services de test
-INSERT INTO services (nom, description, categorie, prix, disponible) VALUES
-('Consultation IT', 'Service de consultation en informatique', 'Consultation', 150.00, true),
-('Formation Web', 'Formation en développement web', 'Formation', 500.00, true),
-('Support Technique', 'Support technique 24/7', 'Support', 100.00, true);
+-- Insérer le service "Avance sur salaire" avec les nouvelles données
+INSERT INTO services (nom, description, categorie, frais_attribues, pourcentage_max, duree, disponible) VALUES
+('Avance sur salaire', 'Service permettant aux employés de recevoir une partie de leur salaire avant la date de paiement officielle, en cas de besoin urgent. L''avance est remboursée automatiquement lors du versement du salaire.', 'Finances / Services aux employés', 15000.00, 30.00, '24-48 heures', true);
+
+-- Insérer quelques autres services de test
+INSERT INTO services (nom, description, categorie, frais_attribues, pourcentage_max, duree, disponible) VALUES
+('Consultation IT', 'Service de consultation en informatique', 'Consultation', 50000.00, 15.00, '2 heures', true),
+('Formation Web', 'Formation en développement web', 'Formation', 150000.00, 20.00, '40 heures', true),
+('Support Technique', 'Support technique 24/7', 'Support', 25000.00, 10.00, '1 heure', true);
 
 -- Insérer quelques métriques de performance de test
 INSERT INTO performance_metrics (nom, valeur, unite, categorie, date_mesure) VALUES

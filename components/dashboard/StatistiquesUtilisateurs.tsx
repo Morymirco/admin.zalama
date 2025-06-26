@@ -2,15 +2,15 @@
 
 import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { useFirebaseCollection } from '@/hooks/useFirebaseCollection';
-import userService from '@/services/userService';
+import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { userService } from '@/services/userService';
 import { Utilisateur } from '@/types/utilisateur';
 import { format } from 'date-fns/format';
 import { fr } from 'date-fns/locale/fr';
 
 export default function StatistiquesUtilisateurs() {
   // Utiliser notre hook pour récupérer les utilisateurs
-  const { data: utilisateurs, loading, error } = useFirebaseCollection<Utilisateur>(userService);
+  const { data: utilisateurs, loading, error } = useSupabaseCollection<Utilisateur>(userService);
   // Calcul des statistiques avec useMemo pour optimiser les performances
   const {
     totalUtilisateurs,
@@ -33,8 +33,8 @@ export default function StatistiquesUtilisateurs() {
     
     // Calcul des statistiques de base
     const total = utilisateurs.length;
-    const actifs = utilisateurs.filter(user => user.active).length;
-    const inactifs = utilisateurs.filter(user => !user.active).length;
+    const actifs = utilisateurs.filter(user => user.actif).length;
+    const inactifs = utilisateurs.filter(user => !user.actif).length;
     
     // Données pour le graphique en camembert (statut)
     const statut = [
@@ -58,9 +58,9 @@ export default function StatistiquesUtilisateurs() {
     // Données pour le graphique d'évolution (inscriptions par mois)
     const monthsData: Record<string, number> = {};
     utilisateurs.forEach(user => {
-      if (user.createdAt) {
+      if (user.created_at) {
         // Convertir le Timestamp Firebase en Date
-        const date = user.createdAt.toDate ? user.createdAt.toDate() : new Date(user.createdAt);
+        const date = user.created_at.toDate ? user.created_at.toDate() : new Date(user.created_at);
         const month = format(date, 'yyyy-MM');
         monthsData[month] = (monthsData[month] || 0) + 1;
       }

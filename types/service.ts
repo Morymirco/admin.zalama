@@ -8,6 +8,7 @@ export interface Service {
   pourcentageMax: number;
   duree: string;
   disponible: boolean;
+  fraisAttribues?: number; // Frais en FG
   createdAt: Timestamp;
 }
 

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { User } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
+import authService, { AuthUser } from '@/services/authService';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,9 +14,16 @@ export const useAuth = () => {
     // Récupérer la session utilisateur actuelle
     const getSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        setUser(session?.user ?? null);
+        const session = await authService.getSession();
+        const currentUser = await authService.getCurrentUser();
+        
+        setUser(currentUser);
+        
+        // Récupérer le profil utilisateur si connecté
+        if (currentUser) {
+          const profile = await authService.getUserProfile(currentUser.id);
+          setUserProfile(profile);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erreur lors de la récupération de la session');
       } finally {
@@ -26,9 +34,22 @@ export const useAuth = () => {
     getSession();
 
     // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = authService.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null);
+        
+        // Récupérer le profil utilisateur si connecté
+        if (session?.user) {
+          try {
+            const profile = await authService.getUserProfile(session.user.id);
+            setUserProfile(profile);
+          } catch (err) {
+            console.error('Erreur lors de la récupération du profil:', err);
+          }
+        } else {
+          setUserProfile(null);
+        }
+        
         setLoading(false);
       }
     );
@@ -41,15 +62,17 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
+      const { user: authUser } = await authService.signIn({ email, password });
       
-      setUser(data.user);
-      return data;
+      setUser(authUser);
+      
+      // Récupérer le profil utilisateur
+      if (authUser) {
+        const profile = await authService.getUserProfile(authUser.id);
+        setUserProfile(profile);
+      }
+      
+      return authUser;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur de connexion';
       setError(errorMessage);
@@ -64,17 +87,23 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
       
-      const { data, error } = await supabase.auth.signUp({
+      const { user: authUser } = await authService.signUp({
         email,
         password,
-        options: {
-          data: userData
-        }
+        displayName: userData?.displayName || '',
+        role: userData?.role,
+        partenaireId: userData?.partenaireId,
       });
-
-      if (error) throw error;
       
-      return data;
+      if (authUser) {
+        setUser(authUser);
+        
+        // Récupérer le profil utilisateur
+        const profile = await authService.getUserProfile(authUser.id);
+        setUserProfile(profile);
+      }
+      
+      return authUser;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur d\'inscription';
       setError(errorMessage);
@@ -87,9 +116,9 @@ export const useAuth = () => {
   const signOut = async () => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await authService.signOut();
       setUser(null);
+      setUserProfile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de déconnexion');
       throw err;
@@ -103,11 +132,7 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) throw error;
+      await authService.resetPassword(email);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur de réinitialisation';
       setError(errorMessage);
@@ -122,11 +147,7 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
       
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (error) throw error;
+      await authService.updatePassword(password);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur de mise à jour du mot de passe';
       setError(errorMessage);
@@ -136,8 +157,18 @@ export const useAuth = () => {
     }
   };
 
+  // Vérifier si l'utilisateur est admin
+  const isAdmin = userProfile?.role === 'admin';
+
+  // Vérifier si l'utilisateur est actif
+  const isActive = userProfile?.active || false;
+
+  // Vérifier si l'utilisateur est authentifié
+  const isAuthenticated = !!user && isActive;
+
   return {
     user,
+    userProfile,
     loading,
     error,
     signIn,
@@ -145,6 +176,8 @@ export const useAuth = () => {
     signOut,
     resetPassword,
     updatePassword,
-    isAuthenticated: !!user
+    isAuthenticated,
+    isAdmin,
+    isActive,
   };
 }; 

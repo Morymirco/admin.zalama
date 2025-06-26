@@ -68,6 +68,21 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
               </div>
               
               <div>
+                <label htmlFor="frais" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Frais attribués (FG)</label>
+                <input
+                  type="number"
+                  id="add-frais"
+                  name="fraisAttribues"
+                  required
+                  min="0"
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                  placeholder="Ex: 15000"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <label htmlFor="pourcentage" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Pourcentage (%)</label>
                 <input
                   type="number"
@@ -79,9 +94,7 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
                   placeholder="Pourcentage des frais"
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+              
               <div>
                 <label htmlFor="duree" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Durée</label>
                 <input
@@ -93,7 +106,9 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
                   placeholder="Ex: 1 heure"
                 />
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center">
                 <label className="flex items-center cursor-pointer">
                   <input

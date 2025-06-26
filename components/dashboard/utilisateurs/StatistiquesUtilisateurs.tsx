@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Users, GraduationCap, Briefcase, Building } from 'lucide-react';
 
 interface StatistiqueUtilisateur {
   type: string;
@@ -12,11 +12,48 @@ interface StatistiqueUtilisateur {
 }
 
 interface StatistiquesUtilisateursProps {
-  statistiques: StatistiqueUtilisateur[];
-  isLoading: boolean;
+  statistiques?: StatistiqueUtilisateur[];
+  isLoading?: boolean;
 }
 
-const StatistiquesUtilisateurs: React.FC<StatistiquesUtilisateursProps> = ({ statistiques, isLoading }) => {
+const StatistiquesUtilisateurs: React.FC<StatistiquesUtilisateursProps> = ({ 
+  statistiques = [], 
+  isLoading = false 
+}) => {
+  // Données par défaut si aucune statistique n'est fournie
+  const defaultStats: StatistiqueUtilisateur[] = [
+    {
+      type: 'Étudiants',
+      nombre: 0,
+      nouveauxCeMois: 0,
+      actifs: 0,
+      inactifs: 0,
+      tendance: 'stable',
+      icon: <GraduationCap className="h-6 w-6 text-[var(--zalama-blue)]" />
+    },
+    {
+      type: 'Salariés',
+      nombre: 0,
+      nouveauxCeMois: 0,
+      actifs: 0,
+      inactifs: 0,
+      tendance: 'stable',
+      icon: <Briefcase className="h-6 w-6 text-[var(--zalama-green)]" />
+    },
+    {
+      type: 'Entreprises',
+      nombre: 0,
+      nouveauxCeMois: 0,
+      actifs: 0,
+      inactifs: 0,
+      tendance: 'stable',
+      icon: <Building className="h-6 w-6 text-[var(--zalama-orange)]" />
+    }
+  ];
+
+  // Utiliser les statistiques fournies ou les données par défaut
+  const statsToDisplay = statistiques && statistiques.length > 0 ? statistiques : defaultStats;
+
   return (
     <div className="mb-8">
       <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Activité par type d&apos;utilisateur</h2>
@@ -29,7 +66,7 @@ const StatistiquesUtilisateurs: React.FC<StatistiquesUtilisateursProps> = ({ sta
         <div>
           {/* Cartes des statistiques */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {statistiques.map((stat, index) => (
+            {statsToDisplay.map((stat, index) => (
               <div key={index} className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-3 border border-[var(--zalama-border)]">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center">
@@ -63,7 +100,7 @@ const StatistiquesUtilisateurs: React.FC<StatistiquesUtilisateursProps> = ({ sta
                     <div className="w-full bg-[var(--zalama-bg-lighter)] rounded-full h-1.5">
                       <div 
                         className="bg-[var(--zalama-success)] h-1.5 rounded-full" 
-                        style={{ width: `${(stat.actifs / stat.nombre) * 100}%` }}
+                        style={{ width: `${stat.nombre > 0 ? (stat.actifs / stat.nombre) * 100 : 0}%` }}
                       ></div>
                     </div>
                   </div>
@@ -76,7 +113,7 @@ const StatistiquesUtilisateurs: React.FC<StatistiquesUtilisateursProps> = ({ sta
                     <div className="w-full bg-[var(--zalama-bg-lighter)] rounded-full h-1.5">
                       <div 
                         className="bg-[var(--zalama-danger)] h-1.5 rounded-full" 
-                        style={{ width: `${(stat.inactifs / stat.nombre) * 100}%` }}
+                        style={{ width: `${stat.nombre > 0 ? (stat.inactifs / stat.nombre) * 100 : 0}%` }}
                       ></div>
                     </div>
                   </div>

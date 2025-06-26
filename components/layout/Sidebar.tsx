@@ -63,7 +63,7 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className={`fixed top-0 left-0 h-screen sidebar flex flex-col shadow-lg z-30 ${theme === 'dark' ? 'bg-[var(--zalama-sidebar)] text-zinc-100' : 'bg-white text-gray-800'}`}
+      className="fixed top-0 left-0 h-screen sidebar flex flex-col shadow-lg z-30 bg-[var(--zalama-bg-darker)] text-[var(--zalama-text)]"
       style={{ width: collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)' }}
     >
       <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--zalama-border)]">
@@ -73,7 +73,7 @@ export default function Sidebar() {
         </div>
         <button 
           onClick={toggleSidebar} 
-          className="text-[var(--zalama-gray)] hover:text-[var(--zalama-blue)] transition-colors focus:outline-none"
+          className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-blue)] transition-colors focus:outline-none"
         >
           {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
@@ -83,10 +83,10 @@ export default function Sidebar() {
           <Link 
             key={href} 
             href={href} 
-            className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${theme === 'dark' ? 'hover:bg-[var(--zalama-bg-light)]' : 'hover:bg-gray-100'}`}
+            className="flex items-center gap-3 px-4 py-3 rounded-md transition-colors hover:bg-[var(--zalama-bg-light)]"
             title={label}
           >
-            <Icon className={`w-5 h-5 ${theme === 'dark' ? 'text-[var(--zalama-blue)]' : 'text-blue-600'}`} />
+            <Icon className="w-5 h-5 text-[var(--zalama-blue)]" />
             <span className={`sidebar-text ${collapsed ? 'hidden' : 'block'}`}>{label}</span>
           </Link>
         ))}
@@ -97,20 +97,20 @@ export default function Sidebar() {
           className="flex items-center justify-between w-full px-2 py-2 rounded-md hover:bg-[var(--zalama-bg-light)] transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--zalama-blue)] to-[var(--zalama-blue-accent)] flex items-center justify-center text-white font-bold text-sm shadow-md">
               <User2 className="w-4 h-4 md:hidden" />
               <span className={`${collapsed ? 'hidden' : 'block'}`}>FG</span>
             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <span className="text-zinc-100 text-sm leading-tight">Fassou Gbagan</span>
-                <span className="bg-green-600 text-xs text-white px-1.5 py-0.5 rounded w-fit">Admin</span>
+                <span className="text-[var(--zalama-text)] text-sm leading-tight">Fassou Gbagan</span>
+                <span className="bg-[var(--zalama-success)] text-xs text-white px-1.5 py-0.5 rounded w-fit">Admin</span>
               </div>
             )}
           </div>
           {!collapsed && (
             <div>
-              {menuOpen ? <ChevronUp className="w-4 h-4 text-[var(--zalama-gray)]" /> : <ChevronDown className="w-4 h-4 text-[var(--zalama-gray)]" />}
+              {menuOpen ? <ChevronUp className="w-4 h-4 text-[var(--zalama-text-secondary)]" /> : <ChevronDown className="w-4 h-4 text-[var(--zalama-text-secondary)]" />}
             </div>
           )}
         </button>
@@ -126,7 +126,7 @@ export default function Sidebar() {
               <span>Paramètres</span>
             </button>
             <div className="border-t border-[var(--zalama-border)] my-1"></div>
-            <button className="flex items-center gap-3 px-4 py-2 w-full text-left text-red-400 hover:bg-[var(--zalama-bg-light)] transition-colors">
+            <button className="flex items-center gap-3 px-4 py-2 w-full text-left text-[var(--zalama-danger)] hover:bg-[var(--zalama-bg-light)] transition-colors">
               <LogOut className="w-4 h-4" />
               <span>Déconnexion</span>
             </button>

@@ -29,11 +29,11 @@ export default function DashboardHeader() {
     })()
     return title ? (
       <span className="flex items-center gap-1 text-xl font-semibold">
-        <Link href={'/dashboard'} className={theme === 'dark' ? 'text-white' : 'text-gray-800'}>Tableau de Bord </Link>
-        <ChevronRight className="h-4 w-4" />
+        <Link href={'/dashboard'} className="text-[var(--zalama-text)] hover:text-[var(--zalama-blue)] transition-colors">Tableau de Bord </Link>
+        <ChevronRight className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
         {title}
       </span>
-    ) : <span className="flex items-center gap-1 text-xl font-semibold">Tableau de Bord</span>;
+    ) : <span className="flex items-center gap-1 text-xl font-semibold text-[var(--zalama-text)]">Tableau de Bord</span>;
   };
   
   // Gérer l'ouverture/fermeture du drawer de notifications
@@ -50,7 +50,7 @@ export default function DashboardHeader() {
     <>
       <header className="w-full h-16 flex items-center justify-between px-4 md:px-8 bg-[var(--zalama-header-blue)] border-b border-[var(--zalama-border)] shadow-sm sticky top-0 z-20">
         {/* Titre du dashboard */}
-        <h1 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}> {getPageTitle()}</h1>
+        <h1 className="text-xl font-bold text-[var(--zalama-text)]"> {getPageTitle()}</h1>
         {/* Bloc actions */}
         <div className="flex items-center gap-4 md:gap-6">
           <button
@@ -58,11 +58,11 @@ export default function DashboardHeader() {
             aria-label="Voir les notifications"
             onClick={toggleNotifications}
           >
-            <Bell className={`w-6 h-6 ${theme === 'dark' ? 'text-zinc-300 hover:text-white' : 'text-gray-600 hover:text-gray-800'} transition-colors`} />
+            <Bell className="w-6 h-6 text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors" />
             {unreadCount > 0 && (
               <>
-                <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-red-400 opacity-75"></span>
-                <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">
+                <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-[var(--zalama-danger)] opacity-75"></span>
+                <span className="absolute -top-1 -right-1 bg-[var(--zalama-danger)] text-[10px] text-white rounded-full px-1">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               </>
@@ -70,10 +70,10 @@ export default function DashboardHeader() {
           </button>
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors focus:outline-none"
+            className="p-2 rounded-full bg-[var(--zalama-bg-light)] hover:bg-[var(--zalama-bg-lighter)] transition-colors focus:outline-none"
             aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
           >
-            {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-zinc-200" />}
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-[var(--zalama-warning)]" /> : <Moon className="w-5 h-5 text-[var(--zalama-text-secondary)]" />}
           </button>
         </div>
       </header>

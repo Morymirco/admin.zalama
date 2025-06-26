@@ -38,12 +38,15 @@ const convertToUIService = (service: Service): UIService => {
     nom: service.nom,
     description: service.description,
     categorie: service.categorie,
-    pourcentageMax: service.pourcentageMax,
+    pourcentageMax: service.pourcentage_max,
     duree: service.duree,
     disponible: service.disponible,
-    fraisAttribues: service.fraisAttribues,
-    createdAt: service.createdAt,
-    dateCreation: service.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+    fraisAttribues: service.frais_attribues,
+    frais_attribues: service.frais_attribues,
+    pourcentage_max: service.pourcentage_max,
+    image_url: service.image_url,
+    dateCreation: service.date_creation?.toISOString() || service.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+    createdAt: service.createdAt
   };
 };
 

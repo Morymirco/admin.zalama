@@ -201,9 +201,9 @@ export default function StatistiquesGenerales() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-gray-500">Aucune donnée à afficher</p>
-                <p className="text-sm text-gray-400">Ajoutez des utilisateurs avec leur type</p>
+              <div className="text-center p-4 bg-[var(--zalama-bg-lighter)] rounded-lg">
+                <p className="text-[var(--zalama-text-secondary)]">Aucune donnée à afficher</p>
+                <p className="text-sm text-[var(--zalama-text-secondary)]">Ajoutez des utilisateurs avec leur type</p>
               </div>
             )}
           </div>

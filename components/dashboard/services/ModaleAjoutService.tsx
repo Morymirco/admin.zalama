@@ -72,11 +72,9 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
                 <input
                   type="number"
                   id="add-frais"
-                  name="fraisAttribues"
-                  required
-                  min="0"
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                  placeholder="Ex: 15000"
+                  name="frais_attribues"
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>
             </div>
@@ -87,11 +85,9 @@ const ModaleAjoutService: React.FC<ModaleAjoutServiceProps> = ({
                 <input
                   type="number"
                   id="add-pourcentage"
-                  name="pourcentage"
-                  required
-                  min="0"
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                  name="pourcentage_max"
                   placeholder="Pourcentage des frais"
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>
               

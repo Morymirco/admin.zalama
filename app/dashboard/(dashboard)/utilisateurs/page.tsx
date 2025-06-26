@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Search, Plus, Filter, GraduationCap, Briefcase, Building } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 // Importation des composants
@@ -44,7 +44,42 @@ export default function UtilisateursPage() {
   const [currentUtilisateur, setCurrentUtilisateur] = useState<Utilisateur | null>(null);
 
   // Types d'utilisateurs disponibles
-  const types = ['tous', 'etudiant', 'salaries', 'pension'];
+  const types = ['tous', 'Étudiant', 'Salarié', 'Entreprise'];
+
+  // Fonction pour transformer les statistiques en format attendu
+  const transformStats = () => {
+    if (!stats) return [];
+    
+    return [
+      {
+        type: 'Étudiants',
+        nombre: stats.parType['Étudiant'] || 0,
+        nouveauxCeMois: 0, // À calculer si nécessaire
+        actifs: stats.actifs * ((stats.parType['Étudiant'] || 0) / stats.total) || 0,
+        inactifs: stats.inactifs * ((stats.parType['Étudiant'] || 0) / stats.total) || 0,
+        tendance: 'stable' as const,
+        icon: <GraduationCap className="h-6 w-6 text-[var(--zalama-blue)]" />
+      },
+      {
+        type: 'Salariés',
+        nombre: stats.parType['Salarié'] || 0,
+        nouveauxCeMois: 0,
+        actifs: stats.actifs * ((stats.parType['Salarié'] || 0) / stats.total) || 0,
+        inactifs: stats.inactifs * ((stats.parType['Salarié'] || 0) / stats.total) || 0,
+        tendance: 'stable' as const,
+        icon: <Briefcase className="h-6 w-6 text-[var(--zalama-green)]" />
+      },
+      {
+        type: 'Entreprises',
+        nombre: stats.parType['Entreprise'] || 0,
+        nouveauxCeMois: 0,
+        actifs: stats.actifs * ((stats.parType['Entreprise'] || 0) / stats.total) || 0,
+        inactifs: stats.inactifs * ((stats.parType['Entreprise'] || 0) / stats.total) || 0,
+        tendance: 'stable' as const,
+        icon: <Building className="h-6 w-6 text-[var(--zalama-orange)]" />
+      }
+    ];
+  };
 
   // Handlers
   const handlePageChange = (pageNumber: number) => {
@@ -74,25 +109,21 @@ export default function UtilisateursPage() {
   };
 
   // Formulaire d'ajout d'utilisateur
-  const handleSubmitAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
+  const handleSubmitAddUser = async (formData: FormData) => {
     try {
-      const form = e.currentTarget;
-      
       const userData = {
-        displayName: (form.querySelector('#displayName') as HTMLInputElement)?.value || '',
-        email: (form.querySelector('#email') as HTMLInputElement)?.value || '',
-        phoneNumber: (form.querySelector('#phoneNumber') as HTMLInputElement)?.value || '',
-        role: (form.querySelector('#role') as HTMLSelectElement)?.value || 'user',
-        poste: (form.querySelector('#poste') as HTMLInputElement)?.value || '',
-        departement: (form.querySelector('#departement') as HTMLInputElement)?.value || '',
-        active: (form.querySelector('#active') as HTMLInputElement)?.checked || false,
-        type: (form.querySelector('#type') as HTMLSelectElement)?.value || '',
-        partenaireId: (form.querySelector('#partenaireId') as HTMLInputElement)?.value || '',
-        photoURL: (form.querySelector('#photoURL') as HTMLInputElement)?.value || '',
-        etablissement: (form.querySelector('#etablissement') as HTMLInputElement)?.value || '',
-        niveauEtudes: (form.querySelector('#niveauEtudes') as HTMLSelectElement)?.value || '',
+        nom: formData.get('nom') as string,
+        prenom: formData.get('prenom') as string,
+        email: formData.get('email') as string,
+        telephone: formData.get('telephone') as string,
+        adresse: formData.get('adresse') as string,
+        type: formData.get('type') as 'Étudiant' | 'Salarié' | 'Entreprise',
+        statut: 'En attente' as const,
+        actif: true,
+        etablissement: formData.get('etablissement') as string,
+        niveau_etudes: formData.get('niveauEtudes') as string,
+        organisation: formData.get('organisation') as string,
+        poste: formData.get('poste') as string,
       };
 
       await createUser(userData);
@@ -107,25 +138,21 @@ export default function UtilisateursPage() {
   };
 
   // Formulaire d'édition d'utilisateur
-  const handleSubmitEditUser = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmitEditUser = async (formData: FormData) => {
     if (!currentUtilisateur) return;
     
     try {
-      const form = e.currentTarget;
-      
       const userData = {
-        displayName: (form.querySelector('#edit-displayName') as HTMLInputElement)?.value || '',
-        email: (form.querySelector('#edit-email') as HTMLInputElement)?.value || '',
-        phoneNumber: (form.querySelector('#edit-phoneNumber') as HTMLInputElement)?.value || '',
-        role: (form.querySelector('#edit-role') as HTMLSelectElement)?.value || 'user',
-        poste: (form.querySelector('#edit-poste') as HTMLInputElement)?.value || '',
-        departement: (form.querySelector('#edit-departement') as HTMLInputElement)?.value || '',
-        active: (form.querySelector('#edit-active') as HTMLInputElement)?.checked || false,
-        type: (form.querySelector('#edit-type') as HTMLSelectElement)?.value || '',
-        partenaireId: (form.querySelector('#edit-partenaireId') as HTMLInputElement)?.value || '',
-        etablissement: (form.querySelector('#edit-etablissement') as HTMLInputElement)?.value || '',
-        niveauEtudes: (form.querySelector('#edit-niveauEtudes') as HTMLSelectElement)?.value || '',
+        nom: formData.get('nom') as string,
+        prenom: formData.get('prenom') as string,
+        email: formData.get('email') as string,
+        telephone: formData.get('telephone') as string,
+        adresse: formData.get('adresse') as string,
+        type: formData.get('type') as 'Étudiant' | 'Salarié' | 'Entreprise',
+        etablissement: formData.get('etablissement') as string,
+        niveau_etudes: formData.get('niveauEtudes') as string,
+        organisation: formData.get('organisation') as string,
+        poste: formData.get('poste') as string,
       };
 
       await updateUser(currentUtilisateur.id, userData);
@@ -207,15 +234,15 @@ export default function UtilisateursPage() {
 
       {/* Section des statistiques */}
       <StatistiquesUtilisateurs 
-        stats={stats}
+        statistiques={transformStats()}
         isLoading={statsLoading}
       />
       
       {/* Résumé des utilisateurs */}
       <ResumeUtilisateurs 
         totalUtilisateurs={filteredUtilisateurs.length}
-        utilisateursActifs={filteredUtilisateurs.filter(u => u.active).length}
-        utilisateursInactifs={filteredUtilisateurs.filter(u => !u.active).length}
+        utilisateursActifs={filteredUtilisateurs.filter(u => u.actif || u.active).length}
+        utilisateursInactifs={filteredUtilisateurs.filter(u => !(u.actif || u.active)).length}
         isLoading={isLoading}
       />
       

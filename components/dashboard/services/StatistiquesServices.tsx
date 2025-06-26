@@ -1,6 +1,5 @@
 import React from 'react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { RefreshCw, DollarSign, Users, ArrowUpCircle } from 'lucide-react';
+import { RefreshCw, DollarSign, Users, ArrowUpCircle, FileText, Clock, CheckCircle } from 'lucide-react';
 
 interface DemandeStats {
   type: string;
@@ -13,12 +12,63 @@ interface DemandeStats {
   icon: React.ReactNode;
 }
 
-interface StatistiquesServicesProps {
-  demandeStats: DemandeStats[];
-  isLoading: boolean;
+interface ServiceStats {
+  total: number;
+  disponibles: number;
+  indisponibles: number;
+  parCategorie: Record<string, number>;
 }
 
-const StatistiquesServices: React.FC<StatistiquesServicesProps> = ({ demandeStats, isLoading }) => {
+interface StatistiquesServicesProps {
+  demandeStats?: DemandeStats[];
+  serviceStats?: ServiceStats;
+  isLoading?: boolean;
+}
+
+const StatistiquesServices: React.FC<StatistiquesServicesProps> = ({ 
+  demandeStats, 
+  serviceStats,
+  isLoading = false 
+}) => {
+  // Créer des données de démonstration si aucune donnée n'est disponible
+  const createDemoStats = (): DemandeStats[] => {
+    return [
+      {
+        type: 'Avance sur salaire',
+        nombre: 45,
+        approuvees: 32,
+        enCours: 8,
+        refusees: 5,
+        delaiMoyen: 24,
+        tendance: 'hausse' as const,
+        icon: <DollarSign className="h-6 w-6 text-[var(--zalama-success)]" />
+      },
+      {
+        type: 'Demande de congé',
+        nombre: 28,
+        approuvees: 25,
+        enCours: 2,
+        refusees: 1,
+        delaiMoyen: 48,
+        tendance: 'stable' as const,
+        icon: <Clock className="h-6 w-6 text-[var(--zalama-warning)]" />
+      },
+      {
+        type: 'Attestation de travail',
+        nombre: 67,
+        approuvees: 65,
+        enCours: 1,
+        refusees: 1,
+        delaiMoyen: 12,
+        tendance: 'hausse' as const,
+        icon: <FileText className="h-6 w-6 text-[var(--zalama-blue)]" />
+      }
+    ];
+  };
+
+  // Déterminer les données à afficher
+  const statsToDisplay = demandeStats || createDemoStats();
+
   return (
     <div className="mb-8">
       <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Activité par service (ce mois-ci)</h2>
@@ -27,11 +77,18 @@ const StatistiquesServices: React.FC<StatistiquesServicesProps> = ({ demandeStat
         <div className="flex justify-center items-center h-40">
           <RefreshCw className="h-8 w-8 animate-spin text-[var(--zalama-blue)]" />
         </div>
+      ) : statsToDisplay.length === 0 ? (
+        <div className="flex justify-center items-center h-40">
+          <div className="text-center">
+            <p className="text-[var(--zalama-text-secondary)] mb-2">Aucune donnée disponible</p>
+            <p className="text-sm text-[var(--zalama-text-secondary)]">Les statistiques des services apparaîtront ici</p>
+          </div>
+        </div>
       ) : (
         <div>
           {/* Cartes des statistiques */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {demandeStats.map((stat, index) => (
+            {statsToDisplay.map((stat, index) => (
               <div key={index} className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center">

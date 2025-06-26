@@ -10,6 +10,39 @@ const supabase = createClient(
   supabaseAnonKey
 );
 
+// Fonction utilitaire pour convertir les données de la DB vers l'interface
+const convertFromDB = (dbService: any): Service => {
+  return {
+    id: dbService.id,
+    nom: dbService.nom,
+    description: dbService.description,
+    categorie: dbService.categorie,
+    pourcentage_max: dbService.pourcentage_max || 0,
+    duree: dbService.duree || '',
+    disponible: dbService.disponible ?? true,
+    frais_attribues: dbService.frais_attribues || 0,
+    image_url: dbService.image_url,
+    date_creation: dbService.date_creation ? new Date(dbService.date_creation) : undefined,
+    createdAt: dbService.created_at ? { toDate: () => new Date(dbService.created_at) } as any : undefined
+  };
+};
+
+// Fonction utilitaire pour convertir les données vers la DB
+const convertToDB = (serviceData: Partial<Service>): any => {
+  const dbData: any = {};
+  
+  if (serviceData.nom !== undefined) dbData.nom = serviceData.nom;
+  if (serviceData.description !== undefined) dbData.description = serviceData.description;
+  if (serviceData.categorie !== undefined) dbData.categorie = serviceData.categorie;
+  if (serviceData.pourcentage_max !== undefined) dbData.pourcentage_max = serviceData.pourcentage_max;
+  if (serviceData.duree !== undefined) dbData.duree = serviceData.duree;
+  if (serviceData.disponible !== undefined) dbData.disponible = serviceData.disponible;
+  if (serviceData.frais_attribues !== undefined) dbData.frais_attribues = serviceData.frais_attribues;
+  if (serviceData.image_url !== undefined) dbData.image_url = serviceData.image_url;
+  
+  return dbData;
+};
+
 class ServiceService {
   // Récupérer tous les services
   async getAll(): Promise<Service[]> {
@@ -20,7 +53,7 @@ class ServiceService {
         .order('nom', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(convertFromDB);
     } catch (error) {
       console.error('Erreur lors de la récupération des services:', error);
       throw error;
@@ -37,7 +70,7 @@ class ServiceService {
         .single();
 
       if (error) throw error;
-      return data;
+      return data ? convertFromDB(data) : null;
     } catch (error) {
       console.error('Erreur lors de la récupération du service:', error);
       throw error;
@@ -47,18 +80,18 @@ class ServiceService {
   // Créer un nouveau service
   async create(serviceData: ServiceFormData): Promise<Service> {
     try {
+      const dbData = convertToDB(serviceData);
+      dbData.date_creation = new Date().toISOString();
+      dbData.disponible = serviceData.disponible ?? true;
+
       const { data, error } = await supabase
         .from('services')
-        .insert([{
-          ...serviceData,
-          created_at: new Date().toISOString(),
-          disponible: serviceData.disponible ?? true
-        }])
+        .insert([dbData])
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return convertFromDB(data);
     } catch (error) {
       console.error('Erreur lors de la création du service:', error);
       throw error;
@@ -68,18 +101,18 @@ class ServiceService {
   // Mettre à jour un service
   async update(id: string, serviceData: Partial<Service>): Promise<Service> {
     try {
+      const dbData = convertToDB(serviceData);
+      dbData.updated_at = new Date().toISOString();
+
       const { data, error } = await supabase
         .from('services')
-        .update({
-          ...serviceData,
-          updated_at: new Date().toISOString()
-        })
+        .update(dbData)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return convertFromDB(data);
     } catch (error) {
       console.error('Erreur lors de la mise à jour du service:', error);
       throw error;
@@ -111,7 +144,7 @@ class ServiceService {
         .order('nom', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(convertFromDB);
     } catch (error) {
       console.error('Erreur lors de la recherche de services:', error);
       throw error;
@@ -128,7 +161,7 @@ class ServiceService {
         .order('nom', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(convertFromDB);
     } catch (error) {
       console.error('Erreur lors du filtrage par catégorie:', error);
       throw error;
@@ -145,7 +178,7 @@ class ServiceService {
         .order('nom', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(convertFromDB);
     } catch (error) {
       console.error('Erreur lors de la récupération des services disponibles:', error);
       throw error;
@@ -204,15 +237,12 @@ class ServiceService {
       throw error;
     }
   }
-
-  // Obtenir les services disponibles (fonction utilitaire)
-  async getAvailableServices(): Promise<Service[]> {
-    return this.getAvailable();
-  }
 }
 
-export default new ServiceService();
+// Instance singleton
+const serviceService = new ServiceService();
 
-// Fonctions utilitaires pour l'export
-export const getAvailableServices = () => new ServiceService().getAvailable();
-export const getCategoriesWithCount = () => new ServiceService().getCategoriesWithCount();
+// Exports pour la compatibilité
+export default serviceService;
+export const getAvailableServices = () => serviceService.getAvailable();
+export const getCategoriesWithCount = () => serviceService.getCategoriesWithCount();

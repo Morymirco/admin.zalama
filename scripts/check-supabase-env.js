@@ -49,7 +49,7 @@ requiredVars.forEach(varName => {
     allValid = false;
   } else {
     const value = match[1].trim();
-    if (value === 'votre_cle_service_role_ici' && varName === 'SUPABASE_SERVICE_ROLE_KEY') {
+    if (value === '' && varName === 'SUPABASE_SERVICE_ROLE_KEY') {
       console.log(`⚠️  ${varName} : À CONFIGURER (valeur par défaut)`);
       invalidVars.push(varName);
       allValid = false;
@@ -73,7 +73,7 @@ optionalVars.forEach(varName => {
     console.log(`⚠️  ${varName} : NON CONFIGURÉE (optionnel)`);
   } else {
     const value = match[1].trim();
-    if (value.includes('votre_') || value === '' || value === 'undefined') {
+      if (value.includes('votre_') || value === '' || value === 'undefined') {
       console.log(`⚠️  ${varName} : À CONFIGURER (optionnel)`);
     } else {
       console.log(`✅ ${varName} : CONFIGURÉE`);

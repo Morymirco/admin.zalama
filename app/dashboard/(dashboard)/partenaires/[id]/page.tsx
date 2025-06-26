@@ -27,6 +27,7 @@ import Image from 'next/image';
 import { useSupabasePartnerDetail, useSupabaseEmployees } from '@/hooks/useSupabasePartners';
 import ListeEmployes from '@/components/dashboard/partenaires/ListeEmployes';
 import ModaleAjoutEmploye from '@/components/dashboard/partenaires/ModaleAjoutEmploye';
+import DemandesAvanceSalaire from '@/components/dashboard/partenaires/DemandesAvanceSalaire';
 
 export default function PartenaireDetailPage() {
   const params = useParams();
@@ -34,7 +35,7 @@ export default function PartenaireDetailPage() {
   const partnerId = params.id as string;
 
   // États locaux
-  const [activeTab, setActiveTab] = useState<'overview' | 'employees'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'demandes'>('overview');
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
 
   // Hooks pour récupérer les données
@@ -173,6 +174,17 @@ export default function PartenaireDetailPage() {
         >
           <Users className="h-4 w-4" />
           Employés ({partenaire.employees?.length || 0})
+        </button>
+        <button
+          onClick={() => setActiveTab('demandes')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+            activeTab === 'demandes'
+              ? 'bg-[var(--zalama-card)] text-[var(--zalama-text)] shadow-sm'
+              : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
+          }`}
+        >
+          <FileText className="h-4 w-4" />
+          Demandes & Transactions
         </button>
       </div>
 
@@ -384,7 +396,7 @@ export default function PartenaireDetailPage() {
             </div>
           )}
         </div>
-      ) : (
+      ) : activeTab === 'employees' ? (
         <div>
           <ListeEmployes
             employes={partenaire.employees || []}
@@ -395,6 +407,11 @@ export default function PartenaireDetailPage() {
             onUpdateEmploye={handleUpdateEmployee}
             onDeleteEmploye={handleDeleteEmployee}
           />
+        </div>
+      ) : (
+        <div>
+          {/* Liste des demandes d'avance sur salaire */}
+          <DemandesAvanceSalaire partnerId={partnerId} />
         </div>
       )}
 

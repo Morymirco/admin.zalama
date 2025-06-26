@@ -82,8 +82,8 @@ export default function ServicesPage() {
         nom: (form.querySelector('#add-nom') as HTMLInputElement)?.value || '',
         description: (form.querySelector('#add-description') as HTMLTextAreaElement)?.value || '',
         categorie: (form.querySelector('#add-categorie') as HTMLInputElement)?.value || '',
-        fraisAttribues: parseFloat((form.querySelector('#add-frais') as HTMLInputElement)?.value || '0'),
-        pourcentageMax: parseFloat((form.querySelector('#add-pourcentage') as HTMLInputElement)?.value || '0'),
+        frais_attribues: parseFloat((form.querySelector('#add-frais') as HTMLInputElement)?.value || '0'),
+        pourcentage_max: parseFloat((form.querySelector('#add-pourcentage') as HTMLInputElement)?.value || '0'),
         duree: (form.querySelector('#add-duree') as HTMLInputElement)?.value || '',
         disponible: (form.querySelector('#add-disponible') as HTMLInputElement)?.checked || false,
       };
@@ -111,8 +111,8 @@ export default function ServicesPage() {
         nom: (form.querySelector('#edit-nom') as HTMLInputElement)?.value || '',
         description: (form.querySelector('#edit-description') as HTMLTextAreaElement)?.value || '',
         categorie: (form.querySelector('#edit-categorie') as HTMLInputElement)?.value || '',
-        fraisAttribues: parseFloat((form.querySelector('#edit-frais') as HTMLInputElement)?.value || '0'),
-        pourcentageMax: parseFloat((form.querySelector('#edit-pourcentage') as HTMLInputElement)?.value || '0'),
+        frais_attribues: parseFloat((form.querySelector('#edit-frais') as HTMLInputElement)?.value || '0'),
+        pourcentage_max: parseFloat((form.querySelector('#edit-pourcentage') as HTMLInputElement)?.value || '0'),
         duree: (form.querySelector('#edit-duree') as HTMLInputElement)?.value || '',
         disponible: (form.querySelector('#edit-disponible') as HTMLInputElement)?.checked || false,
       };
@@ -201,7 +201,7 @@ export default function ServicesPage() {
 
       {/* Section des statistiques */}
       <StatistiquesServices 
-        stats={stats}
+        serviceStats={stats}
         isLoading={statsLoading}
       />
       

@@ -12,6 +12,8 @@ DROP TABLE IF EXISTS services CASCADE;
 DROP TABLE IF EXISTS partners CASCADE;
 DROP TABLE IF EXISTS admin_users CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS demandes_avance_salaire CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
 
 -- Supprimer tous les types ENUM existants
 DROP TYPE IF EXISTS notification_type CASCADE;
@@ -24,6 +26,9 @@ DROP TYPE IF EXISTS employee_gender CASCADE;
 DROP TYPE IF EXISTS user_status CASCADE;
 DROP TYPE IF EXISTS user_type CASCADE;
 DROP TYPE IF EXISTS admin_role CASCADE;
+DROP TYPE IF EXISTS demande_statut CASCADE;
+DROP TYPE IF EXISTS transaction_statut CASCADE;
+DROP TYPE IF EXISTS methode_paiement CASCADE;
 
 -- Types ENUM
 CREATE TYPE user_type AS ENUM ('Étudiant', 'Salarié', 'Entreprise');
@@ -36,6 +41,9 @@ CREATE TYPE transaction_type AS ENUM ('Débloqué', 'Récupéré', 'Revenu', 'Re
 CREATE TYPE transaction_status AS ENUM ('En attente', 'Validé', 'Rejeté', 'Annulé');
 CREATE TYPE notification_type AS ENUM ('Information', 'Alerte', 'Succès', 'Erreur');
 CREATE TYPE admin_role AS ENUM ('admin', 'user', 'rh', 'responsable');
+CREATE TYPE demande_statut AS ENUM ('EN_ATTENTE', 'APPROUVE', 'REFUSE', 'PAYE');
+CREATE TYPE transaction_statut AS ENUM ('EFFECTUEE', 'ANNULEE');
+CREATE TYPE methode_paiement AS ENUM ('VIREMENT_BANCAIRE', 'MOBILE_MONEY', 'ESPECES', 'CHEQUE');
 
 -- =====================================================
 -- TABLE: admin_users (Utilisateurs d'administration)
@@ -221,6 +229,44 @@ CREATE TABLE notifications (
 );
 
 -- =====================================================
+-- TABLE: demandes_avance_salaire
+-- =====================================================
+CREATE TABLE demandes_avance_salaire (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  employe_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+  montant_demande DECIMAL(10,2) NOT NULL,
+  motif TEXT NOT NULL,
+  date_demande TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  statut demande_statut DEFAULT 'EN_ATTENTE',
+  commentaire TEXT,
+  date_traitement TIMESTAMP WITH TIME ZONE,
+  numero_reception VARCHAR(100),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- TABLE: transactions
+-- =====================================================
+CREATE TABLE transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  demande_avance_id UUID REFERENCES demandes_avance_salaire(id) ON DELETE CASCADE,
+  employe_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+  entreprise_id UUID REFERENCES partners(id) ON DELETE CASCADE,
+  montant DECIMAL(10,2) NOT NULL,
+  numero_transaction VARCHAR(100) UNIQUE NOT NULL,
+  methode_paiement methode_paiement NOT NULL,
+  numero_compte VARCHAR(100),
+  numero_reception VARCHAR(100),
+  date_transaction TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  recu_url VARCHAR(500),
+  date_creation TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  statut transaction_statut DEFAULT 'EFFECTUEE',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
 -- INDEXES
 -- =====================================================
 
@@ -268,6 +314,19 @@ CREATE INDEX idx_performance_metrics_categorie ON performance_metrics(categorie)
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_lu ON notifications(lu);
 CREATE INDEX idx_notifications_date_creation ON notifications(date_creation);
+
+-- Index pour demandes_avance_salaire
+CREATE INDEX idx_demandes_avance_employe_id ON demandes_avance_salaire(employe_id);
+CREATE INDEX idx_demandes_avance_statut ON demandes_avance_salaire(statut);
+CREATE INDEX idx_demandes_avance_date_demande ON demandes_avance_salaire(date_demande);
+
+-- Index pour transactions
+CREATE INDEX idx_transactions_demande_avance_id ON transactions(demande_avance_id);
+CREATE INDEX idx_transactions_employe_id ON transactions(employe_id);
+CREATE INDEX idx_transactions_entreprise_id ON transactions(entreprise_id);
+CREATE INDEX idx_transactions_numero_transaction ON transactions(numero_transaction);
+CREATE INDEX idx_transactions_date_transaction ON transactions(date_transaction);
+CREATE INDEX idx_transactions_statut ON transactions(statut);
 
 -- =====================================================
 -- VUES
@@ -327,6 +386,76 @@ SELECT
   SUM(frais_attribues) as total_fees
 FROM services;
 
+-- Vue des demandes avec informations employé et entreprise
+CREATE VIEW demandes_avance_details AS
+SELECT 
+  das.id,
+  das.employe_id,
+  e.nom as employe_nom,
+  e.prenom as employe_prenom,
+  e.email as employe_email,
+  p.id as entreprise_id,
+  p.nom as entreprise_nom,
+  p.email as entreprise_email,
+  p.email_rh as entreprise_email_rh,
+  das.montant_demande,
+  das.motif,
+  das.date_demande,
+  das.statut,
+  das.commentaire,
+  das.date_traitement,
+  das.numero_reception,
+  das.created_at,
+  das.updated_at
+FROM demandes_avance_salaire das
+LEFT JOIN employees e ON das.employe_id = e.id
+LEFT JOIN partners p ON e.partner_id = p.id;
+
+-- Vue des transactions avec informations complètes
+CREATE VIEW transactions_details AS
+SELECT 
+  t.id,
+  t.demande_avance_id,
+  t.employe_id,
+  e.nom as employe_nom,
+  e.prenom as employe_prenom,
+  e.email as employe_email,
+  t.entreprise_id,
+  p.nom as entreprise_nom,
+  p.email as entreprise_email,
+  p.email_rh as entreprise_email_rh,
+  t.montant,
+  t.numero_transaction,
+  t.methode_paiement,
+  t.numero_compte,
+  t.numero_reception,
+  t.date_transaction,
+  t.recu_url as recu,
+  t.date_creation,
+  t.statut,
+  t.created_at,
+  t.updated_at
+FROM transactions t
+LEFT JOIN employees e ON t.employe_id = e.id
+LEFT JOIN partners p ON t.entreprise_id = p.id;
+
+-- Vue des statistiques des demandes par entreprise
+CREATE VIEW demandes_statistiques_entreprise AS
+SELECT 
+  p.id as entreprise_id,
+  p.nom as entreprise_nom,
+  COUNT(das.id) as total_demandes,
+  COUNT(CASE WHEN das.statut = 'EN_ATTENTE' THEN 1 END) as demandes_en_attente,
+  COUNT(CASE WHEN das.statut = 'APPROUVE' THEN 1 END) as demandes_approvees,
+  COUNT(CASE WHEN das.statut = 'REFUSE' THEN 1 END) as demandes_refusees,
+  COUNT(CASE WHEN das.statut = 'PAYE' THEN 1 END) as demandes_payees,
+  SUM(das.montant_demande) as montant_total_demande,
+  AVG(das.montant_demande) as montant_moyen_demande
+FROM partners p
+LEFT JOIN employees e ON p.id = e.partner_id
+LEFT JOIN demandes_avance_salaire das ON e.id = das.employe_id
+GROUP BY p.id, p.nom;
+
 -- =====================================================
 -- TRIGGERS ET FONCTIONS
 -- =====================================================
@@ -379,6 +508,18 @@ CREATE TRIGGER trigger_update_alerts_updated_at
 -- Triggers pour financial_transactions
 CREATE TRIGGER trigger_update_financial_transactions_updated_at
   BEFORE UPDATE ON financial_transactions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Triggers pour demandes_avance_salaire
+CREATE TRIGGER trigger_update_demandes_avance_updated_at
+  BEFORE UPDATE ON demandes_avance_salaire
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Triggers pour transactions
+CREATE TRIGGER trigger_update_transactions_updated_at
+  BEFORE UPDATE ON transactions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
@@ -441,6 +582,8 @@ ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE financial_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE demandes_avance_salaire ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 
 -- Politiques simplifiées pour admin_users (éviter la récursion)
 CREATE POLICY "Users can view their own profile" ON admin_users
@@ -475,6 +618,14 @@ CREATE POLICY "Users can view their own notifications" ON notifications
   FOR SELECT USING (user_id = auth.uid());
 
 CREATE POLICY "Authenticated users can manage notifications" ON notifications
+  FOR ALL USING (auth.role() = 'authenticated');
+
+-- Politiques pour demandes_avance_salaire
+CREATE POLICY "Authenticated users have full access to demandes_avance_salaire" ON demandes_avance_salaire
+  FOR ALL USING (auth.role() = 'authenticated');
+
+-- Politiques pour transactions
+CREATE POLICY "Authenticated users have full access to transactions" ON transactions
   FOR ALL USING (auth.role() = 'authenticated');
 
 -- =====================================================

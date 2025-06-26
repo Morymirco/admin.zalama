@@ -70,10 +70,10 @@ const ModaleEditionService: React.FC<ModaleEditionServiceProps> = ({
                 <input
                   type="number"
                   id="edit-frais"
-                  required
-                  min="0"
-                  defaultValue={service.fraisAttribues || 0}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                  name="frais_attribues"
+                  defaultValue={service.fraisAttribues || service.frais_attribues || 0}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>
             </div>
@@ -84,10 +84,10 @@ const ModaleEditionService: React.FC<ModaleEditionServiceProps> = ({
                 <input
                   type="number"
                   id="edit-pourcentage"
-                  required
-                  min="0"
-                  defaultValue={service.pourcentageMax}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                  name="pourcentage_max"
+                  defaultValue={service.pourcentageMax || service.pourcentage_max || 0}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
               </div>
               

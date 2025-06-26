@@ -5,17 +5,21 @@ export interface Service {
   nom: string;
   description: string;
   categorie: string;
-  pourcentageMax: number;
+  pourcentage_max: number;
   duree: string;
   disponible: boolean;
-  fraisAttribues?: number; // Frais en FG
-  createdAt: Timestamp;
+  frais_attribues?: number;
+  image_url?: string;
+  date_creation?: Date;
+  createdAt?: Timestamp;
 }
 
 // Type UIService avec createdAt optionnel pour la compatibilité
 export type UIService = Omit<Service, 'createdAt'> & {
-  dateCreation?: string; // Optionnel pour la compatibilité avec l'ancien code
-  createdAt?: Timestamp; // Rendre createdAt optionnel
+  dateCreation?: string;
+  createdAt?: Timestamp;
+  fraisAttribues?: number;
+  pourcentageMax?: number;
 };
 
-export type ServiceFormData = Omit<Service, 'id' | 'createdAt'>;
+export type ServiceFormData = Omit<Service, 'id' | 'createdAt' | 'date_creation'>;

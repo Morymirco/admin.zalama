@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import { Partenaire } from '@/types/partenaire';
 
 interface ModaleAjoutUtilisateurProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (formData: FormData) => Promise<void>;
+  types?: string[];
+  partners?: Partenaire[];
 }
 
 const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
   isOpen,
   onClose,
-  onSubmit
+  onSubmit,
+  partners = []
 }) => {
-  const [typeUtilisateur, setTypeUtilisateur] = useState<string>('Étudiant');
+  const [selectedPartner, setSelectedPartner] = useState<string>('');
 
   if (!isOpen) return null;
 
@@ -20,7 +24,7 @@ const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-[var(--zalama-card)] rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-5 border-b border-[var(--zalama-border)]">
-          <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Ajouter un nouvel utilisateur</h3>
+          <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Ajouter un nouvel employé</h3>
           <button 
             onClick={onClose}
             className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors"
@@ -35,27 +39,30 @@ const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
           onSubmit(formData);
         }} className="p-5">
           <div className="space-y-4">
-            {/* Type d'utilisateur */}
+            {/* Sélection du partenaire */}
             <div>
-              <label htmlFor="type" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Type d&apos;utilisateur</label>
+              <label htmlFor="partner_id" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Partenaire *</label>
               <select
-                id="type"
-                name="type"
+                id="partner_id"
+                name="partner_id"
                 required
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                value={typeUtilisateur}
-                onChange={(e) => setTypeUtilisateur(e.target.value)}
+                value={selectedPartner}
+                onChange={(e) => setSelectedPartner(e.target.value)}
               >
-                <option value="Étudiant">Étudiant</option>
-                <option value="Salarié">Salarié</option>
-                <option value="Entreprise">Entreprise</option>
+                <option value="">Sélectionner un partenaire</option>
+                {partners.map((partner) => (
+                  <option key={partner.id} value={partner.id}>
+                    {partner.nom}
+                  </option>
+                ))}
               </select>
             </div>
             
             {/* Informations personnelles */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="prenom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Prénom</label>
+                <label htmlFor="prenom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Prénom *</label>
                 <input
                   type="text"
                   id="prenom"
@@ -67,7 +74,7 @@ const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
               </div>
               
               <div>
-                <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom</label>
+                <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom *</label>
                 <input
                   type="text"
                   id="nom"
@@ -78,10 +85,25 @@ const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
                 />
               </div>
             </div>
+
+            {/* Genre */}
+            <div>
+              <label htmlFor="genre" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Genre</label>
+              <select
+                id="genre"
+                name="genre"
+                className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+              >
+                <option value="">Sélectionner un genre</option>
+                <option value="Homme">Homme</option>
+                <option value="Femme">Femme</option>
+                <option value="Autre">Autre</option>
+              </select>
+            </div>
             
             {/* Coordonnées */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email *</label>
               <input
                 type="email"
                 id="email"
@@ -93,7 +115,7 @@ const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
             </div>
             
             <div>
-              <label htmlFor="telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone</label>
+              <label htmlFor="telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone *</label>
               <input
                 type="tel"
                 id="telephone"
@@ -110,133 +132,90 @@ const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({
                 type="text"
                 id="adresse"
                 name="adresse"
-                required
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 placeholder="Adresse complète"
               />
             </div>
             
-            {/* Champs spécifiques au type d'utilisateur */}
-            {typeUtilisateur === 'Étudiant' && (
-              <>
-                <div>
-                  <label htmlFor="etablissement" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Établissement</label>
-                  <input
-                    type="text"
-                    id="etablissement"
-                    name="etablissement"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Nom de l'établissement"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="niveauEtudes" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Niveau d&apos;études</label>
-                  <select
-                    id="niveauEtudes"
-                    name="niveauEtudes"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                  >
-                    <option value="">Sélectionner un niveau</option>
-                    <option value="Licence 1">Licence 1</option>
-                    <option value="Licence 2">Licence 2</option>
-                    <option value="Licence 3">Licence 3</option>
-                    <option value="Master 1">Master 1</option>
-                    <option value="Master 2">Master 2</option>
-                    <option value="Doctorat">Doctorat</option>
-                  </select>
-                </div>
-              </>
-            )}
-            
-            {typeUtilisateur === 'Salarié' && (
-              <>
-                <div>
-                  <label htmlFor="organisation" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Organisation</label>
-                  <input
-                    type="text"
-                    id="organisation"
-                    name="organisation"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Nom de l'organisation"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="poste" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Poste</label>
-                  <input
-                    type="text"
-                    id="poste"
-                    name="poste"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Intitulé du poste"
-                  />
-                </div>
-              </>
-            )}
-            
-            {typeUtilisateur === 'Entreprise' && (
-              <>
-                <div>
-                  <label htmlFor="organisation" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom de l&apos;entreprise</label>
-                  <input
-                    type="text"
-                    id="organisation"
-                    name="organisation"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Nom de l'entreprise"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="secteur" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Secteur d&apos;activité</label>
-                  <input
-                    type="text"
-                    id="secteur"
-                    name="secteur"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-                    placeholder="Secteur d'activité"
-                  />
-                </div>
-              </>
-            )}
-            
-            {/* Statut */}
+            {/* Informations professionnelles */}
             <div>
-              <label htmlFor="statut" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Statut</label>
-              <select
-                id="statut"
-                name="statut"
+              <label htmlFor="poste" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Poste *</label>
+              <input
+                type="text"
+                id="poste"
+                name="poste"
                 required
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                placeholder="Intitulé du poste"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Rôle</label>
+              <input
+                type="text"
+                id="role"
+                name="role"
+                className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                placeholder="Rôle dans l'entreprise"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="type_contrat" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Type de contrat</label>
+              <select
+                id="type_contrat"
+                name="type_contrat"
+                className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
               >
-                <option value="Actif">Actif</option>
-                <option value="Inactif">Inactif</option>
-                <option value="En attente">En attente</option>
+                <option value="">Sélectionner un type</option>
+                <option value="CDI">CDI</option>
+                <option value="CDD">CDD</option>
+                <option value="Consultant">Consultant</option>
+                <option value="Stage">Stage</option>
+                <option value="Autre">Autre</option>
               </select>
             </div>
-          </div>
-          
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
-            >
-              Ajouter
-            </button>
+
+            <div>
+              <label htmlFor="salaire_net" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Salaire net (GNF)</label>
+              <input
+                type="number"
+                id="salaire_net"
+                name="salaire_net"
+                min="0"
+                step="1000"
+                className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="date_embauche" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Date d'embauche</label>
+              <input
+                type="date"
+                id="date_embauche"
+                name="date_embauche"
+                className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+              />
+            </div>
+            
+            {/* Boutons */}
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-[var(--zalama-border)] text-[var(--zalama-text)] rounded-lg hover:bg-[var(--zalama-bg-lighter)] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
+              >
+                Ajouter l'employé
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Partenaire, Employe, PartenaireAvecEmployes, StatistiquesPartenaire } from '@/types/partenaire';
 import smsService from './smsService';
 import employeeAccountService from './employeeAccountService';
+import partnerAccountService from './partnerAccountService';
 import { generatePassword, sendSMS, validateEmail } from '@/lib/utils';
 
 // Configuration Supabase - Variables définies directement
@@ -77,13 +78,17 @@ export const partenaireService = {
     }
   },
 
-  // Créer un nouveau partenaire avec envoi de SMS
+  // Créer un nouveau partenaire avec création automatique de comptes
   async create(partenaireData: Omit<Partenaire, 'id' | 'created_at' | 'updated_at'>): Promise<{
     partenaire: Partenaire;
     smsResults: {
       representant: { success: boolean; message?: string; error?: string };
       rh: { success: boolean; message?: string; error?: string };
       admin: { success: boolean; message?: string; error?: string };
+    };
+    accountResults: {
+      rh: { success: boolean; password?: string; error?: string };
+      responsable: { success: boolean; password?: string; error?: string };
     };
   }> {
     try {
@@ -105,91 +110,111 @@ export const partenaireService = {
         admin: { success: false, message: '', error: '' }
       };
 
-      // Envoyer les SMS de bienvenue après création réussie
-      try {
-        // SMS au représentant
-        if (partenaireData.telephone_representant && partenaireData.nom_representant) {
-          try {
-            await smsService.sendWelcomeSMSToRepresentant(
-              partenaireData.nom,
-              partenaireData.nom_representant,
-              partenaireData.telephone_representant,
-              partenaireData.email_representant || ''
-            );
-            smsResults.representant = {
-              success: true,
-              message: `SMS envoyé au représentant ${partenaireData.nom_representant} (${partenaireData.telephone_representant})`
-            };
-          } catch (smsError) {
-            console.error('Erreur SMS représentant détaillée:', smsError);
-            smsResults.representant = {
-              success: false,
-              error: `Erreur SMS représentant: ${smsError instanceof Error ? smsError.message : String(smsError)}`
-            };
-          }
-        } else {
-          smsResults.representant = {
-            success: false,
-            error: 'Numéro de téléphone ou nom du représentant manquant'
-          };
-        }
+      // Résultats des comptes créés
+      const accountResults = {
+        rh: { success: false, password: undefined, error: '' },
+        responsable: { success: false, password: undefined, error: '' }
+      };
 
-        // SMS au responsable RH
-        if (partenaireData.telephone_rh && partenaireData.nom_rh) {
-          try {
-            await smsService.sendWelcomeSMSToRH(
-              partenaireData.nom,
-              partenaireData.nom_rh,
-              partenaireData.telephone_rh,
-              partenaireData.email_rh || ''
-            );
+      // Créer les comptes RH et responsable automatiquement
+      try {
+        console.log('🔐 Création automatique des comptes RH et responsable...');
+        
+        const partnerWithId = { ...partenaireData, id: data.id };
+        const accountCreationResults = await partnerAccountService.createPartnerAccounts(partnerWithId);
+
+        // Traiter les résultats RH
+        if (accountCreationResults.rh.account.success) {
+          accountResults.rh = {
+            success: true,
+            password: accountCreationResults.rh.account.account?.password,
+            error: ''
+          };
+          
+          if (accountCreationResults.rh.sms.success) {
             smsResults.rh = {
               success: true,
-              message: `SMS envoyé au responsable RH ${partenaireData.nom_rh} (${partenaireData.telephone_rh})`
+              message: `Compte RH créé et SMS envoyé à ${partenaireData.nom_rh} (${partenaireData.telephone_rh})`
             };
-          } catch (smsError) {
-            console.error('Erreur SMS RH détaillée:', smsError);
+          } else {
             smsResults.rh = {
               success: false,
-              error: `Erreur SMS RH: ${smsError instanceof Error ? smsError.message : String(smsError)}`
+              error: `Compte RH créé mais SMS non envoyé: ${accountCreationResults.rh.sms.error}`
             };
           }
         } else {
+          accountResults.rh = {
+            success: false,
+            password: undefined,
+            error: accountCreationResults.rh.account.error || 'Erreur création compte RH'
+          };
           smsResults.rh = {
             success: false,
-            error: 'Numéro de téléphone ou nom du responsable RH manquant'
+            error: accountResults.rh.error
           };
         }
 
-        // SMS de notification à l'admin
-        try {
-          await smsService.sendPartnerCreationNotification(
-            partenaireData.nom,
-            partenaireData.type,
-            partenaireData.secteur
-          );
-          smsResults.admin = {
+        // Traiter les résultats responsable
+        if (accountCreationResults.responsable.account.success) {
+          accountResults.responsable = {
             success: true,
-            message: 'Notification admin envoyée'
+            password: accountCreationResults.responsable.account.account?.password,
+            error: ''
           };
-        } catch (smsError) {
-          console.error('Erreur SMS admin détaillée:', smsError);
-          smsResults.admin = {
+          
+          if (accountCreationResults.responsable.sms.success) {
+            smsResults.representant = {
+              success: true,
+              message: `Compte responsable créé et SMS envoyé à ${partenaireData.nom_representant} (${partenaireData.telephone_representant})`
+            };
+          } else {
+            smsResults.representant = {
+              success: false,
+              error: `Compte responsable créé mais SMS non envoyé: ${accountCreationResults.responsable.sms.error}`
+            };
+          }
+        } else {
+          accountResults.responsable = {
             success: false,
-            error: `Erreur SMS admin: ${smsError instanceof Error ? smsError.message : String(smsError)}`
+            password: undefined,
+            error: accountCreationResults.responsable.account.error || 'Erreur création compte responsable'
+          };
+          smsResults.representant = {
+            success: false,
+            error: accountResults.responsable.error
           };
         }
 
-        console.log('Résultats des SMS de bienvenue:', smsResults);
-      } catch (smsError) {
-        console.error('Erreur générale lors de l\'envoi des SMS de bienvenue:', smsError);
-        // Marquer tous les SMS comme échoués
-        smsResults.representant.error = 'Erreur générale SMS';
-        smsResults.rh.error = 'Erreur générale SMS';
-        smsResults.admin.error = 'Erreur générale SMS';
+        console.log('✅ Résultats création comptes:', accountResults);
+
+      } catch (accountError) {
+        console.error('❌ Erreur lors de la création des comptes:', accountError);
+        accountResults.rh.error = `Erreur générale création compte RH: ${accountError instanceof Error ? accountError.message : String(accountError)}`;
+        accountResults.responsable.error = `Erreur générale création compte responsable: ${accountError instanceof Error ? accountError.message : String(accountError)}`;
       }
 
-      return { partenaire: data, smsResults };
+      // SMS de notification à l'admin
+      try {
+        await smsService.sendPartnerCreationNotification(
+          partenaireData.nom,
+          partenaireData.type,
+          partenaireData.secteur
+        );
+        smsResults.admin = {
+          success: true,
+          message: 'Notification admin envoyée'
+        };
+      } catch (smsError) {
+        console.error('Erreur SMS admin détaillée:', smsError);
+        smsResults.admin = {
+          success: false,
+          error: `Erreur SMS admin: ${smsError instanceof Error ? smsError.message : String(smsError)}`
+        };
+      }
+
+      console.log('📊 Résultats finaux:', { smsResults, accountResults });
+
+      return { partenaire: data, smsResults, accountResults };
     } catch (error) {
       console.error('Erreur partenaireService.create:', error);
       throw error;

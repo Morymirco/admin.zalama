@@ -1,23 +1,25 @@
 import React from 'react';
-import { Users, Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Briefcase, GraduationCap, Building } from 'lucide-react';
+import { Users, Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Briefcase, Building, UserCheck, UserX } from 'lucide-react';
 import Image from 'next/image';
-import { Utilisateur } from '@/types/utilisateur';
+import { Employe } from '@/types/partenaire';
+import { Partenaire } from '@/types/partenaire';
 
 interface ListeUtilisateursProps {
-  utilisateurs: Utilisateur[];
-  filteredUtilisateurs: Utilisateur[];
+  utilisateurs: Employe[];
+  filteredUtilisateurs: Employe[];
   searchTerm: string;
   typeFilter: string;
   types?: string[];
   currentPage: number;
   itemsPerPage: number;
   isLoading: boolean;
+  partners?: Partenaire[];
   onSearch: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onTypeFilterChange: (type: string) => void;
   onPageChange: (page: number) => void;
   onAddClick: () => void;
-  onEditClick: (utilisateur: Utilisateur) => void;
-  onDeleteClick: (utilisateur: Utilisateur) => void;
+  onEditClick: (utilisateur: Employe) => void;
+  onDeleteClick: (utilisateur: Employe) => void;
 }
 
 const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
@@ -30,6 +32,7 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
   currentPage,
   itemsPerPage,
   isLoading,
+  partners,
   onSearch,
   onTypeFilterChange,
   onPageChange,
@@ -39,11 +42,12 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
 }) => {
   // Vérification de sécurité pour toutes les props critiques
   const safeFilteredUtilisateurs = filteredUtilisateurs || [];
-  const safeTypes = types || ['tous', 'etudiant', 'salaries', 'pension'];
+  const safeTypes = types || ['tous'];
   const safeSearchTerm = searchTerm || '';
   const safeTypeFilter = typeFilter || 'tous';
   const safeCurrentPage = currentPage || 1;
   const safeItemsPerPage = itemsPerPage || 10;
+  const safePartners = partners || [];
   
   // Vérification des handlers
   const safeOnSearch = onSearch || (() => {});
@@ -59,32 +63,33 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
   const currentItems = safeFilteredUtilisateurs.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(safeFilteredUtilisateurs.length / safeItemsPerPage);
 
-  // Fonction pour obtenir l'icône en fonction du type d'utilisateur
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'Étudiant':
-        return <GraduationCap className="h-4 w-4" />;
-      case 'Salarié':
-        return <Briefcase className="h-4 w-4" />;
-      case 'Entreprise':
-        return <Building className="h-4 w-4" />;
-      default:
-        return <Users className="h-4 w-4" />;
+  // Fonction pour obtenir le nom du partenaire
+  const getPartnerName = (partnerId: string) => {
+    const partner = safePartners.find(p => p.id === partnerId);
+    return partner?.nom || 'Partenaire inconnu';
+  };
+
+  // Fonction pour obtenir l'icône en fonction du poste
+  const getPosteIcon = (poste: string) => {
+    if (poste?.toLowerCase().includes('manager') || poste?.toLowerCase().includes('directeur')) {
+      return <Briefcase className="h-4 w-4" />;
     }
+    return <Users className="h-4 w-4" />;
   };
 
   // Fonction pour obtenir la couleur du statut
-  const getStatusColor = (statut: string) => {
-    switch (statut) {
-      case 'Actif':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'Inactif':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      case 'En attente':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
-    }
+  const getStatusColor = (actif: boolean) => {
+    return actif 
+      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+  };
+
+  // Fonction pour formater le salaire
+  const formatSalary = (salary: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'GNF'
+    }).format(salary);
   };
 
   return (
@@ -94,7 +99,7 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
         <div className="relative w-full md:w-64">
           <input
             type="text"
-            placeholder="Rechercher..."
+            placeholder="Rechercher un employé..."
             className="w-full pl-10 pr-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
             value={safeSearchTerm}
             onChange={safeOnSearch}
@@ -108,11 +113,11 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
             onClick={safeOnAddClick}
           >
             <Plus className="h-4 w-4" />
-            Ajouter
+            Ajouter un employé
           </button>
           
           <div className="flex items-center">
-            <span className="mr-2 text-[var(--zalama-text)]">Type:</span>
+            <span className="mr-2 text-[var(--zalama-text)]">Partenaire:</span>
             <select 
               value={safeTypeFilter}
               onChange={(e) => safeOnTypeFilterChange(e.target.value)}
@@ -120,7 +125,7 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
             >
               {safeTypes.map(type => (
                 <option key={type} value={type}>
-                  {type === 'tous' ? 'Tous les types' : type}
+                  {type === 'tous' ? 'Tous les partenaires' : getPartnerName(type)}
                 </option>
               ))}
             </select>
@@ -128,7 +133,7 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
         </div>
       </div>
       
-      {/* Liste des utilisateurs */}
+      {/* Liste des employés */}
       <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm border border-[var(--zalama-border)] overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
@@ -137,33 +142,35 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
           </div>
         ) : safeFilteredUtilisateurs.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-[var(--zalama-text-secondary)]">Aucun utilisateur trouvé</p>
+            <p className="text-[var(--zalama-text-secondary)]">Aucun employé trouvé</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--zalama-border)]">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Utilisateur</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Employé</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Partenaire</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Poste</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Salaire</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Statut</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Date d&apos;inscription</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Date d'embauche</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--zalama-border)]">
-                {currentItems.map((utilisateur) => (
-                  <tr key={utilisateur.id} className="hover:bg-[var(--zalama-bg-lighter)]">
+                {currentItems.map((employe) => (
+                  <tr key={employe.id} className="hover:bg-[var(--zalama-bg-lighter)]">
                     <td className="px-2 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
                           <Image 
                             className="h-10 w-10 rounded-full object-cover" 
-                            src={utilisateur.photo_url || utilisateur.photoURL || '/images/avatar-placeholder.png'} 
+                            src={employe.photo_url || '/images/avatar-placeholder.png'} 
                             width={40}
                             height={40}
-                            alt={`${utilisateur.displayName || `${utilisateur.prenom} ${utilisateur.nom}`}`}
+                            alt={`${employe.prenom} ${employe.nom}`}
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = '/images/avatar-placeholder.png';
                             }}
@@ -171,50 +178,55 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-[var(--zalama-text)]">
-                            {utilisateur.displayName || `${utilisateur.prenom} ${utilisateur.nom}`}
+                            {employe.prenom} {employe.nom}
                           </div>
-                          {utilisateur.type === 'Salarié' && utilisateur.poste && (
-                            <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.poste}</div>
-                          )}
-                          {utilisateur.type === 'Étudiant' && utilisateur.niveau_etudes && utilisateur.etablissement && (
-                            <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.niveau_etudes} - {utilisateur.etablissement}</div>
-                          )}
-                          {utilisateur.type === 'Entreprise' && utilisateur.organisation && (
-                            <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.organisation}</div>
-                          )}
+                          <div className="text-xs text-[var(--zalama-text-secondary)]">
+                            {employe.role || 'Employé'}
+                          </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap">
-                      <div className="text-sm text-[var(--zalama-text)]">{utilisateur.email}</div>
-                      <div className="text-xs text-[var(--zalama-text-secondary)]">{utilisateur.telephone || utilisateur.phoneNumber}</div>
+                      <div className="text-sm text-[var(--zalama-text)]">{employe.email}</div>
+                      <div className="text-xs text-[var(--zalama-text-secondary)]">{employe.telephone}</div>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <span className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[var(--zalama-bg-lighter)]">
-                          {getTypeIcon(utilisateur.type)}
-                          <span>{utilisateur.type}</span>
+                          <Building className="h-4 w-4" />
+                          <span>{getPartnerName(employe.partner_id)}</span>
                         </span>
                       </div>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(utilisateur.statut || (utilisateur.actif ? 'Actif' : 'Inactif'))}`}>
-                        {utilisateur.statut || (utilisateur.actif ? 'Actif' : 'Inactif')}
+                      <div className="flex items-center">
+                        <span className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[var(--zalama-bg-lighter)]">
+                          {getPosteIcon(employe.poste)}
+                          <span>{employe.poste}</span>
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-4 whitespace-nowrap text-sm text-[var(--zalama-text)]">
+                      {formatSalary(employe.salaire_net || 0)}
+                    </td>
+                    <td className="px-2 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(employe.actif)}`}>
+                        {employe.actif ? 'Actif' : 'Inactif'}
                       </span>
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap text-sm text-[var(--zalama-text-secondary)]">
-                      {utilisateur.date_inscription ? new Date(utilisateur.date_inscription).toLocaleDateString('fr-FR') : 'N/A'}
+                      {employe.date_embauche ? new Date(employe.date_embauche).toLocaleDateString('fr-FR') : 'N/A'}
                     </td>
                     <td className="px-2 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
                         <button 
-                          onClick={() => safeOnEditClick(utilisateur)}
+                          onClick={() => safeOnEditClick(employe)}
                           className="p-2 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button 
-                          onClick={() => safeOnDeleteClick(utilisateur)}
+                          onClick={() => safeOnDeleteClick(employe)}
                           className="p-2 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -278,3 +290,4 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
 };
 
 export default ListeUtilisateurs;
+

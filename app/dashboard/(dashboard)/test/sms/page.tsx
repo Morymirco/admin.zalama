@@ -97,9 +97,9 @@ export default function SMSTestPage() {
         </h1>
         <p className="text-[var(--zalama-text-secondary)]">
           Testez l'envoi de SMS avec le service Nimba SMS
-        </p>
-      </div>
-
+            </p>
+          </div>
+          
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formulaire de test */}
         <div className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)]">
@@ -112,21 +112,21 @@ export default function SMSTestPage() {
             <div className="space-y-2">
               <label className="block text-sm font-medium text-[var(--zalama-text)]">
                 Numéro de téléphone
-              </label>
-              <input
-                type="text"
+            </label>
+            <input
+              type="text"
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 placeholder="+224 XXX XXX XXX"
-              />
-            </div>
-
+            />
+          </div>
+          
             <div className="space-y-2">
               <label className="block text-sm font-medium text-[var(--zalama-text)]">
                 Message
-              </label>
+            </label>
               <textarea
                 name="message"
                 value={formData.message}
@@ -134,9 +134,9 @@ export default function SMSTestPage() {
                 rows={3}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 placeholder="Votre message..."
-              />
-            </div>
-
+            />
+          </div>
+          
             {/* Boutons de test */}
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -156,8 +156,8 @@ export default function SMSTestPage() {
                 <CheckCircle className="h-4 w-4" />
                 Vérifier Solde
               </button>
-            </div>
-
+          </div>
+          
             <button
               onClick={() => testSMSService('list_messages', { limit: 5 })}
               disabled={loading}
@@ -285,7 +285,7 @@ export default function SMSTestPage() {
           </div>
         </div>
       </div>
-
+      
       {/* Résultats */}
       <div className="mt-6 bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)]">
         <div className="flex justify-between items-center mb-4">

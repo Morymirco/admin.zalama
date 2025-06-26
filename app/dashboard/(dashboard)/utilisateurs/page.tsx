@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, Plus, Filter, GraduationCap, Briefcase, Building } from 'lucide-react';
+import { Search, Plus, Filter, Users, Building, Briefcase, UserCheck, UserX } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 // Importation des composants
@@ -14,37 +14,35 @@ import {
   ModaleSuppressionUtilisateur
 } from '@/components/dashboard/utilisateurs';
 
-// Importation du hook Supabase
-import { useSupabaseUsers } from '@/hooks/useSupabaseUsers';
-import { Utilisateur } from '@/types/utilisateur';
+// Importation du hook Supabase pour les employés
+import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
+import { Employe } from '@/types/partenaire';
 
 export default function UtilisateursPage() {
-  // Utilisation du hook Supabase pour les utilisateurs
+  // Utilisation du hook Supabase pour les employés
   const {
-    filteredUsers: filteredUtilisateurs,
+    filteredEmployees: filteredUtilisateurs,
+    partners,
     isLoading,
     stats,
     statsLoading,
     searchTerm,
-    typeFilter,
+    partnerFilter,
     currentPage,
     totalPages,
     setSearchTerm,
-    setTypeFilter,
+    setPartnerFilter,
     setCurrentPage,
-    createUser,
-    updateUser,
-    deleteUser
-  } = useSupabaseUsers(10);
+    createEmployee,
+    updateEmployee,
+    deleteEmployee
+  } = useSupabaseEmployees(10);
 
   // États pour les modales
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [currentUtilisateur, setCurrentUtilisateur] = useState<Utilisateur | null>(null);
-
-  // Types d'utilisateurs disponibles
-  const types = ['tous', 'Étudiant', 'Salarié', 'Entreprise'];
+  const [currentUtilisateur, setCurrentUtilisateur] = useState<Employe | null>(null);
 
   // Fonction pour transformer les statistiques en format attendu
   const transformStats = () => {
@@ -52,31 +50,31 @@ export default function UtilisateursPage() {
     
     return [
       {
-        type: 'Étudiants',
-        nombre: stats.parType['Étudiant'] || 0,
+        type: 'Total Employés',
+        nombre: stats.total,
         nouveauxCeMois: 0, // À calculer si nécessaire
-        actifs: stats.actifs * ((stats.parType['Étudiant'] || 0) / stats.total) || 0,
-        inactifs: stats.inactifs * ((stats.parType['Étudiant'] || 0) / stats.total) || 0,
+        actifs: stats.actifs,
+        inactifs: stats.inactifs,
         tendance: 'stable' as const,
-        icon: <GraduationCap className="h-6 w-6 text-[var(--zalama-blue)]" />
+        icon: <Users className="h-6 w-6 text-[var(--zalama-blue)]" />
       },
       {
-        type: 'Salariés',
-        nombre: stats.parType['Salarié'] || 0,
+        type: 'Employés Actifs',
+        nombre: stats.actifs,
         nouveauxCeMois: 0,
-        actifs: stats.actifs * ((stats.parType['Salarié'] || 0) / stats.total) || 0,
-        inactifs: stats.inactifs * ((stats.parType['Salarié'] || 0) / stats.total) || 0,
+        actifs: stats.actifs,
+        inactifs: 0,
         tendance: 'stable' as const,
-        icon: <Briefcase className="h-6 w-6 text-[var(--zalama-green)]" />
+        icon: <UserCheck className="h-6 w-6 text-[var(--zalama-green)]" />
       },
       {
-        type: 'Entreprises',
-        nombre: stats.parType['Entreprise'] || 0,
+        type: 'Employés Inactifs',
+        nombre: stats.inactifs,
         nouveauxCeMois: 0,
-        actifs: stats.actifs * ((stats.parType['Entreprise'] || 0) / stats.total) || 0,
-        inactifs: stats.inactifs * ((stats.parType['Entreprise'] || 0) / stats.total) || 0,
+        actifs: 0,
+        inactifs: stats.inactifs,
         tendance: 'stable' as const,
-        icon: <Building className="h-6 w-6 text-[var(--zalama-orange)]" />
+        icon: <UserX className="h-6 w-6 text-[var(--zalama-orange)]" />
       }
     ];
   };
@@ -90,80 +88,82 @@ export default function UtilisateursPage() {
     setSearchTerm(e.target.value);
   };
 
-  const handleTypeFilterChange = (type: string) => {
-    setTypeFilter(type);
+  const handlePartnerFilterChange = (partnerId: string) => {
+    setPartnerFilter(partnerId);
   };
 
   const handleAddUser = () => {
     setShowAddModal(true);
   };
 
-  const handleEditUser = (user: Utilisateur) => {
+  const handleEditUser = (user: Employe) => {
     setCurrentUtilisateur(user);
     setShowEditModal(true);
   };
 
-  const handleDeleteUser = (user: Utilisateur) => {
+  const handleDeleteUser = (user: Employe) => {
     setCurrentUtilisateur(user);
     setShowDeleteModal(true);
   };
 
-  // Formulaire d'ajout d'utilisateur
+  // Formulaire d'ajout d'employé
   const handleSubmitAddUser = async (formData: FormData) => {
     try {
-      const userData = {
+      const employeeData = {
+        partner_id: formData.get('partner_id') as string,
         nom: formData.get('nom') as string,
         prenom: formData.get('prenom') as string,
         email: formData.get('email') as string,
         telephone: formData.get('telephone') as string,
         adresse: formData.get('adresse') as string,
-        type: formData.get('type') as 'Étudiant' | 'Salarié' | 'Entreprise',
-        statut: 'En attente' as const,
-        actif: true,
-        etablissement: formData.get('etablissement') as string,
-        niveau_etudes: formData.get('niveauEtudes') as string,
-        organisation: formData.get('organisation') as string,
         poste: formData.get('poste') as string,
+        role: formData.get('role') as string,
+        type_contrat: formData.get('type_contrat') as 'CDI' | 'CDD' | 'Consultant' | 'Stage' | 'Autre',
+        salaire_net: parseFloat(formData.get('salaire_net') as string) || 0,
+        date_embauche: formData.get('date_embauche') as string,
+        actif: true,
+        genre: formData.get('genre') as 'Homme' | 'Femme' | 'Autre'
       };
 
-      await createUser(userData);
+      await createEmployee(employeeData);
       
       setShowAddModal(false);
-      toast.success('Utilisateur ajouté avec succès');
+      toast.success('Employé ajouté avec succès');
       
     } catch (error) {
-      console.error("Erreur lors de l'ajout de l'utilisateur:", error);
-      toast.error('Erreur lors de l\'ajout de l\'utilisateur');
+      console.error("Erreur lors de l'ajout de l'employé:", error);
+      toast.error('Erreur lors de l\'ajout de l\'employé');
     }
   };
 
-  // Formulaire d'édition d'utilisateur
+  // Formulaire d'édition d'employé
   const handleSubmitEditUser = async (formData: FormData) => {
     if (!currentUtilisateur) return;
     
     try {
-      const userData = {
+      const employeeData = {
         nom: formData.get('nom') as string,
         prenom: formData.get('prenom') as string,
         email: formData.get('email') as string,
         telephone: formData.get('telephone') as string,
         adresse: formData.get('adresse') as string,
-        type: formData.get('type') as 'Étudiant' | 'Salarié' | 'Entreprise',
-        etablissement: formData.get('etablissement') as string,
-        niveau_etudes: formData.get('niveauEtudes') as string,
-        organisation: formData.get('organisation') as string,
         poste: formData.get('poste') as string,
+        role: formData.get('role') as string,
+        type_contrat: formData.get('type_contrat') as 'CDI' | 'CDD' | 'Consultant' | 'Stage' | 'Autre',
+        salaire_net: parseFloat(formData.get('salaire_net') as string) || 0,
+        date_embauche: formData.get('date_embauche') as string,
+        genre: formData.get('genre') as 'Homme' | 'Femme' | 'Autre'
       };
 
-      await updateUser(currentUtilisateur.id, userData);
+      await updateEmployee(currentUtilisateur.id, employeeData);
       
       setShowEditModal(false);
       setCurrentUtilisateur(null);
-      toast.success('Utilisateur mis à jour avec succès');
+      toast.success('Employé mis à jour avec succès');
       
     } catch (error) {
-      console.error("Erreur lors de la mise à jour de l'utilisateur:", error);
-      toast.error('Erreur lors de la mise à jour de l\'utilisateur');
+      console.error("Erreur lors de la mise à jour de l'employé:", error);
+      toast.error('Erreur lors de la mise à jour de l\'employé');
     }
   };
 
@@ -171,15 +171,15 @@ export default function UtilisateursPage() {
     if (!currentUtilisateur) return;
     
     try {
-      await deleteUser(currentUtilisateur.id);
+      await deleteEmployee(currentUtilisateur.id);
       
       setShowDeleteModal(false);
       setCurrentUtilisateur(null);
-      toast.success('Utilisateur supprimé avec succès');
+      toast.success('Employé supprimé avec succès');
       
     } catch (error) {
-      console.error("Erreur lors de la suppression de l'utilisateur:", error);
-      toast.error('Erreur lors de la suppression de l\'utilisateur');
+      console.error("Erreur lors de la suppression de l'employé:", error);
+      toast.error('Erreur lors de la suppression de l\'employé');
     }
   };
 
@@ -188,17 +188,26 @@ export default function UtilisateursPage() {
   const endIndex = startIndex + 10;
   const currentItems = (filteredUtilisateurs || []).slice(startIndex, endIndex);
 
+  // Préparer les options de filtre par partenaire
+  const partnerOptions = [
+    { value: 'tous', label: 'Tous les partenaires' },
+    ...(partners || []).map(partner => ({
+      value: partner.id,
+      label: partner.nom
+    }))
+  ];
+
   return (
     <div className="p-6">
       {/* En-tête avec recherche et filtres */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Utilisateurs</h1>
+          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Employés</h1>
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
             <input
               type="text"
-              placeholder="Rechercher un utilisateur..."
+              placeholder="Rechercher un employé..."
               className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
               value={searchTerm}
               onChange={handleSearch}
@@ -210,13 +219,13 @@ export default function UtilisateursPage() {
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
             <select
-              value={typeFilter}
-              onChange={(e) => handleTypeFilterChange(e.target.value)}
+              value={partnerFilter}
+              onChange={(e) => handlePartnerFilterChange(e.target.value)}
               className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
             >
-              {types.map((type) => (
-                <option key={type} value={type}>
-                  {type === 'tous' ? 'Tous les types' : type}
+              {partnerOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -227,7 +236,7 @@ export default function UtilisateursPage() {
             className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
           >
             <Plus className="h-4 w-4" />
-            Ajouter
+            Ajouter un employé
           </button>
         </div>
       </div>
@@ -238,26 +247,26 @@ export default function UtilisateursPage() {
         isLoading={statsLoading}
       />
       
-      {/* Résumé des utilisateurs */}
+      {/* Résumé des employés */}
       <ResumeUtilisateurs 
         totalUtilisateurs={filteredUtilisateurs.length}
-        utilisateursActifs={filteredUtilisateurs.filter(u => u.actif || u.active).length}
-        utilisateursInactifs={filteredUtilisateurs.filter(u => !(u.actif || u.active)).length}
+        utilisateursActifs={filteredUtilisateurs.filter(u => u.actif).length}
+        utilisateursInactifs={filteredUtilisateurs.filter(u => !u.actif).length}
         isLoading={isLoading}
       />
       
-      {/* Liste des utilisateurs */}
+      {/* Liste des employés */}
       <ListeUtilisateurs 
         utilisateurs={currentItems}
         filteredUtilisateurs={filteredUtilisateurs || []}
         searchTerm={searchTerm}
-        typeFilter={typeFilter}
-        types={types}
+        typeFilter={partnerFilter}
+        types={partnerOptions.map(p => p.value)}
         currentPage={currentPage}
         itemsPerPage={10}
         isLoading={isLoading}
         onSearch={handleSearch}
-        onTypeFilterChange={handleTypeFilterChange}
+        onTypeFilterChange={handlePartnerFilterChange}
         onPageChange={handlePageChange}
         onAddClick={handleAddUser}
         onEditClick={handleEditUser}
@@ -269,7 +278,8 @@ export default function UtilisateursPage() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSubmit={handleSubmitAddUser}
-        types={types.filter(t => t !== 'tous')}
+        types={partnerOptions.filter(p => p.value !== 'tous').map(p => p.value)}
+        partners={partners}
       />
       
       {showEditModal && currentUtilisateur && (
@@ -281,7 +291,8 @@ export default function UtilisateursPage() {
           }}
           onSubmit={handleSubmitEditUser}
           utilisateur={currentUtilisateur}
-          types={types.filter(t => t !== 'tous')}
+          types={partnerOptions.filter(p => p.value !== 'tous').map(p => p.value)}
+          partners={partners}
         />
       )}
       

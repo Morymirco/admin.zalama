@@ -126,9 +126,9 @@ async function addSampleUsers() {
     console.log(`📝 Ajout de ${sampleUsers.length} utilisateurs de test...`);
     
     const { data: insertedUsers, error: insertError } = await supabase
-      .from('users')
+          .from('users')
       .insert(sampleUsers)
-      .select();
+          .select();
 
     if (insertError) {
       console.error('❌ Erreur lors de l\'ajout des utilisateurs:', insertError);
@@ -141,8 +141,8 @@ async function addSampleUsers() {
     insertedUsers.forEach((user, index) => {
       console.log(`   ${index + 1}. ${user.prenom} ${user.nom} (${user.type}) - ${user.email}`);
     });
-
-    // Afficher les statistiques
+      
+      // Afficher les statistiques
     const stats = {
       total: insertedUsers.length,
       etudiants: insertedUsers.filter(u => u.type === 'Étudiant').length,

@@ -1,5 +1,5 @@
 "use client";
-import { Home, Users, BarChart2, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Home, Users, BarChart2, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, ChevronDown, ChevronUp, Database } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Alertes & Risques', icon: AlertCircle, href: '/dashboard/alertes' },
   { label: 'Objectifs & Performances', icon: Target, href: '/dashboard/performance' },
   { label: 'Visualisations', icon: BarChart2, href: '/dashboard/visualisations' },
+  { label: 'Test Migration', icon: Database, href: '/dashboard/migration-test' },
   { label: 'Paramètres', icon: Settings, href: '/dashboard/settings' },
 ];
 

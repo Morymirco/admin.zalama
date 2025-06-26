@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Calendar, DollarSign, MapPin, Phone, Mail, User, CheckCircle, AlertCircle, Key, MessageSquare } from 'lucide-react';
+import { X, UserPlus, Calendar, DollarSign, MapPin, Phone, Mail, User, CheckCircle, Key, MessageSquare } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Employe } from '@/types/partenaire';
 
@@ -448,7 +448,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">
-                  Email
+                  Email *
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--zalama-text-secondary)]" />
@@ -457,10 +457,14 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     id="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
+                    required
                     className="w-full pl-10 pr-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:border-[var(--zalama-blue)] focus:outline-none"
                     placeholder="email@exemple.com"
                   />
                 </div>
+                <p className="text-xs text-[var(--zalama-text-secondary)] mt-1">
+                  Un compte de connexion sera créé automatiquement avec cet email
+                </p>
               </div>
               <div>
                 <label htmlFor="telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">
@@ -477,6 +481,9 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                     placeholder="+224 623 456 789"
                   />
                 </div>
+                <p className="text-xs text-[var(--zalama-text-secondary)] mt-1">
+                  Pour recevoir les identifiants par SMS
+                </p>
               </div>
             </div>
           </div>
@@ -527,4 +534,4 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
   );
 };
 
-export default ModaleAjoutEmploye;
+export default ModaleAjoutEmploye; 

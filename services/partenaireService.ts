@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { Partenaire, Employe, PartenaireAvecEmployes, StatistiquesPartenaire } from '@/types/partenaire';
 import smsService from './smsService';
+import employeeAccountService from './employeeAccountService';
+import { generatePassword, sendSMS, validateEmail } from '@/lib/utils';
 
 // Configuration Supabase - Variables définies directement
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -448,10 +450,32 @@ export const employeService = {
     }
   },
 
-  // Créer un nouvel employé
-  async create(employeData: Omit<Employe, 'id' | 'created_at' | 'updated_at'>): Promise<Employe> {
+  // Créer un nouvel employé avec compte de connexion automatique
+  async create(employeData: Omit<Employe, 'id' | 'created_at' | 'updated_at'>): Promise<{
+    employe: Employe;
+    account?: {
+      success: boolean;
+      password?: string;
+      error?: string;
+    };
+    sms?: {
+      success: boolean;
+      error?: string;
+    };
+  }> {
     try {
-      const { data, error } = await supabase
+      // Vérifier que l'email est fourni pour la création du compte
+      if (!employeData.email) {
+        throw new Error('L\'email est requis pour créer un compte de connexion');
+      }
+
+      // Valider l'email
+      if (!validateEmail(employeData.email)) {
+        throw new Error('Format d\'email invalide');
+      }
+
+      // Créer l'employé dans la base de données
+      const { data: employe, error } = await supabase
         .from('employees')
         .insert([employeData])
         .select()
@@ -462,10 +486,72 @@ export const employeService = {
         throw error;
       }
 
+      // Créer le compte de connexion automatiquement
+      let accountResult = { success: false, error: 'Création de compte non tentée' };
+      let smsResult = { success: false, error: 'SMS non envoyé' };
+
+      try {
+        // Préparer les données pour la création du compte
+        const accountData = {
+          ...employeData,
+          id: employe.id, // ID de l'employé créé
+          partner_id: employeData.partner_id
+        };
+
+        // Créer le compte avec mot de passe généré
+        accountResult = await employeeAccountService.createEmployeeAccount(accountData);
+
+        // Envoyer un SMS de confirmation si le compte a été créé avec succès
+        if (accountResult.success && employeData.telephone) {
+          console.log('📱 Préparation de l\'envoi SMS:', {
+            telephone: employeData.telephone,
+            prenom: employeData.prenom,
+            email: employeData.email,
+            password: accountResult.account?.password
+          });
+          
+          const smsMessage = `Bonjour ${employeData.prenom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeData.email}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
+          
+          try {
+            console.log('📤 Tentative d\'envoi SMS...');
+            const smsSent = await sendSMS(employeData.telephone, smsMessage);
+            console.log('📱 Résultat SMS:', smsSent);
+            
+            smsResult = {
+              success: smsSent,
+              error: smsSent ? undefined : 'Échec de l\'envoi du SMS'
+            };
+          } catch (smsError) {
+            console.error('❌ Erreur lors de l\'envoi du SMS:', smsError);
+            smsResult = {
+              success: false,
+              error: `Erreur SMS: ${smsError instanceof Error ? smsError.message : String(smsError)}`
+            };
+          }
+        } else {
+          console.log('📱 SMS non envoyé:', {
+            accountSuccess: accountResult.success,
+            hasTelephone: !!employeData.telephone,
+            telephone: employeData.telephone
+          });
+        }
+
+      } catch (accountError) {
+        console.error('Erreur lors de la création du compte:', accountError);
+        accountResult = {
+          success: false,
+          error: `Erreur création compte: ${accountError instanceof Error ? accountError.message : String(accountError)}`
+        };
+      }
+
       // Mettre à jour les statistiques du partenaire
       await partenaireService.updatePartnerStats(employeData.partner_id);
 
-      return data;
+      return {
+        employe,
+        account: accountResult,
+        sms: smsResult
+      };
     } catch (error) {
       console.error('Erreur employeService.create:', error);
       throw error;

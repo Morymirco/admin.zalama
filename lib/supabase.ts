@@ -58,6 +58,7 @@ export interface Partner {
 export interface Employee {
   id: string
   partner_id: string
+  user_id?: string  // Référence vers l'UID de Supabase Auth
   nom: string
   prenom: string
   genre: 'Homme' | 'Femme' | 'Autre'

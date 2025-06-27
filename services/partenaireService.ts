@@ -526,6 +526,23 @@ export const employeService = {
         // Créer le compte avec mot de passe généré
         accountResult = await employeeAccountService.createEmployeeAccount(accountData);
 
+        // Si le compte a été créé avec succès, mettre à jour l'employé avec l'UID auth
+        if (accountResult.success && accountResult.account) {
+          const { error: updateError } = await supabase
+            .from('employees')
+            .update({ user_id: accountResult.account.id })
+            .eq('id', employe.id);
+
+          if (updateError) {
+            console.error('Erreur lors de la mise à jour du user_id:', updateError);
+            // Ne pas faire échouer le processus pour cette erreur
+          } else {
+            console.log('✅ user_id mis à jour avec succès:', accountResult.account.id);
+            // Mettre à jour l'objet employe retourné
+            employe.user_id = accountResult.account.id;
+          }
+        }
+
         // Envoyer un SMS de confirmation si le compte a été créé avec succès
         if (accountResult.success && employeData.telephone) {
           console.log('📱 Préparation de l\'envoi SMS:', {

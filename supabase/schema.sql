@@ -129,6 +129,7 @@ CREATE TABLE partners (
 CREATE TABLE employees (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   partner_id UUID REFERENCES partners(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id), -- Référence vers l'UID de Supabase Auth
   nom VARCHAR(100) NOT NULL,
   prenom VARCHAR(100) NOT NULL,
   genre employee_gender NOT NULL,
@@ -289,6 +290,7 @@ CREATE INDEX idx_partners_actif ON partners(actif);
 
 -- Index pour employees
 CREATE INDEX idx_employees_partner_id ON employees(partner_id);
+CREATE INDEX idx_employees_user_id ON employees(user_id);
 CREATE INDEX idx_employees_actif ON employees(actif);
 
 -- Index pour services

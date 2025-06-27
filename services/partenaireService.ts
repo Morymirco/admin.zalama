@@ -597,47 +597,72 @@ export const employeService = {
       // Envoyer un SMS de confirmation si le compte a été créé avec succès
       let smsResult = { success: false, error: 'SMS non envoyé' };
 
-      if (result.success && employeData.telephone) {
-        console.log('📱 Préparation de l\'envoi SMS:', {
-          telephone: employeData.telephone,
-          prenom: employeData.prenom,
-          email: employeData.email,
-          password: result.result.password
-        });
-        
-        try {
-          console.log('📤 Tentative d\'envoi SMS...');
-          
-          // Utiliser la méthode spécialisée pour les employés
-          await smsService.sendWelcomeSMSToEmployee(
-            employeData.nom,
-            employeData.prenom,
-            employeData.telephone,
-            employeData.email,
-            result.result.password || ''
-          );
-          
-          console.log('📱 SMS envoyé avec succès');
-          
-          smsResult = {
-            success: true,
-            error: ''
-          };
-        } catch (smsError) {
-          console.error('❌ Erreur lors de l\'envoi du SMS:', smsError);
-          smsResult = {
-            success: false,
-            error: `Erreur SMS: ${smsError instanceof Error ? smsError.message : String(smsError)}`
-          };
+      try {
+        // Préparer les données pour la création du compte
+        const accountData = {
+          ...employeData,
+          id: employe.id, // ID de l'employé créé
+          partner_id: employeData.partner_id
+        };
+
+        // Créer le compte avec mot de passe généré
+        accountResult = await employeeAccountService.createEmployeeAccount(accountData);
+
+        // Si le compte a été créé avec succès, mettre à jour l'employé avec l'UID auth
+        if (accountResult.success && accountResult.account) {
+          const { error: updateError } = await supabase
+            .from('employees')
+            .update({ user_id: accountResult.account.id })
+            .eq('id', employe.id);
+
+          if (updateError) {
+            console.error('Erreur lors de la mise à jour du user_id:', updateError);
+            // Ne pas faire échouer le processus pour cette erreur
+          } else {
+            console.log('✅ user_id mis à jour avec succès:', accountResult.account.id);
+            // Mettre à jour l'objet employe retourné
+            employe.user_id = accountResult.account.id;
+          }
         }
-      } else {
-        console.log('📱 SMS non envoyé:', {
-          syncSuccess: result.success,
-          hasTelephone: !!employeData.telephone,
-          telephone: employeData.telephone
-        });
-        
-        smsResult = {
+
+        // Envoyer un SMS de confirmation si le compte a été créé avec succès
+        if (accountResult.success && employeData.telephone) {
+          console.log('📱 Préparation de l\'envoi SMS:', {
+            telephone: employeData.telephone,
+            prenom: employeData.prenom,
+            email: employeData.email,
+            password: accountResult.account?.password
+          });
+          
+          const smsMessage = `Bonjour ${employeData.prenom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeData.email}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
+          
+          try {
+            console.log('📤 Tentative d\'envoi SMS...');
+            const smsSent = await sendSMS(employeData.telephone, smsMessage);
+            console.log('📱 Résultat SMS:', smsSent);
+            
+            smsResult = {
+              success: smsSent,
+              error: smsSent ? undefined : 'Échec de l\'envoi du SMS'
+            };
+          } catch (smsError) {
+            console.error('❌ Erreur lors de l\'envoi du SMS:', smsError);
+            smsResult = {
+              success: false,
+              error: `Erreur SMS: ${smsError instanceof Error ? smsError.message : String(smsError)}`
+            };
+          }
+        } else {
+          console.log('📱 SMS non envoyé:', {
+            accountSuccess: accountResult.success,
+            hasTelephone: !!employeData.telephone,
+            telephone: employeData.telephone
+          });
+        }
+
+      } catch (accountError) {
+        console.error('Erreur lors de la création du compte:', accountError);
+        accountResult = {
           success: false,
           error: result.success ? 'Numéro de téléphone manquant' : 'Compte non créé'
         };

@@ -13,6 +13,14 @@ interface UseSupabasePartnersReturn {
       rh: { success: boolean; message?: string; error?: string };
       admin: { success: boolean; message?: string; error?: string };
     };
+    emailResults: {
+      rh: { success: boolean; message?: string; error?: string };
+      responsable: { success: boolean; message?: string; error?: string };
+    };
+    accountResults: {
+      rh: { success: boolean; password?: string; error?: string };
+      responsable: { success: boolean; password?: string; error?: string };
+    };
   }>;
   updatePartenaire: (id: string, data: Partial<Omit<Partenaire, 'id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   deletePartenaire: (id: string) => Promise<void>;

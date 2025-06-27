@@ -67,8 +67,8 @@ export function cleanPhoneNumberForSMS(phoneNumber: string): string {
  */
 export async function sendSMS(phoneNumber: string, message: string): Promise<boolean> {
   try {
-    // Nettoyer le numéro de téléphone
-    const cleanNumber = cleanPhoneNumberForSMS(phoneNumber);
+    // Nettoyer le numéro de téléphone pour Nimba SMS (format sans +)
+    const cleanNumber = cleanPhoneNumberForSMS(phoneNumber).replace('+', '');
     
     console.log('📱 Envoi SMS:', {
       originalNumber: phoneNumber,
@@ -82,7 +82,7 @@ export async function sendSMS(phoneNumber: string, message: string): Promise<boo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        to: cleanNumber,
+        to: [cleanNumber], // Envoyer comme array selon le format Nimba SMS
         message
       }),
     });

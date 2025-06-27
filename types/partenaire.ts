@@ -67,6 +67,7 @@ export interface Employe {
   salaire_net?: number;
   date_embauche?: string;
   actif: boolean;
+  user_id?: string;
   created_at: string;
   updated_at: string;
 }

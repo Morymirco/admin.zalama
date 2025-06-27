@@ -3,7 +3,8 @@ import { Partenaire, Employe, PartenaireAvecEmployes, StatistiquesPartenaire } f
 import smsService from './smsService';
 import employeeAccountService from './employeeAccountService';
 import partnerAccountService from './partnerAccountService';
-import { generatePassword, sendSMS, validateEmail } from '@/lib/utils';
+import { employeeSyncService } from './employeeSyncService';
+import { generatePassword, validateEmail } from '@/lib/utils';
 
 // Configuration Supabase - Variables définies directement
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -86,6 +87,10 @@ export const partenaireService = {
       rh: { success: boolean; message?: string; error?: string };
       admin: { success: boolean; message?: string; error?: string };
     };
+    emailResults: {
+      rh: { success: boolean; message?: string; error?: string };
+      responsable: { success: boolean; message?: string; error?: string };
+    };
     accountResults: {
       rh: { success: boolean; password?: string; error?: string };
       responsable: { success: boolean; password?: string; error?: string };
@@ -108,6 +113,12 @@ export const partenaireService = {
         representant: { success: false, message: '', error: '' },
         rh: { success: false, message: '', error: '' },
         admin: { success: false, message: '', error: '' }
+      };
+
+      // Résultats des emails
+      const emailResults = {
+        rh: { success: false, message: '', error: '' },
+        responsable: { success: false, message: '', error: '' }
       };
 
       // Résultats des comptes créés
@@ -134,12 +145,28 @@ export const partenaireService = {
           if (accountCreationResults.rh.sms.success) {
             smsResults.rh = {
               success: true,
-              message: `Compte RH créé et SMS envoyé à ${partenaireData.nom_rh} (${partenaireData.telephone_rh})`
+              message: `Compte RH créé et SMS envoyé à ${partenaireData.nom_rh} (${partenaireData.telephone_rh})`,
+              error: ''
             };
           } else {
             smsResults.rh = {
               success: false,
+              message: '',
               error: `Compte RH créé mais SMS non envoyé: ${accountCreationResults.rh.sms.error}`
+            };
+          }
+
+          if (accountCreationResults.rh.email.success) {
+            emailResults.rh = {
+              success: true,
+              message: `Compte RH créé et email envoyé à ${partenaireData.nom_rh} (${partenaireData.email_rh})`,
+              error: ''
+            };
+          } else {
+            emailResults.rh = {
+              success: false,
+              message: '',
+              error: `Compte RH créé mais email non envoyé: ${accountCreationResults.rh.email.error}`
             };
           }
         } else {
@@ -150,6 +177,12 @@ export const partenaireService = {
           };
           smsResults.rh = {
             success: false,
+            message: '',
+            error: accountResults.rh.error
+          };
+          emailResults.rh = {
+            success: false,
+            message: '',
             error: accountResults.rh.error
           };
         }
@@ -165,12 +198,28 @@ export const partenaireService = {
           if (accountCreationResults.responsable.sms.success) {
             smsResults.representant = {
               success: true,
-              message: `Compte responsable créé et SMS envoyé à ${partenaireData.nom_representant} (${partenaireData.telephone_representant})`
+              message: `Compte responsable créé et SMS envoyé à ${partenaireData.nom_representant} (${partenaireData.telephone_representant})`,
+              error: ''
             };
           } else {
             smsResults.representant = {
               success: false,
+              message: '',
               error: `Compte responsable créé mais SMS non envoyé: ${accountCreationResults.responsable.sms.error}`
+            };
+          }
+
+          if (accountCreationResults.responsable.email.success) {
+            emailResults.responsable = {
+              success: true,
+              message: `Compte responsable créé et email envoyé à ${partenaireData.nom_representant} (${partenaireData.email_representant})`,
+              error: ''
+            };
+          } else {
+            emailResults.responsable = {
+              success: false,
+              message: '',
+              error: `Compte responsable créé mais email non envoyé: ${accountCreationResults.responsable.email.error}`
             };
           }
         } else {
@@ -181,6 +230,12 @@ export const partenaireService = {
           };
           smsResults.representant = {
             success: false,
+            message: '',
+            error: accountResults.responsable.error
+          };
+          emailResults.responsable = {
+            success: false,
+            message: '',
             error: accountResults.responsable.error
           };
         }
@@ -202,19 +257,21 @@ export const partenaireService = {
         );
         smsResults.admin = {
           success: true,
-          message: 'Notification admin envoyée'
+          message: 'Notification admin envoyée',
+          error: ''
         };
       } catch (smsError) {
         console.error('Erreur SMS admin détaillée:', smsError);
         smsResults.admin = {
           success: false,
+          message: '',
           error: `Erreur SMS admin: ${smsError instanceof Error ? smsError.message : String(smsError)}`
         };
       }
 
-      console.log('📊 Résultats finaux:', { smsResults, accountResults });
+      console.log('📊 Résultats finaux:', { smsResults, emailResults, accountResults });
 
-      return { partenaire: data, smsResults, accountResults };
+      return { partenaire: data, smsResults, emailResults, accountResults };
     } catch (error) {
       console.error('Erreur partenaireService.create:', error);
       throw error;
@@ -499,73 +556,90 @@ export const employeService = {
         throw new Error('Format d\'email invalide');
       }
 
-      // Créer l'employé dans la base de données
-      const { data: employe, error } = await supabase
-        .from('employees')
-        .insert([employeData])
-        .select()
-        .single();
+      console.log('🔄 Création d\'employé avec synchronisation automatique...');
 
-      if (error) {
-        console.error('Erreur lors de la création de l\'employé:', error);
-        throw error;
+      // Utiliser l'API route pour la synchronisation
+      const response = await fetch('/api/employees/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'create_with_auth',
+          employeeData: employeData
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      // Créer le compte de connexion automatiquement
-      let accountResult = { success: false, error: 'Création de compte non tentée' };
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erreur lors de la création avec synchronisation');
+      }
+
+      console.log('✅ Employé créé avec synchronisation:', result);
+
+      // Récupérer l'employé créé
+      const { data: employe, error: fetchError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', result.result.employee.id)
+        .single();
+
+      if (fetchError || !employe) {
+        throw new Error('Erreur lors de la récupération de l\'employé créé');
+      }
+
+      // Envoyer un SMS de confirmation si le compte a été créé avec succès
       let smsResult = { success: false, error: 'SMS non envoyé' };
 
-      try {
-        // Préparer les données pour la création du compte
-        const accountData = {
-          ...employeData,
-          id: employe.id, // ID de l'employé créé
-          partner_id: employeData.partner_id
-        };
-
-        // Créer le compte avec mot de passe généré
-        accountResult = await employeeAccountService.createEmployeeAccount(accountData);
-
-        // Envoyer un SMS de confirmation si le compte a été créé avec succès
-        if (accountResult.success && employeData.telephone) {
-          console.log('📱 Préparation de l\'envoi SMS:', {
-            telephone: employeData.telephone,
-            prenom: employeData.prenom,
-            email: employeData.email,
-            password: accountResult.account?.password
-          });
+      if (result.success && employeData.telephone) {
+        console.log('📱 Préparation de l\'envoi SMS:', {
+          telephone: employeData.telephone,
+          prenom: employeData.prenom,
+          email: employeData.email,
+          password: result.result.password
+        });
+        
+        try {
+          console.log('📤 Tentative d\'envoi SMS...');
           
-          const smsMessage = `Bonjour ${employeData.prenom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeData.email}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
+          // Utiliser la méthode spécialisée pour les employés
+          await smsService.sendWelcomeSMSToEmployee(
+            employeData.nom,
+            employeData.prenom,
+            employeData.telephone,
+            employeData.email,
+            result.result.password || ''
+          );
           
-          try {
-            console.log('📤 Tentative d\'envoi SMS...');
-            const smsSent = await sendSMS(employeData.telephone, smsMessage);
-            console.log('📱 Résultat SMS:', smsSent);
-            
-            smsResult = {
-              success: smsSent,
-              error: smsSent ? undefined : 'Échec de l\'envoi du SMS'
-            };
-          } catch (smsError) {
-            console.error('❌ Erreur lors de l\'envoi du SMS:', smsError);
-            smsResult = {
-              success: false,
-              error: `Erreur SMS: ${smsError instanceof Error ? smsError.message : String(smsError)}`
-            };
-          }
-        } else {
-          console.log('📱 SMS non envoyé:', {
-            accountSuccess: accountResult.success,
-            hasTelephone: !!employeData.telephone,
-            telephone: employeData.telephone
-          });
+          console.log('📱 SMS envoyé avec succès');
+          
+          smsResult = {
+            success: true,
+            error: ''
+          };
+        } catch (smsError) {
+          console.error('❌ Erreur lors de l\'envoi du SMS:', smsError);
+          smsResult = {
+            success: false,
+            error: `Erreur SMS: ${smsError instanceof Error ? smsError.message : String(smsError)}`
+          };
         }
-
-      } catch (accountError) {
-        console.error('Erreur lors de la création du compte:', accountError);
-        accountResult = {
+      } else {
+        console.log('📱 SMS non envoyé:', {
+          syncSuccess: result.success,
+          hasTelephone: !!employeData.telephone,
+          telephone: employeData.telephone
+        });
+        
+        smsResult = {
           success: false,
-          error: `Erreur création compte: ${accountError instanceof Error ? accountError.message : String(accountError)}`
+          error: result.success ? 'Numéro de téléphone manquant' : 'Compte non créé'
         };
       }
 
@@ -574,7 +648,11 @@ export const employeService = {
 
       return {
         employe,
-        account: accountResult,
+        account: {
+          success: result.success,
+          password: result.result.password,
+          error: result.error
+        },
         sms: smsResult
       };
     } catch (error) {

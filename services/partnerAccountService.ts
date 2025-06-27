@@ -1,4 +1,5 @@
 import { sendSMS } from '@/lib/utils';
+import emailService from './emailService';
 
 interface AccountResult {
   success: boolean;
@@ -7,6 +8,11 @@ interface AccountResult {
 }
 
 interface SMSResult {
+  success: boolean;
+  error?: string;
+}
+
+interface EmailResult {
   success: boolean;
   error?: string;
 }
@@ -114,6 +120,34 @@ class PartnerAccountService {
     }
   }
 
+  // Envoyer email pour compte RH
+  async sendRHAccountEmail(rhData: any, accountResult: AccountResult): Promise<EmailResult> {
+    if (!accountResult.success || !rhData.email_rh) {
+      return { success: false, error: 'Données manquantes pour l\'envoi email' };
+    }
+
+    try {
+      await emailService.sendWelcomeEmailToRH({
+        nom: rhData.nom_rh,
+        email: rhData.email_rh,
+        password: accountResult.account?.password || '',
+        role: 'rh',
+        partenaireNom: rhData.nom
+      });
+      
+      return {
+        success: true,
+        error: undefined
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email RH:', error);
+      return {
+        success: false,
+        error: `Erreur email RH: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
   // Envoyer SMS pour compte responsable
   async sendResponsableAccountSMS(responsableData: any, accountResult: AccountResult): Promise<SMSResult> {
     if (!accountResult.success || !responsableData.telephone_representant) {
@@ -138,14 +172,50 @@ class PartnerAccountService {
     }
   }
 
+  // Envoyer email pour compte responsable
+  async sendResponsableAccountEmail(responsableData: any, accountResult: AccountResult): Promise<EmailResult> {
+    if (!accountResult.success || !responsableData.email_representant) {
+      return { success: false, error: 'Données manquantes pour l\'envoi email' };
+    }
+
+    try {
+      await emailService.sendWelcomeEmailToResponsable({
+        nom: responsableData.nom_representant,
+        email: responsableData.email_representant,
+        password: accountResult.account?.password || '',
+        role: 'responsable',
+        partenaireNom: responsableData.nom
+      });
+      
+      return {
+        success: true,
+        error: undefined
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email responsable:', error);
+      return {
+        success: false,
+        error: `Erreur email responsable: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
   // Créer les comptes RH et responsable pour un partenaire
   async createPartnerAccounts(partenaireData: any): Promise<{
-    rh: { account: AccountResult; sms: SMSResult };
-    responsable: { account: AccountResult; sms: SMSResult };
+    rh: { account: AccountResult; sms: SMSResult; email: EmailResult };
+    responsable: { account: AccountResult; sms: SMSResult; email: EmailResult };
   }> {
     const results = {
-      rh: { account: { success: false, error: 'Non tenté' }, sms: { success: false, error: 'Non tenté' } },
-      responsable: { account: { success: false, error: 'Non tenté' }, sms: { success: false, error: 'Non tenté' } }
+      rh: { 
+        account: { success: false, error: 'Non tenté' }, 
+        sms: { success: false, error: 'Non tenté' },
+        email: { success: false, error: 'Non tenté' }
+      },
+      responsable: { 
+        account: { success: false, error: 'Non tenté' }, 
+        sms: { success: false, error: 'Non tenté' },
+        email: { success: false, error: 'Non tenté' }
+      }
     };
 
     // Créer le compte RH si les données sont fournies
@@ -154,7 +224,14 @@ class PartnerAccountService {
         results.rh.account = await this.createRHAccount(partenaireData);
         
         if (results.rh.account.success) {
-          results.rh.sms = await this.sendRHAccountSMS(partenaireData, results.rh.account);
+          // Envoyer SMS et email en parallèle
+          const [smsResult, emailResult] = await Promise.allSettled([
+            this.sendRHAccountSMS(partenaireData, results.rh.account),
+            this.sendRHAccountEmail(partenaireData, results.rh.account)
+          ]);
+          
+          results.rh.sms = smsResult.status === 'fulfilled' ? smsResult.value : { success: false, error: 'Erreur SMS' };
+          results.rh.email = emailResult.status === 'fulfilled' ? emailResult.value : { success: false, error: 'Erreur email' };
         }
       } catch (error) {
         console.error('Erreur lors de la création du compte RH:', error);
@@ -168,7 +245,14 @@ class PartnerAccountService {
         results.responsable.account = await this.createResponsableAccount(partenaireData);
         
         if (results.responsable.account.success) {
-          results.responsable.sms = await this.sendResponsableAccountSMS(partenaireData, results.responsable.account);
+          // Envoyer SMS et email en parallèle
+          const [smsResult, emailResult] = await Promise.allSettled([
+            this.sendResponsableAccountSMS(partenaireData, results.responsable.account),
+            this.sendResponsableAccountEmail(partenaireData, results.responsable.account)
+          ]);
+          
+          results.responsable.sms = smsResult.status === 'fulfilled' ? smsResult.value : { success: false, error: 'Erreur SMS' };
+          results.responsable.email = emailResult.status === 'fulfilled' ? emailResult.value : { success: false, error: 'Erreur email' };
         }
       } catch (error) {
         console.error('Erreur lors de la création du compte responsable:', error);

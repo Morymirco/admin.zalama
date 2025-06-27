@@ -20,12 +20,21 @@ class SMSService {
   }
 
   /**
+   * Obtenir l'URL de base selon l'environnement
+   */
+  private getBaseUrl(): string {
+    return process.env.NODE_ENV === 'production' 
+      ? 'https://admin.zalama.com' 
+      : 'http://localhost:3001';
+  }
+
+  /**
    * Envoyer un SMS simple selon le format Nimba SMS
    */
   async sendSMS(message: SMSMessage): Promise<any> {
     try {
-      // Utiliser l'API route Next.js pour éviter les problèmes CORS
-      const response = await fetch('/api/sms/send', {
+      // Utiliser l'API route Next.js avec l'URL complète
+      const response = await fetch(`${this.getBaseUrl()}/api/sms/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +257,7 @@ Les SMS de bienvenue ont été envoyés aux contacts.`;
    */
   async checkBalance(): Promise<any> {
     try {
-      const response = await fetch('/api/sms/send', {
+      const response = await fetch(`${this.getBaseUrl()}/api/sms/send`, {
         method: 'GET',
       });
 
@@ -329,6 +338,42 @@ Les SMS de bienvenue ont été envoyés aux contacts.`;
       console.error('Erreur lors de la récupération des contacts:', error);
       throw error;
     }
+  }
+
+  /**
+   * Envoyer un SMS de bienvenue avec identifiants à un employé
+   */
+  async sendWelcomeSMSToEmployee(
+    nomEmploye: string,
+    prenomEmploye: string,
+    telephoneEmploye: string,
+    emailEmploye: string,
+    password: string
+  ): Promise<any> {
+    // Formater le numéro de téléphone selon le format Nimba SMS
+    const formattedPhone = this.formatPhoneNumber(telephoneEmploye);
+    
+    const message = `Bonjour ${prenomEmploye},
+
+Votre compte ZaLaMa a été créé avec succès !
+
+🔐 Vos identifiants de connexion :
+Email: ${emailEmploye}
+Mot de passe: ${password}
+
+🌐 Connectez-vous sur : https://admin.zalama.com
+
+⚠️ Important : Changez votre mot de passe lors de votre première connexion.
+
+Pour toute question, contactez-nous au +224 XXX XXX XXX.
+
+Cordialement,
+L'équipe ZaLaMa`;
+
+    return this.sendSMS({
+      to: [formattedPhone],
+      message: message,
+    });
   }
 }
 

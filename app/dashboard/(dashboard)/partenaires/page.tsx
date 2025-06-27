@@ -290,6 +290,60 @@ export default function PartenairesPage() {
         }
       }
 
+      // Afficher les toasts pour les emails
+      if (result.emailResults) {
+        // Email au représentant
+        if (result.emailResults.responsable.success) {
+          toast.success(`✅ ${result.emailResults.responsable.message}`, {
+            duration: 4000,
+            icon: '📧'
+          });
+        } else if (result.emailResults.responsable.error) {
+          toast.error(`❌ ${result.emailResults.responsable.error}`, {
+            duration: 4000,
+            icon: '📧'
+          });
+        }
+
+        // Email au responsable RH
+        if (result.emailResults.rh.success) {
+          toast.success(`✅ ${result.emailResults.rh.message}`, {
+            duration: 4000,
+            icon: '📧'
+          });
+        } else if (result.emailResults.rh.error) {
+          toast.error(`❌ ${result.emailResults.rh.error}`, {
+            duration: 4000,
+            icon: '📧'
+          });
+        }
+
+        // Résumé des emails
+        const emailSuccessCount = [
+          result.emailResults.responsable.success,
+          result.emailResults.rh.success
+        ].filter(Boolean).length;
+
+        const totalEmails = 2;
+        
+        if (emailSuccessCount === totalEmails) {
+          toast.success(`🎉 Tous les emails (${totalEmails}) ont été envoyés avec succès !`, {
+            duration: 5000,
+            icon: '🎉'
+          });
+        } else if (emailSuccessCount > 0) {
+          toast.warning(`⚠️ ${emailSuccessCount}/${totalEmails} emails envoyés avec succès`, {
+            duration: 5000,
+            icon: '⚠️'
+          });
+        } else {
+          toast.error(`❌ Aucun email n'a pu être envoyé`, {
+            duration: 5000,
+            icon: '❌'
+          });
+        }
+      }
+
       setShowAddModal(false);
       
       // Nettoyer les données temporaires

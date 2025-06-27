@@ -4,85 +4,177 @@ import smsService from '@/services/smsService';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, data } = body;
+    const { testType = 'simple', phoneNumber, message } = body;
 
-    switch (action) {
-      case 'send_test':
-        // Envoyer un SMS de test
-        const result = await smsService.sendSMS({
-          to: [data.phone],
-          message: data.message || 'Test SMS de ZaLaMa - ' + new Date().toLocaleString('fr-FR'),
-        });
-        return NextResponse.json({ success: true, data: result });
+    console.log('🧪 Test SMS - Type:', testType);
+    console.log('📱 Numéro original:', phoneNumber);
+    console.log('💬 Message:', message);
 
-      case 'check_balance':
-        // Vérifier le solde
-        const balance = await smsService.checkBalance();
-        return NextResponse.json({ success: true, data: balance });
-
-      case 'list_messages':
-        // Lister les messages
-        const messages = await smsService.listMessages(data.limit || 10);
-        return NextResponse.json({ success: true, data: messages });
-
-      case 'send_welcome_representant':
-        // Envoyer SMS de bienvenue au représentant
-        const welcomeRep = await smsService.sendWelcomeSMSToRepresentant(
-          data.nomPartenaire,
-          data.nomRepresentant,
-          data.telephoneRepresentant,
-          data.emailRepresentant
-        );
-        return NextResponse.json({ success: true, data: welcomeRep });
-
-      case 'send_welcome_rh':
-        // Envoyer SMS de bienvenue au RH
-        const welcomeRH = await smsService.sendWelcomeSMSToRH(
-          data.nomPartenaire,
-          data.nomRH,
-          data.telephoneRH,
-          data.emailRH
-        );
-        return NextResponse.json({ success: true, data: welcomeRH });
-
-      case 'send_verification':
-        // Envoyer SMS de vérification
-        const verification = await smsService.sendVerificationSMS({
-          to: data.phone,
-          message: data.message,
-          expiry_time: data.expiry_time || 5,
-        });
-        return NextResponse.json({ success: true, data: verification });
-
-      case 'verify_code':
-        // Vérifier un code
-        const verifyResult = await smsService.verifyCode(data.verificationId, data.code);
-        return NextResponse.json({ success: true, data: verifyResult });
-
-      default:
-        return NextResponse.json(
-          { success: false, error: 'Action non reconnue' },
-          { status: 400 }
-        );
+    // Validation du numéro de téléphone
+    if (!phoneNumber) {
+      return NextResponse.json(
+        { error: 'Le numéro de téléphone est requis' },
+        { status: 400 }
+      );
     }
+
+    let result;
+
+    try {
+      switch (testType) {
+        case 'simple':
+          // Test simple avec l'API SMS
+          result = await smsService.sendSMS({
+            to: [phoneNumber],
+            message: message || 'Test SMS ZaLaMa - ' + new Date().toLocaleString('fr-FR')
+          });
+          break;
+
+        case 'welcome_representant':
+          // Test SMS de bienvenue représentant
+          result = await smsService.sendWelcomeSMSToRepresentant(
+            'Entreprise Test',
+            'John Doe',
+            phoneNumber,
+            'john.doe@test.com'
+          );
+          break;
+
+        case 'welcome_rh':
+          // Test SMS de bienvenue RH
+          result = await smsService.sendWelcomeSMSToRH(
+            'Entreprise Test',
+            'Jane Smith',
+            phoneNumber,
+            'jane.smith@test.com'
+          );
+          break;
+
+        case 'partner_creation':
+          // Test notification création partenaire
+          result = await smsService.sendPartnerCreationNotification(
+            'Nouvelle Entreprise',
+            'Entreprise',
+            'Technologie'
+          );
+          break;
+
+        case 'welcome_employee':
+          // Test SMS de bienvenue employé avec identifiants
+          result = await smsService.sendWelcomeSMSToEmployee(
+            'Doe',
+            'John',
+            phoneNumber,
+            'john.doe@test.com',
+            'MotDePasse123!'
+          );
+          break;
+
+        default:
+          return NextResponse.json(
+            { error: 'Type de test non reconnu' },
+            { status: 400 }
+          );
+      }
+
+      console.log('✅ Test SMS réussi:', result);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Test SMS réussi',
+        result: result,
+        phoneNumber: phoneNumber
+      });
+
+    } catch (smsError) {
+      console.error('❌ Erreur lors de l\'envoi SMS:', smsError);
+      
+      let smsErrorMessage = 'Erreur SMS inconnue';
+      if (smsError instanceof Error) {
+        smsErrorMessage = smsError.message;
+      } else if (typeof smsError === 'string') {
+        smsErrorMessage = smsError;
+      } else if (smsError && typeof smsError === 'object') {
+        if ('message' in smsError) {
+          smsErrorMessage = String(smsError.message);
+        } else if ('error' in smsError) {
+          smsErrorMessage = String(smsError.error);
+        } else {
+          smsErrorMessage = JSON.stringify(smsError);
+        }
+      }
+
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Erreur lors de l'envoi SMS: ${smsErrorMessage}`,
+          phoneNumber: phoneNumber
+        },
+        { status: 500 }
+      );
+    }
+
   } catch (error) {
-    console.error('Erreur dans l\'API SMS:', error);
+    console.error('❌ Erreur générale test SMS:', error);
+    
+    let errorMessage = 'Erreur inconnue';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object') {
+      if ('message' in error) {
+        errorMessage = String(error.message);
+      } else if ('error' in error) {
+        errorMessage = String(error.error);
+      } else {
+        errorMessage = JSON.stringify(error);
+      }
+    }
+
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' },
+      { 
+        success: false, 
+        error: `Erreur générale: ${errorMessage}`,
+        phoneNumber: phoneNumber || 'Non fourni'
+      },
       { status: 500 }
     );
   }
 }
 
+// Route GET pour tester le solde
 export async function GET() {
   try {
-    // Vérifier le solde par défaut
     const balance = await smsService.checkBalance();
-    return NextResponse.json({ success: true, data: balance });
+    
+    return NextResponse.json({
+      success: true,
+      balance: balance
+    });
   } catch (error) {
-    console.error('Erreur lors de la vérification du solde:', error);
+    console.error('❌ Erreur vérification solde:', error);
+    
+    let errorMessage = 'Erreur inconnue';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object') {
+      if ('message' in error) {
+        errorMessage = String(error.message);
+      } else if ('error' in error) {
+        errorMessage = String(error.error);
+      } else {
+        errorMessage = JSON.stringify(error);
+      }
+    }
+
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' },
+      { 
+        success: false, 
+        error: `Erreur lors de la vérification du solde: ${errorMessage}`
+      },
       { status: 500 }
     );
   }

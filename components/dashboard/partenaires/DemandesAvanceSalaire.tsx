@@ -1,23 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import salaryAdvanceService from '@/services/salaryAdvanceService';
-import { DemandeAvanceSalaire, Transaction } from '@/types/salaryAdvanceRequest';
-import { RefreshCw, AlertCircle, User, CheckCircle, XCircle, Clock, DollarSign, FileText, CreditCard } from 'lucide-react';
+import { SalaryAdvanceRequest, Transaction } from '@/types/salaryAdvanceRequest';
+import { 
+  RefreshCw, 
+  AlertCircle, 
+  User, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  DollarSign, 
+  FileText, 
+  CreditCard,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
+  Eye,
+  MoreHorizontal
+} from 'lucide-react';
 
 interface DemandesAvanceSalaireProps {
   partnerId: string;
 }
 
 const statusColors: Record<string, string> = {
-  'EN_ATTENTE': 'bg-yellow-100 text-yellow-800',
-  'APPROUVE': 'bg-blue-100 text-blue-800',
-  'REFUSE': 'bg-red-100 text-red-800',
-  'PAYE': 'bg-green-100 text-green-800',
-  'EFFECTUEE': 'bg-green-100 text-green-800',
-  'ANNULEE': 'bg-red-100 text-red-800',
+  'En attente': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  'Validé': 'bg-green-100 text-green-800 border-green-200',
+  'Rejeté': 'bg-red-100 text-red-800 border-red-200',
+  'EFFECTUEE': 'bg-green-100 text-green-800 border-green-200',
+  'EN_COURS': 'bg-blue-100 text-blue-800 border-blue-200',
+  'ECHEC': 'bg-red-100 text-red-800 border-red-200',
+  'ANNULEE': 'bg-gray-100 text-gray-800 border-gray-200',
+};
+
+const statusIcons: Record<string, React.ReactNode> = {
+  'En attente': <Clock className="h-4 w-4" />,
+  'Validé': <CheckCircle className="h-4 w-4" />,
+  'Rejeté': <XCircle className="h-4 w-4" />,
+  'EFFECTUEE': <CheckCircle className="h-4 w-4" />,
+  'EN_COURS': <RefreshCw className="h-4 w-4 animate-spin" />,
+  'ECHEC': <XCircle className="h-4 w-4" />,
+  'ANNULEE': <XCircle className="h-4 w-4" />,
 };
 
 const DemandesAvanceSalaire: React.FC<DemandesAvanceSalaireProps> = ({ partnerId }) => {
-  const [demandes, setDemandes] = useState<DemandeAvanceSalaire[]>([]);
+  const [demandes, setDemandes] = useState<SalaryAdvanceRequest[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,159 +73,271 @@ const DemandesAvanceSalaire: React.FC<DemandesAvanceSalaireProps> = ({ partnerId
     return new Intl.NumberFormat('fr-FR').format(montant) + ' GNF';
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('fr-FR');
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('fr-FR');
   };
+
+  const getStatusBadge = (status: string) => (
+    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${statusColors[status] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+      {statusIcons[status] || <Clock className="h-4 w-4" />}
+      {status}
+    </span>
+  );
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec onglets */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-[var(--zalama-text)] flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-[var(--zalama-blue)]" />
-          Demandes & Transactions
-        </h2>
-        
-        {/* Onglets */}
-        <div className="flex gap-1 bg-[var(--zalama-bg-lighter)] rounded-lg p-1">
-          <button
-            onClick={() => setActiveTab('demandes')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              activeTab === 'demandes'
-                ? 'bg-[var(--zalama-card)] text-[var(--zalama-text)] shadow-sm'
-                : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
-            }`}
-          >
-            <FileText className="h-4 w-4" />
-            Demandes ({demandes.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('transactions')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              activeTab === 'transactions'
-                ? 'bg-[var(--zalama-card)] text-[var(--zalama-text)] shadow-sm'
-                : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
-            }`}
-          >
-            <CreditCard className="h-4 w-4" />
-            Transactions ({transactions.length})
-          </button>
+      {/* En-tête avec statistiques */}
+      <div className="bg-gradient-to-r from-[var(--zalama-blue)] to-[var(--zalama-blue-dark)] rounded-xl p-6 text-white">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Demandes & Transactions
+          </h2>
+          
+          {/* Onglets */}
+          <div className="flex gap-1 bg-white/10 rounded-lg p-1 backdrop-blur-sm">
+            <button
+              onClick={() => setActiveTab('demandes')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                activeTab === 'demandes'
+                  ? 'bg-white text-[var(--zalama-blue)] shadow-sm'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              Demandes ({demandes.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('transactions')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                activeTab === 'transactions'
+                  ? 'bg-white text-[var(--zalama-blue)] shadow-sm'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <CreditCard className="h-4 w-4" />
+              Transactions ({transactions.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Statistiques rapides */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold">{demandes.length}</div>
+            <div className="text-sm opacity-90">Total Demandes</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold">
+              {demandes.filter(d => d.statut === 'En attente').length}
+            </div>
+            <div className="text-sm opacity-90">En Attente</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold">
+              {demandes.filter(d => d.statut === 'Validé').length}
+            </div>
+            <div className="text-sm opacity-90">Approuvées</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold">
+              {formatMontant(demandes.reduce((sum, d) => sum + (d.montant_demande || 0), 0))}
+            </div>
+            <div className="text-sm opacity-90">Montant Total</div>
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <RefreshCw className="h-8 w-8 animate-spin text-[var(--zalama-blue)]" />
-          <span className="ml-2 text-[var(--zalama-text)]">Chargement...</span>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="relative">
+            <RefreshCw className="h-12 w-12 animate-spin text-[var(--zalama-blue)]" />
+            <div className="absolute inset-0 rounded-full border-4 border-[var(--zalama-blue)] border-opacity-20"></div>
+          </div>
+          <span className="mt-4 text-[var(--zalama-text)] font-medium">Chargement des données...</span>
         </div>
       ) : error ? (
-        <div className="flex items-center gap-2 text-[var(--zalama-danger)]">
-          <AlertCircle className="h-5 w-5" />
-          {error}
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-center gap-3 text-red-800">
+            <AlertCircle className="h-6 w-6" />
+            <div>
+              <h3 className="font-semibold">Erreur de chargement</h3>
+              <p className="text-sm">{error}</p>
+            </div>
+          </div>
         </div>
       ) : activeTab === 'demandes' ? (
-        /* Onglet Demandes */
-        <div className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)]">
-          <h3 className="text-lg font-semibold mb-4 text-[var(--zalama-text)]">Demandes d'avance sur salaire</h3>
+        /* Onglet Demandes - Design en cartes */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-[var(--zalama-text)] flex items-center gap-2">
+              <FileText className="h-5 w-5 text-[var(--zalama-blue)]" />
+              Demandes d'avance sur salaire
+            </h3>
+            <div className="text-sm text-[var(--zalama-text-secondary)]">
+              {demandes.length} demande{demandes.length !== 1 ? 's' : ''}
+            </div>
+          </div>
           
           {demandes.length === 0 ? (
-            <div className="text-center text-[var(--zalama-text-secondary)] py-8">
-              Aucune demande d'avance sur salaire trouvée pour ce partenaire.
+            <div className="bg-[var(--zalama-card)] rounded-xl p-12 text-center border border-[var(--zalama-border)]">
+              <FileText className="h-16 w-16 text-[var(--zalama-text-secondary)] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[var(--zalama-text)] mb-2">Aucune demande</h3>
+              <p className="text-[var(--zalama-text-secondary)]">
+                Aucune demande d'avance sur salaire trouvée pour ce partenaire.
+              </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--zalama-border)]">
-                    <th className="px-4 py-2 text-left">Employé</th>
-                    <th className="px-4 py-2 text-left">Montant demandé</th>
-                    <th className="px-4 py-2 text-left">Motif</th>
-                    <th className="px-4 py-2 text-left">Statut</th>
-                    <th className="px-4 py-2 text-left">Date de demande</th>
-                    <th className="px-4 py-2 text-left">Traitement</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {demandes.map((demande) => (
-                    <tr key={demande.id} className="border-b border-[var(--zalama-border)] hover:bg-[var(--zalama-bg-lighter)]">
-                      <td className="px-4 py-2 flex items-center gap-2">
-                        <User className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
-                        {demande.employe ? `${demande.employe.prenom} ${demande.employe.nom}` : 'Employé inconnu'}
-                      </td>
-                      <td className="px-4 py-2 font-medium text-[var(--zalama-text)]">
+            <div className="grid gap-4">
+              {demandes.map((demande) => (
+                <div key={demande.id} className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)] hover:shadow-lg transition-all duration-200">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[var(--zalama-blue)] rounded-full flex items-center justify-center">
+                        <User className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-[var(--zalama-text)]">
+                          {demande.employe ? `${demande.employe.prenom} ${demande.employe.nom}` : 'Employé inconnu'}
+                        </h4>
+                        <p className="text-sm text-[var(--zalama-text-secondary)]">
+                          {demande.employe?.poste || 'Poste non spécifié'}
+                        </p>
+                      </div>
+                    </div>
+                    {getStatusBadge(demande.statut)}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <DollarSign className="h-4 w-4 text-[var(--zalama-success)]" />
+                        <span className="text-sm text-[var(--zalama-text-secondary)]">Montant demandé</span>
+                      </div>
+                      <div className="text-lg font-bold text-[var(--zalama-text)]">
                         {formatMontant(demande.montant_demande)}
-                      </td>
-                      <td className="px-4 py-2 text-[var(--zalama-text-secondary)] max-w-xs truncate">
-                        {demande.motif}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColors[demande.statut] || 'bg-gray-100 text-gray-800'}`}>
-                          {demande.statut}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-[var(--zalama-text-secondary)]">
-                        {formatDate(demande.date_demande)}
-                      </td>
-                      <td className="px-4 py-2 text-[var(--zalama-text-secondary)]">
-                        {demande.date_traitement ? formatDate(demande.date_traitement) : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="h-4 w-4 text-[var(--zalama-warning)]" />
+                        <span className="text-sm text-[var(--zalama-text-secondary)]">Date de demande</span>
+                      </div>
+                      <div className="text-sm font-medium text-[var(--zalama-text)]">
+                        {formatDate(demande.date_creation)}
+                      </div>
+                    </div>
+
+                    <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="h-4 w-4 text-[var(--zalama-blue)]" />
+                        <span className="text-sm text-[var(--zalama-text-secondary)]">Traitement</span>
+                      </div>
+                      <div className="text-sm font-medium text-[var(--zalama-text)]">
+                        {demande.date_validation ? formatDate(demande.date_validation) : 'En attente'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+                      <span className="text-sm font-medium text-[var(--zalama-text-secondary)]">Motif</span>
+                    </div>
+                    <p className="text-[var(--zalama-text)]">{demande.motif}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       ) : (
-        /* Onglet Transactions */
-        <div className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)]">
-          <h3 className="text-lg font-semibold mb-4 text-[var(--zalama-text)]">Transactions</h3>
+        /* Onglet Transactions - Design en cartes */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-[var(--zalama-text)] flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-[var(--zalama-success)]" />
+              Transactions
+            </h3>
+            <div className="text-sm text-[var(--zalama-text-secondary)]">
+              {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+            </div>
+          </div>
           
           {transactions.length === 0 ? (
-            <div className="text-center text-[var(--zalama-text-secondary)] py-8">
-              Aucune transaction trouvée pour ce partenaire.
+            <div className="bg-[var(--zalama-card)] rounded-xl p-12 text-center border border-[var(--zalama-border)]">
+              <CreditCard className="h-16 w-16 text-[var(--zalama-text-secondary)] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[var(--zalama-text)] mb-2">Aucune transaction</h3>
+              <p className="text-[var(--zalama-text-secondary)]">
+                Aucune transaction trouvée pour ce partenaire.
+              </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--zalama-border)]">
-                    <th className="px-4 py-2 text-left">Employé</th>
-                    <th className="px-4 py-2 text-left">Montant</th>
-                    <th className="px-4 py-2 text-left">Méthode de paiement</th>
-                    <th className="px-4 py-2 text-left">N° Transaction</th>
-                    <th className="px-4 py-2 text-left">Statut</th>
-                    <th className="px-4 py-2 text-left">Date transaction</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((transaction) => (
-                    <tr key={transaction.id} className="border-b border-[var(--zalama-border)] hover:bg-[var(--zalama-bg-lighter)]">
-                      <td className="px-4 py-2 flex items-center gap-2">
-                        <User className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
-                        {transaction.employe ? `${transaction.employe.prenom} ${transaction.employe.nom}` : 'Employé inconnu'}
-                      </td>
-                      <td className="px-4 py-2 font-medium text-[var(--zalama-text)]">
+            <div className="grid gap-4">
+              {transactions.map((transaction) => (
+                <div key={transaction.id} className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)] hover:shadow-lg transition-all duration-200">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[var(--zalama-success)] rounded-full flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-[var(--zalama-text)]">
+                          {transaction.employe ? `${transaction.employe.prenom} ${transaction.employe.nom}` : 'Employé inconnu'}
+                        </h4>
+                        <p className="text-sm text-[var(--zalama-text-secondary)]">
+                          {transaction.numero_transaction}
+                        </p>
+                      </div>
+                    </div>
+                    {getStatusBadge(transaction.statut)}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <DollarSign className="h-4 w-4 text-[var(--zalama-success)]" />
+                        <span className="text-sm text-[var(--zalama-text-secondary)]">Montant</span>
+                      </div>
+                      <div className="text-lg font-bold text-[var(--zalama-text)]">
                         {formatMontant(transaction.montant)}
-                      </td>
-                      <td className="px-4 py-2 text-[var(--zalama-text-secondary)]">
+                      </div>
+                    </div>
+                    
+                    <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CreditCard className="h-4 w-4 text-[var(--zalama-blue)]" />
+                        <span className="text-sm text-[var(--zalama-text-secondary)]">Méthode</span>
+                      </div>
+                      <div className="text-sm font-medium text-[var(--zalama-text)]">
                         {transaction.methode_paiement.replace('_', ' ')}
-                      </td>
-                      <td className="px-4 py-2 text-[var(--zalama-text-secondary)] font-mono">
-                        {transaction.numero_transaction}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColors[transaction.statut] || 'bg-gray-100 text-gray-800'}`}>
-                          {transaction.statut}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-[var(--zalama-text-secondary)]">
+                      </div>
+                    </div>
+
+                    <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="h-4 w-4 text-[var(--zalama-warning)]" />
+                        <span className="text-sm text-[var(--zalama-text-secondary)]">Date</span>
+                      </div>
+                      <div className="text-sm font-medium text-[var(--zalama-text)]">
                         {formatDate(transaction.date_transaction)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {transaction.numero_compte && (
+                    <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Eye className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+                        <span className="text-sm font-medium text-[var(--zalama-text-secondary)]">Compte</span>
+                      </div>
+                      <p className="text-[var(--zalama-text)] font-mono">{transaction.numero_compte}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>

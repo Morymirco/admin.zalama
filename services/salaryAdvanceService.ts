@@ -287,6 +287,33 @@ class SalaryAdvanceService {
     }
   }
 
+  // Récupérer les demandes d'un partenaire (alias pour getByPartner)
+  async getDemandesByPartner(partnerId: string): Promise<SalaryAdvanceRequest[]> {
+    return this.getByPartner(partnerId);
+  }
+
+  // Récupérer les transactions d'un partenaire
+  async getTransactionsByPartner(partnerId: string): Promise<Transaction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste),
+          entreprise:partners(nom, type, secteur),
+          demande_avance:demandes_avance_salaire(*)
+        `)
+        .eq('entreprise_id', partnerId)
+        .order('date_transaction', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(convertTransactionFromDB);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des transactions du partenaire:', error);
+      throw error;
+    }
+  }
+
   // Obtenir les statistiques
   async getStats(): Promise<{
     total: number;

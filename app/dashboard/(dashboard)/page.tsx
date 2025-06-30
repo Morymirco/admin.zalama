@@ -4,7 +4,7 @@ import StatistiquesGenerales from '@/components/dashboard/StatistiquesGenerales'
 import PerformanceFinanciere from '@/components/dashboard/PerformanceFinanciere';
 import ActiviteParPartenaires from '@/components/dashboard/ActiviteParPartenaires';
 import ActiviteParService from '@/components/dashboard/ActiviteParService';
-import DonneesUtilisateurs from '@/components/dashboard/DonneesUtilisateurs';
+import DonneesEmployes from '@/components/dashboard/DonneesUtilisateurs';
 import AlertesRisques from '@/components/dashboard/AlertesRisques';
 import GraphiquesVisualisations from '@/components/dashboard/GraphiquesVisualisations';
 import ObjectifsPerformances from '@/components/dashboard/ObjectifsPerformances';
@@ -35,7 +35,7 @@ export default function DashboardPage() {
         
         {/* Troisième rangée */}
         <div className="lg:col-span-2 bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
-          <DonneesUtilisateurs />
+          <DonneesEmployes />
         </div>
         
         <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">

@@ -2,14 +2,11 @@
 
 import React, { useMemo } from 'react';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
-import { partenaireService } from '@/services/partenaireService';
-import { Partenaire } from '@/types/partenaire';
-
-// Interfaces déplacées vers types/partenaire.ts
+import { partnerService } from '@/services/partnerService';
 
 export default function ActiviteParPartenaires() {
   // Utiliser notre hook pour récupérer tous les partenaires
-  const { data: partenaires, loading, error } = useSupabaseCollection<Partenaire>(partenaireService);
+  const { data: partenaires, loading, error } = useSupabaseCollection(partnerService);
 
   // Calculer les statistiques à partir des données des partenaires
   const stats = useMemo(() => {

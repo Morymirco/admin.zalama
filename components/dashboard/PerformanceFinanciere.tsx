@@ -3,12 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, BarChart3 } from 'lucide-react';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
-import financeService, { getMontantTotal, getMontantDebloque, getMontantRecupere, getRevenusGeneres, getTauxRemboursement } from '@/services/financeService';
-import { Transaction } from '@/types/transaction';
+import { transactionService } from '@/services/transactionService';
 
 export default function PerformanceFinanciere() {
   // Utiliser notre hook pour récupérer les transactions
-  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection<Transaction>(financeService);
+  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection(transactionService);
   
   // États pour les statistiques financières
   const [stats, setStats] = useState({
@@ -16,7 +15,9 @@ export default function PerformanceFinanciere() {
     montantDebloque: 0,
     montantRecupere: 0,
     revenusGeneres: 0,
-    tauxRemboursement: 0
+    tauxRemboursement: 0,
+    transactionsCeMois: 0,
+    montantCeMois: 0
   });
   
   const [loading, setLoading] = useState(true);
@@ -28,49 +29,49 @@ export default function PerformanceFinanciere() {
         // Si les transactions sont chargées depuis le hook, nous pouvons les utiliser directement
         if (!loadingTransactions && transactions.length > 0) {
           // Calculer le montant total
-          const montantTotal = transactions.reduce((total, transaction) => total + transaction.montant, 0);
+          const montantTotal = transactions.reduce((total, transaction) => total + (transaction.montant || 0), 0);
           
-          // Calculer le montant débloqué (sorties)
+          // Calculer le montant débloqué (sorties/avances)
           const montantDebloque = transactions
-            .filter(t => ['sortie', 'debit', 'avance'].includes(t.type) && (t.statut === 'complete' || t.statut === 'EFFECTUEE'))
-            .reduce((total, t) => total + t.montant, 0);
+            .filter(t => ['avance', 'debit', 'sortie'].includes(t.type?.toLowerCase()) && 
+                        ['En attente', 'Validé', 'Effectué'].includes(t.statut))
+            .reduce((total, t) => total + (t.montant || 0), 0);
           
-          // Calculer le montant récupéré (entrées)
+          // Calculer le montant récupéré (remboursements/entrées)
           const montantRecupere = transactions
-            .filter(t => ['entree', 'credit'].includes(t.type) && (t.statut === 'complete' || t.statut === 'EFFECTUEE'))
-            .reduce((total, t) => total + t.montant, 0);
+            .filter(t => ['remboursement', 'credit', 'entree'].includes(t.type?.toLowerCase()) && 
+                        ['En attente', 'Validé', 'Effectué'].includes(t.statut))
+            .reduce((total, t) => total + (t.montant || 0), 0);
           
-          // Calculer les revenus générés (frais)
+          // Calculer les revenus générés (frais de service)
           const revenusGeneres = transactions
-            .filter(t => t.statut === 'complete' || t.statut === 'EFFECTUEE')
-            .reduce((total, t) => total + (t.frais || 0), 0);
+            .filter(t => ['frais', 'commission'].includes(t.type?.toLowerCase()) && 
+                        ['En attente', 'Validé', 'Effectué'].includes(t.statut))
+            .reduce((total, t) => total + (t.montant || 0), 0);
           
           // Calculer le taux de remboursement
           const tauxRemboursement = montantDebloque > 0 ? (montantRecupere / montantDebloque) * 100 : 0;
           
-          setStats({
-            montantTotal,
-            montantDebloque,
-            montantRecupere,
-            revenusGeneres,
-            tauxRemboursement
+          // Calculer les transactions de ce mois
+          const now = new Date();
+          const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          
+          const transactionsCeMois = transactions.filter(transaction => {
+            if (!transaction.date_transaction) return false;
+            const transactionDate = new Date(transaction.date_transaction);
+            return transactionDate >= firstDayOfMonth;
           });
-        } else {
-          // Utiliser les méthodes du service pour obtenir les statistiques
-          const [montantTotal, montantDebloque, montantRecupere, revenusGeneres, tauxRemboursement] = await Promise.all([
-            getMontantTotal(),
-            getMontantDebloque(),
-            getMontantRecupere(),
-            getRevenusGeneres(),
-            getTauxRemboursement()
-          ]);
+          
+          const montantCeMois = transactionsCeMois.reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
           
           setStats({
             montantTotal,
             montantDebloque,
             montantRecupere,
             revenusGeneres,
-            tauxRemboursement
+            tauxRemboursement,
+            transactionsCeMois: transactionsCeMois.length,
+            montantCeMois
           });
         }
       } catch (error) {
@@ -166,6 +167,18 @@ export default function PerformanceFinanciere() {
             </div>
           </div>
           <div className="text-lg font-bold text-[var(--zalama-text)]">{Math.round(stats.tauxRemboursement)}%</div>
+        </div>
+      </div>
+      
+      {/* Statistiques du mois */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="bg-[var(--zalama-bg-light)] rounded-lg p-3 border border-[var(--zalama-border)]">
+          <div className="text-sm text-[var(--zalama-text-secondary)]">Transactions ce mois</div>
+          <div className="text-lg font-bold text-[var(--zalama-text)]">{stats.transactionsCeMois}</div>
+        </div>
+        <div className="bg-[var(--zalama-bg-light)] rounded-lg p-3 border border-[var(--zalama-border)]">
+          <div className="text-sm text-[var(--zalama-text-secondary)]">Montant ce mois</div>
+          <div className="text-lg font-bold text-[var(--zalama-text)]">{formatMontant(stats.montantCeMois)}</div>
         </div>
       </div>
     </div>

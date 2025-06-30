@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, DollarSign, Users, ArrowUpCircle, FileText, Clock, CheckCircle } from 'lucide-react';
+import { RefreshCw, DollarSign, Users, ArrowUpCircle, FileText, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 interface DemandeStats {
   type: string;
@@ -17,6 +17,7 @@ interface ServiceStats {
   disponibles: number;
   indisponibles: number;
   parCategorie: Record<string, number>;
+  fraisTotal?: number;
 }
 
 interface StatistiquesServicesProps {
@@ -30,132 +31,106 @@ const StatistiquesServices: React.FC<StatistiquesServicesProps> = ({
   serviceStats,
   isLoading = false 
 }) => {
-  // Créer des données de démonstration si aucune donnée n'est disponible
-  const createDemoStats = (): DemandeStats[] => {
-    return [
-      {
-        type: 'Avance sur salaire',
-        nombre: 45,
-        approuvees: 32,
-        enCours: 8,
-        refusees: 5,
-        delaiMoyen: 24,
-        tendance: 'hausse' as const,
-        icon: <DollarSign className="h-6 w-6 text-[var(--zalama-success)]" />
-      },
-      {
-        type: 'Demande de congé',
-        nombre: 28,
-        approuvees: 25,
-        enCours: 2,
-        refusees: 1,
-        delaiMoyen: 48,
-        tendance: 'stable' as const,
-        icon: <Clock className="h-6 w-6 text-[var(--zalama-warning)]" />
-      },
-      {
-        type: 'Attestation de travail',
-        nombre: 67,
-        approuvees: 65,
-        enCours: 1,
-        refusees: 1,
-        delaiMoyen: 12,
-        tendance: 'hausse' as const,
-        icon: <FileText className="h-6 w-6 text-[var(--zalama-blue)]" />
-      }
-    ];
+  // Créer des données par défaut si aucune statistique n'est disponible
+  const createDefaultStats = (): ServiceStats => {
+    return {
+      total: 0,
+      disponibles: 0,
+      indisponibles: 0,
+      parCategorie: {},
+      fraisTotal: 0
+    };
   };
 
-  // Déterminer les données à afficher
-  const statsToDisplay = demandeStats || createDemoStats();
+  // Utiliser les statistiques fournies ou les données par défaut
+  const stats = serviceStats || createDefaultStats();
+
+  // Créer les cartes de statistiques
+  const statsCards = [
+    {
+      title: 'Total Services',
+      value: stats.total,
+      icon: <FileText className="h-6 w-6 text-[var(--zalama-blue)]" />,
+      color: 'text-[var(--zalama-blue)]',
+      bgColor: 'bg-[var(--zalama-blue)]/10'
+    },
+    {
+      title: 'Services Disponibles',
+      value: stats.disponibles,
+      icon: <CheckCircle className="h-6 w-6 text-[var(--zalama-success)]" />,
+      color: 'text-[var(--zalama-success)]',
+      bgColor: 'bg-[var(--zalama-success)]/10'
+    },
+    {
+      title: 'Services Indisponibles',
+      value: stats.indisponibles,
+      icon: <XCircle className="h-6 w-6 text-[var(--zalama-danger)]" />,
+      color: 'text-[var(--zalama-danger)]',
+      bgColor: 'bg-[var(--zalama-danger)]/10'
+    }
+  ];
 
   return (
     <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Activité par service (ce mois-ci)</h2>
+      <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Statistiques des services</h2>
       
       {isLoading ? (
         <div className="flex justify-center items-center h-40">
           <RefreshCw className="h-8 w-8 animate-spin text-[var(--zalama-blue)]" />
         </div>
-      ) : statsToDisplay.length === 0 ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="text-center">
-            <p className="text-[var(--zalama-text-secondary)] mb-2">Aucune donnée disponible</p>
-            <p className="text-sm text-[var(--zalama-text-secondary)]">Les statistiques des services apparaîtront ici</p>
-          </div>
-        </div>
       ) : (
         <div>
-          {/* Cartes des statistiques */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {statsToDisplay.map((stat, index) => (
+          {/* Cartes des statistiques principales */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {statsCards.map((card, index) => (
               <div key={index} className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center">
-                    <div className="mr-3">
-                      {stat.icon}
-                    </div>
+                <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-[var(--zalama-text)]">{stat.type}</h3>
-                      <div className="flex items-center mt-1">
-                        <span className="text-xs text-[var(--zalama-text-secondary)]">
-                          Délai moyen: {stat.delaiMoyen}h
-                        </span>
-                        <span className={`ml-2 text-xs ${stat.tendance === 'hausse' ? 'text-[var(--zalama-success)]' : stat.tendance === 'baisse' ? 'text-[var(--zalama-danger)]' : 'text-[var(--zalama-text-secondary)]'}`}>
-                          {stat.tendance === 'hausse' ? '↑' : stat.tendance === 'baisse' ? '↓' : '→'}
-                        </span>
-                      </div>
-                    </div>
+                    <p className="text-sm text-[var(--zalama-text-secondary)]">{card.title}</p>
+                    <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
                   </div>
-                  <div className="text-right">
-                    <span className="text-2xl font-bold text-[var(--zalama-text)]">{stat.nombre}</span>
-                    <p className="text-xs text-[var(--zalama-text-secondary)]">demandes</p>
+                  <div className={`p-3 rounded-full ${card.bgColor}`}>
+                    {card.icon}
                   </div>
                 </div>
-                
-                <div className="flex flex-col space-y-2">
-                  <div className="flex flex-col">
-                    <div className="flex justify-between mb-1">
-                      <span className="text-xs text-[var(--zalama-text-secondary)]">Approuvées</span>
-                      <span className="text-xs font-medium text-[var(--zalama-success)]">{stat.approuvees}</span>
                     </div>
-                    <div className="w-full bg-[var(--zalama-bg-lighter)] rounded-full h-1.5">
-                      <div 
-                        className="bg-[var(--zalama-success)] h-1.5 rounded-full" 
-                        style={{ width: `${(stat.approuvees / stat.nombre) * 100}%` }}
-                      ></div>
-                    </div>
+            ))}
                   </div>
                   
-                  <div className="flex flex-col">
-                    <div className="flex justify-between mb-1">
-                      <span className="text-xs text-[var(--zalama-text-secondary)]">En cours</span>
-                      <span className="text-xs font-medium text-[var(--zalama-warning)]">{stat.enCours}</span>
-                    </div>
-                    <div className="w-full bg-[var(--zalama-bg-lighter)] rounded-full h-1.5">
-                      <div 
-                        className="bg-[var(--zalama-warning)] h-1.5 rounded-full" 
-                        style={{ width: `${(stat.enCours / stat.nombre) * 100}%` }}
-                      ></div>
+          {/* Répartition par catégorie */}
+          {Object.keys(stats.parCategorie).length > 0 && (
+            <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+              <h3 className="text-lg font-semibold mb-4 text-[var(--zalama-text)]">Répartition par catégorie</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(stats.parCategorie).map(([categorie, count]) => (
+                  <div key={categorie} className="flex items-center justify-between p-3 bg-[var(--zalama-bg-lighter)] rounded-lg">
+                    <span className="text-sm font-medium text-[var(--zalama-text)]">{categorie}</span>
+                    <span className="text-sm text-[var(--zalama-text-secondary)]">{count} service{count > 1 ? 's' : ''}</span>
+                  </div>
+                ))}
                     </div>
                   </div>
-                  
-                  <div className="flex flex-col">
-                    <div className="flex justify-between mb-1">
-                      <span className="text-xs text-[var(--zalama-text-secondary)]">Refusées</span>
-                      <span className="text-xs font-medium text-[var(--zalama-danger)]">{stat.refusees}</span>
-                    </div>
-                    <div className="w-full bg-[var(--zalama-bg-lighter)] rounded-full h-1.5">
-                      <div 
-                        className="bg-[var(--zalama-danger)] h-1.5 rounded-full" 
-                        style={{ width: `${(stat.refusees / stat.nombre) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
+          )}
+
+          {/* Frais total si disponible */}
+          {stats.fraisTotal !== undefined && stats.fraisTotal > 0 && (
+            <div className="mt-6 bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-[var(--zalama-text-secondary)]">Frais totaux attribués</p>
+                  <p className="text-2xl font-bold text-[var(--zalama-success)]">
+                    {new Intl.NumberFormat('fr-FR', {
+                      style: 'currency',
+                      currency: 'GNF'
+                    }).format(stats.fraisTotal)}
+                  </p>
+                </div>
+                <div className="p-3 bg-[var(--zalama-success)]/10 rounded-full">
+                  <DollarSign className="h-6 w-6 text-[var(--zalama-success)]" />
                 </div>
               </div>
-            ))}
           </div>
+          )}
         </div>
       )}
     </div>

@@ -1,12 +1,12 @@
 import React from 'react';
 import { X, AlertTriangle } from 'lucide-react';
-import { Employe } from '@/types/partenaire';
+import { Employee } from '@/types/employee';
 
 interface ModaleSuppressionUtilisateurProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
-  utilisateur: Employe;
+  utilisateur: Employee;
 }
 
 const ModaleSuppressionUtilisateur: React.FC<ModaleSuppressionUtilisateurProps> = ({

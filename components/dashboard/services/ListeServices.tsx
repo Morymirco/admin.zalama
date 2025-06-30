@@ -125,7 +125,9 @@ const ListeServices: React.FC<ListeServicesProps> = ({
                       <DollarSign className="h-3 w-3 mr-1" />
                       Frais:
                     </span>
-                    <span className="text-[var(--zalama-text)] text-sm font-medium">{service.fraisAttribues ? `${service.fraisAttribues.toLocaleString()} FG` : 'N/A'}</span>
+                    <span className="text-[var(--zalama-text)] text-sm font-medium">
+                      {service.frais_attribues ? `${service.frais_attribues.toLocaleString()} FG` : 'N/A'}
+                    </span>
                   </div>
                   
                   <div className="flex justify-between items-center">
@@ -134,7 +136,13 @@ const ListeServices: React.FC<ListeServicesProps> = ({
                       Créé le:
                     </span>
                     <span className="text-[var(--zalama-text)] text-sm font-medium">
-                      {service.createdAt ? 
+                      {service.dateCreation ? 
+                        new Date(service.dateCreation).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        }) : 
+                        service.createdAt ? 
                         service.createdAt.toDate ? 
                           service.createdAt.toDate().toLocaleDateString('fr-FR', {
                             day: 'numeric',

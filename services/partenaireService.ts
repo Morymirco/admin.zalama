@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Partenaire, PartenaireAvecEmployes, Employe, StatistiquesPartenaire } from '@/types/partenaire';
+import { Employee, Partner } from '@/types/employee';
 import smsService from './smsService';
 import employeeAccountService from './employeeAccountService';
 import partnerAccountService from './partnerAccountService';
@@ -16,7 +16,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Service pour les partenaires
 export const partenaireService = {
   // Récupérer tous les partenaires
-  async getAll(): Promise<Partenaire[]> {
+  async getAll(): Promise<Partner[]> {
     try {
       const { data, error } = await supabase
         .from('partners')
@@ -36,7 +36,7 @@ export const partenaireService = {
   },
 
   // Récupérer un partenaire par ID avec ses employés
-  async getByIdWithEmployees(id: string): Promise<PartenaireAvecEmployes | null> {
+  async getByIdWithEmployees(id: string): Promise<Partner & { employees?: Employee[] } | null> {
     try {
       const { data, error } = await supabase
         .from('partners')
@@ -60,7 +60,7 @@ export const partenaireService = {
   },
 
   // Récupérer un partenaire par ID
-  async getById(id: string): Promise<Partenaire | null> {
+  async getById(id: string): Promise<Partner | null> {
     try {
       const { data, error } = await supabase
         .from('partners')
@@ -81,8 +81,8 @@ export const partenaireService = {
   },
 
   // Créer un nouveau partenaire avec création automatique de comptes
-  async create(partenaireData: Omit<Partenaire, 'id' | 'created_at' | 'updated_at'>): Promise<{
-    partenaire: Partenaire;
+  async create(partenaireData: Omit<Partner, 'id' | 'created_at' | 'updated_at'>): Promise<{
+    partenaire: Partner;
     smsResults: {
       representant: { success: boolean; message?: string; error?: string };
       rh: { success: boolean; message?: string; error?: string };
@@ -241,38 +241,34 @@ export const partenaireService = {
           };
         }
 
-        console.log('✅ Résultats création comptes:', accountResults);
+        // Envoyer un SMS à l'administrateur
+        try {
+          const adminMessage = `Nouveau partenaire créé: ${partenaireData.nom}. Comptes RH et responsable configurés.`;
+          const adminSMSResult = await smsService.sendSMS('+224000000000', adminMessage);
+          smsResults.admin = {
+            success: adminSMSResult.success,
+            message: adminSMSResult.success ? 'SMS admin envoyé' : '',
+            error: adminSMSResult.error || ''
+          };
+        } catch (smsError) {
+          smsResults.admin = {
+            success: false,
+            message: '',
+            error: `Erreur SMS admin: ${smsError}`
+          };
+        }
 
       } catch (accountError) {
         console.error('Erreur lors de la création des comptes:', accountError);
-        accountResults.rh.error = `Erreur générale création compte RH: ${accountError instanceof Error ? accountError.message : String(accountError)}`;
-        accountResults.responsable.error = `Erreur générale création compte responsable: ${accountError instanceof Error ? accountError.message : String(accountError)}`;
+        // Continuer même si la création des comptes échoue
       }
 
-      // SMS de notification à l'admin
-      try {
-        await smsService.sendPartnerCreationNotification(
-          partenaireData.nom,
-          partenaireData.type,
-          partenaireData.secteur
-        );
-        smsResults.admin = {
-          success: true,
-          message: 'Notification admin envoyée',
-          error: ''
-        };
-      } catch (smsError) {
-        console.error('Erreur SMS admin détaillée:', smsError);
-        smsResults.admin = {
-          success: false,
-          message: '',
-          error: `Erreur SMS admin: ${smsError instanceof Error ? smsError.message : String(smsError)}`
-        };
-      }
-
-      console.log('📊 Résultats finaux:', { smsResults, emailResults, accountResults });
-
-      return { partenaire: data, smsResults, emailResults, accountResults };
+      return {
+        partenaire: data,
+        smsResults,
+        emailResults,
+        accountResults
+      };
     } catch (error) {
       console.error('Erreur partenaireService.create:', error);
       throw error;
@@ -280,7 +276,7 @@ export const partenaireService = {
   },
 
   // Mettre à jour un partenaire
-  async update(id: string, partenaireData: Partial<Omit<Partenaire, 'id' | 'created_at' | 'updated_at'>>): Promise<Partenaire> {
+  async update(id: string, partenaireData: Partial<Omit<Partner, 'id' | 'created_at' | 'updated_at'>>): Promise<Partner> {
     try {
       const { data, error } = await supabase
         .from('partners')
@@ -301,7 +297,7 @@ export const partenaireService = {
     }
   },
 
-  // Supprimer un partenaire (supprime aussi ses employés via CASCADE)
+  // Supprimer un partenaire
   async delete(id: string): Promise<void> {
     try {
       const { error } = await supabase
@@ -320,12 +316,12 @@ export const partenaireService = {
   },
 
   // Rechercher des partenaires
-  async search(searchTerm: string): Promise<Partenaire[]> {
+  async search(searchTerm: string): Promise<Partner[]> {
     try {
       const { data, error } = await supabase
         .from('partners')
         .select('*')
-        .or(`nom.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,secteur.ilike.%${searchTerm}%`)
+        .or(`nom.ilike.%${searchTerm}%,secteur.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -340,8 +336,8 @@ export const partenaireService = {
     }
   },
 
-  // Filtrer par type
-  async getByType(type: string): Promise<Partenaire[]> {
+  // Récupérer les partenaires par type
+  async getByType(type: string): Promise<Partner[]> {
     try {
       const { data, error } = await supabase
         .from('partners')
@@ -350,7 +346,7 @@ export const partenaireService = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erreur lors du filtrage par type:', error);
+        console.error('Erreur lors de la récupération des partenaires par type:', error);
         throw error;
       }
 
@@ -361,42 +357,64 @@ export const partenaireService = {
     }
   },
 
-  // Obtenir les statistiques des partenaires
-  async getStatistics(): Promise<StatistiquesPartenaire> {
+  // Récupérer les statistiques des partenaires
+  async getStatistics(): Promise<{
+    total_partenaires: number;
+    partenaires_actifs: number;
+    partenaires_inactifs: number;
+    total_employes: number;
+    salaire_total: number;
+    moyenne_employes_par_partenaire: number;
+    repartition_par_secteur: Array<{
+      secteur: string;
+      count: number;
+    }>;
+    repartition_par_type: Array<{
+      type: string;
+      count: number;
+    }>;
+  }> {
     try {
-      // Récupérer les statistiques de base
-      const { data: partners, error: partnersError } = await supabase
-        .from('partners')
-        .select('*');
+      // Récupérer tous les partenaires
+      const partenaires = await this.getAll();
 
-      if (partnersError) throw partnersError;
+      // Récupérer tous les employés
+      const allEmployees: Employee[] = [];
+      for (const partenaire of partenaires) {
+        try {
+          const employes = await employeService.getByPartnerId(partenaire.id);
+          allEmployees.push(...employes);
+        } catch (err) {
+          console.error(`Erreur lors du chargement des employés du partenaire ${partenaire.id}:`, err);
+        }
+      }
 
-      // Récupérer les employés
-      const { data: employees, error: employeesError } = await supabase
-        .from('employees')
-        .select('*');
-
-      if (employeesError) throw employeesError;
-
-      // Calculer les statistiques
-      const total_partenaires = partners?.length || 0;
-      const partenaires_actifs = partners?.filter(p => p.actif).length || 0;
+      const total_partenaires = partenaires.length;
+      const partenaires_actifs = partenaires.filter(p => p.actif).length;
       const partenaires_inactifs = total_partenaires - partenaires_actifs;
-      const total_employes = employees?.length || 0;
-      const salaire_total = employees?.reduce((sum, emp) => sum + (emp.salaire_net || 0), 0) || 0;
+      const total_employes = allEmployees.length;
+      const salaire_total = allEmployees.reduce((sum, emp) => sum + (emp.salaire_net || 0), 0);
       const moyenne_employes_par_partenaire = total_partenaires > 0 ? total_employes / total_partenaires : 0;
 
       // Répartition par secteur
-      const secteurCounts: Record<string, number> = {};
-      partners?.forEach(partner => {
-        secteurCounts[partner.secteur] = (secteurCounts[partner.secteur] || 0) + 1;
+      const secteurCount: Record<string, number> = {};
+      partenaires.forEach(p => {
+        secteurCount[p.secteur] = (secteurCount[p.secteur] || 0) + 1;
       });
+      const repartition_par_secteur = Object.entries(secteurCount).map(([secteur, count]) => ({
+        secteur,
+        count
+      }));
 
       // Répartition par type
-      const typeCounts: Record<string, number> = {};
-      partners?.forEach(partner => {
-        typeCounts[partner.type] = (typeCounts[partner.type] || 0) + 1;
+      const typeCount: Record<string, number> = {};
+      partenaires.forEach(p => {
+        typeCount[p.type] = (typeCount[p.type] || 0) + 1;
       });
+      const repartition_par_type = Object.entries(typeCount).map(([type, count]) => ({
+        type,
+        count
+      }));
 
       return {
         total_partenaires,
@@ -405,8 +423,8 @@ export const partenaireService = {
         total_employes,
         salaire_total,
         moyenne_employes_par_partenaire,
-        repartition_par_secteur: Object.entries(secteurCounts).map(([secteur, count]) => ({ secteur, count })),
-        repartition_par_type: Object.entries(typeCounts).map(([type, count]) => ({ type, count }))
+        repartition_par_secteur,
+        repartition_par_type
       };
     } catch (error) {
       console.error('Erreur partenaireService.getStatistics:', error);
@@ -414,8 +432,8 @@ export const partenaireService = {
     }
   },
 
-  // Obtenir les partenaires actifs
-  async getActive(): Promise<Partenaire[]> {
+  // Récupérer les partenaires actifs
+  async getActive(): Promise<Partner[]> {
     try {
       const { data, error } = await supabase
         .from('partners')
@@ -435,8 +453,8 @@ export const partenaireService = {
     }
   },
 
-  // Obtenir les partenaires inactifs
-  async getInactive(): Promise<Partenaire[]> {
+  // Récupérer les partenaires inactifs
+  async getInactive(): Promise<Partner[]> {
     try {
       const { data, error } = await supabase
         .from('partners')
@@ -456,28 +474,23 @@ export const partenaireService = {
     }
   },
 
-  // Mettre à jour les statistiques d'un partenaire (nombre d'employés et salaire total)
+  // Mettre à jour les statistiques d'un partenaire
   async updatePartnerStats(partnerId: string): Promise<void> {
     try {
-      // Récupérer les employés du partenaire
-      const { data: employees, error: employeesError } = await supabase
-        .from('employees')
-        .select('salaire_net')
-        .eq('partner_id', partnerId)
-        .eq('actif', true);
-
-      if (employeesError) throw employeesError;
+      // Récupérer tous les employés du partenaire
+      const employes = await employeService.getByPartnerId(partnerId);
 
       // Calculer les nouvelles statistiques
-      const nombre_employes = employees?.length || 0;
-      const salaire_net_total = employees?.reduce((sum, emp) => sum + (emp.salaire_net || 0), 0) || 0;
+      const nombre_employes = employes.length;
+      const salaire_net_total = employes.reduce((sum, emp) => sum + (emp.salaire_net || 0), 0);
 
       // Mettre à jour le partenaire
       const { error: updateError } = await supabase
         .from('partners')
         .update({
           nombre_employes,
-          salaire_net_total
+          salaire_net_total,
+          updated_at: new Date().toISOString()
         })
         .eq('id', partnerId);
 
@@ -492,7 +505,7 @@ export const partenaireService = {
 // Service pour les employés
 export const employeService = {
   // Récupérer tous les employés d'un partenaire
-  async getByPartnerId(partnerId: string): Promise<Employe[]> {
+  async getByPartnerId(partnerId: string): Promise<Employee[]> {
     try {
       const { data, error } = await supabase
         .from('employees')
@@ -513,7 +526,7 @@ export const employeService = {
   },
 
   // Récupérer un employé par ID
-  async getById(id: string): Promise<Employe | null> {
+  async getById(id: string): Promise<Employee | null> {
     try {
       const { data, error } = await supabase
         .from('employees')
@@ -534,8 +547,8 @@ export const employeService = {
   },
 
   // Créer un nouvel employé avec compte de connexion automatique
-  async create(employeData: Omit<Employe, 'id' | 'created_at' | 'updated_at'>): Promise<{
-    employe: Employe;
+  async create(employeData: Omit<Employee, 'id' | 'created_at' | 'updated_at'>): Promise<{
+    employe: Employee;
     account?: {
       success: boolean;
       password?: string;
@@ -559,7 +572,7 @@ export const employeService = {
       console.log('✅ Employé créé avec succès:', result.employee);
 
       // Mettre à jour les statistiques du partenaire
-      await partenaireService.updatePartnerStats(employeData.partner_id);
+      await partenaireService.updatePartnerStats(employeData.partner_id || '');
 
       return {
         employe: result.employee!,
@@ -573,7 +586,7 @@ export const employeService = {
   },
 
   // Mettre à jour un employé
-  async update(id: string, employeData: Partial<Omit<Employe, 'id' | 'created_at' | 'updated_at'>>): Promise<Employe> {
+  async update(id: string, employeData: Partial<Omit<Employee, 'id' | 'created_at' | 'updated_at'>>): Promise<Employee> {
     try {
       const { data, error } = await supabase
         .from('employees')
@@ -589,7 +602,7 @@ export const employeService = {
 
       // Mettre à jour les statistiques du partenaire si l'employé a changé de partenaire
       if (data) {
-        await partenaireService.updatePartnerStats(data.partner_id);
+        await partenaireService.updatePartnerStats(data.partner_id || '');
       }
 
       return data;
@@ -617,7 +630,7 @@ export const employeService = {
 
       // Mettre à jour les statistiques du partenaire
       if (employe) {
-        await partenaireService.updatePartnerStats(employe.partner_id);
+        await partenaireService.updatePartnerStats(employe.partner_id || '');
       }
     } catch (error) {
       console.error('Erreur employeService.delete:', error);
@@ -626,7 +639,7 @@ export const employeService = {
   },
 
   // Créer plusieurs employés en lot
-  async createBatch(employes: Omit<Employe, 'id' | 'created_at' | 'updated_at'>[]): Promise<Employe[]> {
+  async createBatch(employes: Omit<Employee, 'id' | 'created_at' | 'updated_at'>[]): Promise<Employee[]> {
     try {
       const { data, error } = await supabase
         .from('employees')
@@ -640,7 +653,7 @@ export const employeService = {
 
       // Mettre à jour les statistiques du partenaire
       if (employes.length > 0) {
-        await partenaireService.updatePartnerStats(employes[0].partner_id);
+        await partenaireService.updatePartnerStats(employes[0].partner_id || '');
       }
 
       return data || [];
@@ -651,7 +664,7 @@ export const employeService = {
   },
 
   // Rechercher des employés
-  async search(searchTerm: string, partnerId?: string): Promise<Employe[]> {
+  async search(searchTerm: string, partnerId?: string): Promise<Employee[]> {
     try {
       let query = supabase
         .from('employees')

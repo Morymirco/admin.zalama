@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
-import { DemandeAvanceSalaire, Transaction, DemandesStatistiques, TransactionsStatistiques } from '@/types/salaryAdvanceRequest';
+import { 
+  SalaryAdvanceRequest, 
+  Transaction, 
+  SalaryAdvanceRequestFormData, 
+  TransactionFormData,
+  TransactionStatus,
+  TransactionStatut
+} from '@/types/salaryAdvanceRequest';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -7,49 +14,40 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Fonction utilitaire pour convertir les données de la DB vers l'interface DemandeAvanceSalaire
-const convertDemandeFromDB = (dbDemande: any): DemandeAvanceSalaire => {
+// Fonction utilitaire pour convertir les données de la DB vers l'interface
+const convertSalaryAdvanceFromDB = (dbRequest: any): SalaryAdvanceRequest => {
   return {
-    id: dbDemande.id,
-    employe_id: dbDemande.employe_id,
-    montant_demande: dbDemande.montant_demande,
-    motif: dbDemande.motif,
-    date_demande: dbDemande.date_demande ? new Date(dbDemande.date_demande) : new Date(),
-    statut: dbDemande.statut,
-    commentaire: dbDemande.commentaire,
-    date_traitement: dbDemande.date_traitement ? new Date(dbDemande.date_traitement) : undefined,
-    numero_reception: dbDemande.numero_reception,
-    created_at: dbDemande.created_at ? new Date(dbDemande.created_at) : new Date(),
-    updated_at: dbDemande.updated_at ? new Date(dbDemande.updated_at) : new Date(),
-    
-    // Relations
-    employe: dbDemande.employe,
-    entreprise: dbDemande.entreprise
+    id: dbRequest.id,
+    employe_id: dbRequest.employe_id,
+    partenaire_id: dbRequest.partenaire_id,
+    montant_demande: dbRequest.montant_demande || 0,
+    type_motif: dbRequest.type_motif,
+    motif: dbRequest.motif,
+    numero_reception: dbRequest.numero_reception,
+    frais_service: dbRequest.frais_service || 0,
+    montant_total: dbRequest.montant_total || 0,
+    salaire_disponible: dbRequest.salaire_disponible,
+    avance_disponible: dbRequest.avance_disponible,
+    statut: dbRequest.statut || 'En attente',
+    date_creation: dbRequest.date_creation ? new Date(dbRequest.date_creation) : new Date(),
+    date_validation: dbRequest.date_validation ? new Date(dbRequest.date_validation) : undefined,
+    date_rejet: dbRequest.date_rejet ? new Date(dbRequest.date_rejet) : undefined,
+    motif_rejet: dbRequest.motif_rejet,
+    created_at: dbRequest.created_at ? new Date(dbRequest.created_at) : new Date(),
+    updated_at: dbRequest.updated_at ? new Date(dbRequest.updated_at) : new Date(),
+    employe: dbRequest.employe,
+    partenaire: dbRequest.partenaire,
+    transactions: dbRequest.transactions
   };
 };
 
-// Fonction utilitaire pour convertir les données vers la DB pour DemandeAvanceSalaire
-const convertDemandeToDB = (demandeData: Partial<DemandeAvanceSalaire>): any => {
-  const dbData: any = {};
-  
-  if (demandeData.employe_id !== undefined) dbData.employe_id = demandeData.employe_id;
-  if (demandeData.montant_demande !== undefined) dbData.montant_demande = demandeData.montant_demande;
-  if (demandeData.motif !== undefined) dbData.motif = demandeData.motif;
-  if (demandeData.statut !== undefined) dbData.statut = demandeData.statut;
-  if (demandeData.commentaire !== undefined) dbData.commentaire = demandeData.commentaire;
-  if (demandeData.numero_reception !== undefined) dbData.numero_reception = demandeData.numero_reception;
-  
-  return dbData;
-};
-
-// Fonction utilitaire pour convertir les données de la DB vers l'interface Transaction
 const convertTransactionFromDB = (dbTransaction: any): Transaction => {
   return {
     id: dbTransaction.id,
     demande_avance_id: dbTransaction.demande_avance_id,
     employe_id: dbTransaction.employe_id,
     entreprise_id: dbTransaction.entreprise_id,
-    montant: dbTransaction.montant,
+    montant: dbTransaction.montant || 0,
     numero_transaction: dbTransaction.numero_transaction,
     methode_paiement: dbTransaction.methode_paiement,
     numero_compte: dbTransaction.numero_compte,
@@ -57,49 +55,30 @@ const convertTransactionFromDB = (dbTransaction: any): Transaction => {
     date_transaction: dbTransaction.date_transaction ? new Date(dbTransaction.date_transaction) : new Date(),
     recu_url: dbTransaction.recu_url,
     date_creation: dbTransaction.date_creation ? new Date(dbTransaction.date_creation) : new Date(),
-    statut: dbTransaction.statut,
+    statut: dbTransaction.statut || 'EN_COURS',
     created_at: dbTransaction.created_at ? new Date(dbTransaction.created_at) : new Date(),
     updated_at: dbTransaction.updated_at ? new Date(dbTransaction.updated_at) : new Date(),
-    
-    // Relations
     employe: dbTransaction.employe,
     entreprise: dbTransaction.entreprise,
     demande_avance: dbTransaction.demande_avance
   };
 };
 
-// Fonction utilitaire pour convertir les données vers la DB pour Transaction
-const convertTransactionToDB = (transactionData: Partial<Transaction>): any => {
-  const dbData: any = {};
-  
-  if (transactionData.demande_avance_id !== undefined) dbData.demande_avance_id = transactionData.demande_avance_id;
-  if (transactionData.employe_id !== undefined) dbData.employe_id = transactionData.employe_id;
-  if (transactionData.entreprise_id !== undefined) dbData.entreprise_id = transactionData.entreprise_id;
-  if (transactionData.montant !== undefined) dbData.montant = transactionData.montant;
-  if (transactionData.numero_transaction !== undefined) dbData.numero_transaction = transactionData.numero_transaction;
-  if (transactionData.methode_paiement !== undefined) dbData.methode_paiement = transactionData.methode_paiement;
-  if (transactionData.numero_compte !== undefined) dbData.numero_compte = transactionData.numero_compte;
-  if (transactionData.numero_reception !== undefined) dbData.numero_reception = transactionData.numero_reception;
-  if (transactionData.recu_url !== undefined) dbData.recu_url = transactionData.recu_url;
-  if (transactionData.statut !== undefined) dbData.statut = transactionData.statut;
-  
-  return dbData;
-};
-
 class SalaryAdvanceService {
-  // ===== DEMANDES D'AVANCE SUR SALAIRE =====
-
-  // Récupérer toutes les demandes d'un partenaire
-  async getDemandesByPartner(partnerId: string): Promise<DemandeAvanceSalaire[]> {
+  // Récupérer toutes les demandes d'avance avec les relations
+  async getAll(): Promise<SalaryAdvanceRequest[]> {
     try {
       const { data, error } = await supabase
-        .from('demandes_avance_details')
-        .select('*')
-        .eq('entreprise_id', partnerId)
-        .order('date_demande', { ascending: false });
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
+        `)
+        .order('date_creation', { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(convertDemandeFromDB);
+      return (data || []).map(convertSalaryAdvanceFromDB);
     } catch (error) {
       console.error('Erreur lors de la récupération des demandes:', error);
       throw error;
@@ -107,16 +86,20 @@ class SalaryAdvanceService {
   }
 
   // Récupérer une demande par ID
-  async getDemandeById(id: string): Promise<DemandeAvanceSalaire | null> {
+  async getById(id: string): Promise<SalaryAdvanceRequest | null> {
     try {
       const { data, error } = await supabase
-        .from('demandes_avance_details')
-        .select('*')
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
+        `)
         .eq('id', id)
         .single();
 
       if (error) throw error;
-      return data ? convertDemandeFromDB(data) : null;
+      return data ? convertSalaryAdvanceFromDB(data) : null;
     } catch (error) {
       console.error('Erreur lors de la récupération de la demande:', error);
       throw error;
@@ -124,24 +107,24 @@ class SalaryAdvanceService {
   }
 
   // Créer une nouvelle demande
-  async createDemande(demandeData: Partial<DemandeAvanceSalaire>): Promise<DemandeAvanceSalaire> {
+  async create(requestData: SalaryAdvanceRequestFormData): Promise<SalaryAdvanceRequest> {
     try {
-      const dbData = convertDemandeToDB(demandeData);
-      dbData.date_demande = new Date().toISOString();
-      dbData.statut = demandeData.statut || 'EN_ATTENTE';
-
       const { data, error } = await supabase
-        .from('demandes_avance_salaire')
-        .insert([dbData])
+        .from('salary_advance_requests')
+        .insert([{
+          ...requestData,
+          date_creation: new Date().toISOString(),
+          statut: 'En attente'
+        }])
         .select(`
           *,
-          employe:employees(id, nom, prenom, email, poste, salaire_net),
-          entreprise:partners(id, nom, email, email_rh)
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
         `)
         .single();
 
       if (error) throw error;
-      return convertDemandeFromDB(data);
+      return convertSalaryAdvanceFromDB(data);
     } catch (error) {
       console.error('Erreur lors de la création de la demande:', error);
       throw error;
@@ -149,40 +132,88 @@ class SalaryAdvanceService {
   }
 
   // Mettre à jour une demande
-  async updateDemande(id: string, demandeData: Partial<DemandeAvanceSalaire>): Promise<DemandeAvanceSalaire> {
+  async update(id: string, requestData: Partial<SalaryAdvanceRequest>): Promise<SalaryAdvanceRequest> {
     try {
-      const dbData = convertDemandeToDB(demandeData);
-      dbData.updated_at = new Date().toISOString();
-
-      // Si le statut change, mettre à jour la date de traitement
-      if (demandeData.statut && demandeData.statut !== 'EN_ATTENTE') {
-        dbData.date_traitement = new Date().toISOString();
-      }
-
       const { data, error } = await supabase
-        .from('demandes_avance_salaire')
-        .update(dbData)
+        .from('salary_advance_requests')
+        .update({
+          ...requestData,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .select(`
           *,
-          employe:employees(id, nom, prenom, email, poste, salaire_net),
-          entreprise:partners(id, nom, email, email_rh)
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
         `)
         .single();
 
       if (error) throw error;
-      return convertDemandeFromDB(data);
+      return convertSalaryAdvanceFromDB(data);
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la demande:', error);
       throw error;
     }
   }
 
+  // Approuver une demande
+  async approve(id: string, motif?: string): Promise<SalaryAdvanceRequest> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .update({
+          statut: 'Validé',
+          date_validation: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
+        `)
+        .single();
+
+      if (error) throw error;
+      return convertSalaryAdvanceFromDB(data);
+    } catch (error) {
+      console.error('Erreur lors de l\'approbation de la demande:', error);
+      throw error;
+    }
+  }
+
+  // Rejeter une demande
+  async reject(id: string, motif_rejet: string): Promise<SalaryAdvanceRequest> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .update({
+          statut: 'Rejeté',
+          date_rejet: new Date().toISOString(),
+          motif_rejet,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
+        `)
+        .single();
+
+      if (error) throw error;
+      return convertSalaryAdvanceFromDB(data);
+    } catch (error) {
+      console.error('Erreur lors du rejet de la demande:', error);
+      throw error;
+    }
+  }
+
   // Supprimer une demande
-  async deleteDemande(id: string): Promise<void> {
+  async delete(id: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('demandes_avance_salaire')
+        .from('salary_advance_requests')
         .delete()
         .eq('id', id);
 
@@ -193,41 +224,140 @@ class SalaryAdvanceService {
     }
   }
 
-  // Obtenir les statistiques des demandes d'un partenaire
-  async getDemandesStats(partnerId: string): Promise<DemandesStatistiques> {
+  // Rechercher des demandes
+  async search(query: string): Promise<SalaryAdvanceRequest[]> {
     try {
       const { data, error } = await supabase
-        .from('demandes_statistiques_entreprise')
-        .select('*')
-        .eq('entreprise_id', partnerId)
-        .single();
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
+        `)
+        .or(`motif.ilike.%${query}%,type_motif.ilike.%${query}%`)
+        .order('date_creation', { ascending: false });
 
       if (error) throw error;
-
-      return {
-        total_demandes: data?.total_demandes || 0,
-        demandes_en_attente: data?.demandes_en_attente || 0,
-        demandes_approvees: data?.demandes_approvees || 0,
-        demandes_refusees: data?.demandes_refusees || 0,
-        demandes_payees: data?.demandes_payees || 0,
-        montant_total_demande: data?.montant_total_demande || 0,
-        montant_moyen_demande: data?.montant_moyen_demande || 0
-      };
+      return (data || []).map(convertSalaryAdvanceFromDB);
     } catch (error) {
-      console.error('Erreur lors de la récupération des statistiques des demandes:', error);
+      console.error('Erreur lors de la recherche de demandes:', error);
       throw error;
     }
   }
 
-  // ===== TRANSACTIONS =====
-
-  // Récupérer toutes les transactions d'un partenaire
-  async getTransactionsByPartner(partnerId: string): Promise<Transaction[]> {
+  // Filtrer par statut
+  async getByStatus(status: TransactionStatus): Promise<SalaryAdvanceRequest[]> {
     try {
       const { data, error } = await supabase
-        .from('transactions_details')
-        .select('*')
-        .eq('entreprise_id', partnerId)
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
+        `)
+        .eq('statut', status)
+        .order('date_creation', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(convertSalaryAdvanceFromDB);
+    } catch (error) {
+      console.error('Erreur lors du filtrage par statut:', error);
+      throw error;
+    }
+  }
+
+  // Filtrer par partenaire
+  async getByPartner(partnerId: string): Promise<SalaryAdvanceRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone)
+        `)
+        .eq('partenaire_id', partnerId)
+        .order('date_creation', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(convertSalaryAdvanceFromDB);
+    } catch (error) {
+      console.error('Erreur lors du filtrage par partenaire:', error);
+      throw error;
+    }
+  }
+
+  // Obtenir les statistiques
+  async getStats(): Promise<{
+    total: number;
+    enAttente: number;
+    approuvees: number;
+    rejetees: number;
+    montantTotal: number;
+    montantMoyen: number;
+    parStatut: Record<string, number>;
+    parPartenaire: Record<string, number>;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          partenaire:partners(nom)
+        `);
+
+      if (error) throw error;
+
+      const requests = (data || []).map(convertSalaryAdvanceFromDB);
+      
+      const total = requests.length;
+      const enAttente = requests.filter(req => req.statut === 'En attente').length;
+      const approuvees = requests.filter(req => req.statut === 'Validé').length;
+      const rejetees = requests.filter(req => req.statut === 'Rejeté').length;
+      
+      const montantTotal = requests.reduce((sum, req) => sum + (req.montant_demande || 0), 0);
+      const montantMoyen = total > 0 ? montantTotal / total : 0;
+      
+      const parStatut = requests.reduce((acc, req) => {
+        acc[req.statut] = (acc[req.statut] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const parPartenaire = requests.reduce((acc, req) => {
+        const partenaireNom = req.partenaire?.nom || 'Inconnu';
+        acc[partenaireNom] = (acc[partenaireNom] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return {
+        total,
+        enAttente,
+        approuvees,
+        rejetees,
+        montantTotal,
+        montantMoyen,
+        parStatut,
+        parPartenaire
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des statistiques:', error);
+      throw error;
+    }
+  }
+
+  // === MÉTHODES POUR LES TRANSACTIONS ===
+
+  // Récupérer toutes les transactions
+  async getAllTransactions(): Promise<Transaction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste),
+          entreprise:partners(nom, type, secteur),
+          demande_avance:demandes_avance_salaire(*)
+        `)
         .order('date_transaction', { ascending: false });
 
       if (error) throw error;
@@ -238,38 +368,23 @@ class SalaryAdvanceService {
     }
   }
 
-  // Récupérer une transaction par ID
-  async getTransactionById(id: string): Promise<Transaction | null> {
-    try {
-      const { data, error } = await supabase
-        .from('transactions_details')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data ? convertTransactionFromDB(data) : null;
-    } catch (error) {
-      console.error('Erreur lors de la récupération de la transaction:', error);
-      throw error;
-    }
-  }
-
   // Créer une nouvelle transaction
-  async createTransaction(transactionData: Partial<Transaction>): Promise<Transaction> {
+  async createTransaction(transactionData: TransactionFormData): Promise<Transaction> {
     try {
-      const dbData = convertTransactionToDB(transactionData);
-      dbData.date_transaction = new Date().toISOString();
-      dbData.date_creation = new Date().toISOString();
-      dbData.statut = transactionData.statut || 'EFFECTUEE';
-
+      const numeroTransaction = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
       const { data, error } = await supabase
         .from('transactions')
-        .insert([dbData])
+        .insert([{
+          ...transactionData,
+          numero_transaction: numeroTransaction,
+          date_transaction: new Date().toISOString(),
+          statut: 'EN_COURS'
+        }])
         .select(`
           *,
-          employe:employees(id, nom, prenom, email),
-          entreprise:partners(id, nom, email, email_rh),
+          employe:employees(nom, prenom, email, telephone, poste),
+          entreprise:partners(nom, type, secteur),
           demande_avance:demandes_avance_salaire(*)
         `)
         .single();
@@ -282,20 +397,20 @@ class SalaryAdvanceService {
     }
   }
 
-  // Mettre à jour une transaction
-  async updateTransaction(id: string, transactionData: Partial<Transaction>): Promise<Transaction> {
+  // Mettre à jour le statut d'une transaction
+  async updateTransactionStatus(id: string, statut: TransactionStatut): Promise<Transaction> {
     try {
-      const dbData = convertTransactionToDB(transactionData);
-      dbData.updated_at = new Date().toISOString();
-
       const { data, error } = await supabase
         .from('transactions')
-        .update(dbData)
+        .update({
+          statut,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .select(`
           *,
-          employe:employees(id, nom, prenom, email),
-          entreprise:partners(id, nom, email, email_rh),
+          employe:employees(nom, prenom, email, telephone, poste),
+          entreprise:partners(nom, type, secteur),
           demande_avance:demandes_avance_salaire(*)
         `)
         .single();
@@ -303,67 +418,16 @@ class SalaryAdvanceService {
       if (error) throw error;
       return convertTransactionFromDB(data);
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de la transaction:', error);
+      console.error('Erreur lors de la mise à jour du statut de la transaction:', error);
       throw error;
     }
-  }
-
-  // Obtenir les statistiques des transactions d'un partenaire
-  async getTransactionsStats(partnerId: string): Promise<TransactionsStatistiques> {
-    try {
-      const { data, error } = await supabase
-        .from('transactions_details')
-        .select('*')
-        .eq('entreprise_id', partnerId);
-
-      if (error) throw error;
-
-      const transactions = data || [];
-      const total_transactions = transactions.length;
-      const transactions_effectuees = transactions.filter(t => t.statut === 'EFFECTUEE').length;
-      const transactions_annulees = transactions.filter(t => t.statut === 'ANNULEE').length;
-      const montant_total_transactions = transactions.reduce((sum, t) => sum + (t.montant || 0), 0);
-      const montant_moyen_transaction = total_transactions > 0 ? montant_total_transactions / total_transactions : 0;
-
-      return {
-        total_transactions,
-        transactions_effectuees,
-        transactions_annulees,
-        montant_total_transactions,
-        montant_moyen_transaction
-      };
-    } catch (error) {
-      console.error('Erreur lors de la récupération des statistiques des transactions:', error);
-      throw error;
-    }
-  }
-
-  // ===== MÉTHODES DE COMPATIBILITÉ (anciennes méthodes) =====
-
-  // Méthodes de compatibilité pour l'ancien code
-  async getByPartner(partnerId: string): Promise<DemandeAvanceSalaire[]> {
-    return this.getDemandesByPartner(partnerId);
-  }
-
-  async getById(id: string): Promise<DemandeAvanceSalaire | null> {
-    return this.getDemandeById(id);
-  }
-
-  async create(requestData: Partial<DemandeAvanceSalaire>): Promise<DemandeAvanceSalaire> {
-    return this.createDemande(requestData);
-  }
-
-  async update(id: string, requestData: Partial<DemandeAvanceSalaire>): Promise<DemandeAvanceSalaire> {
-    return this.updateDemande(id, requestData);
-  }
-
-  async delete(id: string): Promise<void> {
-    return this.deleteDemande(id);
-  }
-
-  async getStats(partnerId: string): Promise<any> {
-    return this.getDemandesStats(partnerId);
   }
 }
 
-export default new SalaryAdvanceService();
+const salaryAdvanceService = new SalaryAdvanceService();
+
+export default salaryAdvanceService;
+
+// Exports utilitaires
+export const getSalaryAdvanceStats = () => salaryAdvanceService.getStats();
+export const getTransactions = () => salaryAdvanceService.getAllTransactions();

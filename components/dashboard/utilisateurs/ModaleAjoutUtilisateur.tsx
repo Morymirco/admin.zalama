@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { Partenaire } from '@/types/partenaire';
+import { Partner } from '@/types/employee';
 
 interface ModaleAjoutUtilisateurProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (formData: FormData) => Promise<void>;
   types?: string[];
-  partners?: Partenaire[];
+  partners?: Partner[];
 }
 
 const ModaleAjoutUtilisateur: React.FC<ModaleAjoutUtilisateurProps> = ({

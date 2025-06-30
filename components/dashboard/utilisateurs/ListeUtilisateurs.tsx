@@ -1,25 +1,24 @@
 import React from 'react';
 import { Users, Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Briefcase, Building, UserCheck, UserX } from 'lucide-react';
 import Image from 'next/image';
-import { Employe } from '@/types/partenaire';
-import { Partenaire } from '@/types/partenaire';
+import { Employee, Partner } from '@/types/employee';
 
 interface ListeUtilisateursProps {
-  utilisateurs: Employe[];
-  filteredUtilisateurs: Employe[];
+  utilisateurs: Employee[];
+  filteredUtilisateurs: Employee[];
   searchTerm: string;
   typeFilter: string;
   types?: string[];
   currentPage: number;
   itemsPerPage: number;
   isLoading: boolean;
-  partners?: Partenaire[];
+  partners?: Partner[];
   onSearch: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onTypeFilterChange: (type: string) => void;
   onPageChange: (page: number) => void;
   onAddClick: () => void;
-  onEditClick: (utilisateur: Employe) => void;
-  onDeleteClick: (utilisateur: Employe) => void;
+  onEditClick: (utilisateur: Employee) => void;
+  onDeleteClick: (utilisateur: Employee) => void;
 }
 
 const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
@@ -194,7 +193,7 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
                       <div className="flex items-center">
                         <span className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[var(--zalama-bg-lighter)]">
                           <Building className="h-4 w-4" />
-                          <span>{getPartnerName(employe.partner_id)}</span>
+                          <span>{getPartnerName(employe.partner_id || '')}</span>
                         </span>
                       </div>
                     </td>

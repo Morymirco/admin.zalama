@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Employe } from '@/types/partenaire';
-import { partenaireService } from '@/services/partenaireService';
-import { Partenaire } from '@/types/partenaire';
+import { Employee, Partner } from '@/types/employee';
+import { partenaireService, employeService } from '@/services/partenaireService';
 
 interface UseSupabaseEmployeesReturn {
-  employees: Employe[];
-  filteredEmployees: Employe[];
-  partners: Partenaire[];
+  employees: Employee[];
+  filteredEmployees: Employee[];
+  partners: Partner[];
   isLoading: boolean;
   error: string | null;
   stats: {
@@ -27,16 +26,16 @@ interface UseSupabaseEmployeesReturn {
   setPartnerFilter: (partnerId: string) => void;
   setCurrentPage: (page: number) => void;
   refreshEmployees: () => Promise<void>;
-  createEmployee: (employeeData: Partial<Employe>) => Promise<Employe>;
-  updateEmployee: (id: string, employeeData: Partial<Employe>) => Promise<Employe>;
+  createEmployee: (employeeData: Partial<Employee>) => Promise<Employee>;
+  updateEmployee: (id: string, employeeData: Partial<Employee>) => Promise<Employee>;
   deleteEmployee: (id: string) => Promise<void>;
-  searchEmployees: (query: string) => Promise<Employe[]>;
+  searchEmployees: (query: string) => Promise<Employee[]>;
 }
 
 export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmployeesReturn => {
-  const [employees, setEmployees] = useState<Employe[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<Employe[]>([]);
-  const [partners, setPartners] = useState<Partenaire[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<{
@@ -65,10 +64,10 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
       setPartners(partnersData || []);
       
       // Charger tous les employés de tous les partenaires
-      const allEmployees: Employe[] = [];
+      const allEmployees: Employee[] = [];
       for (const partner of partnersData || []) {
         try {
-          const partnerEmployees = await partenaireService.employeService.getByPartnerId(partner.id);
+          const partnerEmployees = await employeService.getByPartnerId(partner.id);
           allEmployees.push(...partnerEmployees);
         } catch (err) {
           console.error(`Erreur lors du chargement des employés du partenaire ${partner.id}:`, err);
@@ -162,9 +161,9 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   }, [searchTerm, partnerFilter, employees]);
 
   // Créer un employé
-  const createEmployee = useCallback(async (employeeData: Partial<Employe>): Promise<Employe> => {
+  const createEmployee = useCallback(async (employeeData: Partial<Employee>): Promise<Employee> => {
     try {
-      const result = await partenaireService.employeService.create(employeeData as any);
+      const result = await employeService.create(employeeData as any);
       const newEmployee = result.employe;
       
       setEmployees(prev => [...prev, newEmployee]);
@@ -177,9 +176,9 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   }, [loadStats]);
 
   // Mettre à jour un employé
-  const updateEmployee = useCallback(async (id: string, employeeData: Partial<Employe>): Promise<Employe> => {
+  const updateEmployee = useCallback(async (id: string, employeeData: Partial<Employee>): Promise<Employee> => {
     try {
-      const updatedEmployee = await partenaireService.employeService.update(id, employeeData);
+      const updatedEmployee = await employeService.update(id, employeeData);
       setEmployees(prev => prev.map(employee => employee.id === id ? updatedEmployee : employee));
       await loadStats(); // Recharger les statistiques
       return updatedEmployee;
@@ -192,7 +191,7 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   // Supprimer un employé
   const deleteEmployee = useCallback(async (id: string): Promise<void> => {
     try {
-      await partenaireService.employeService.delete(id);
+      await employeService.delete(id);
       setEmployees(prev => prev.filter(employee => employee.id !== id));
       await loadStats(); // Recharger les statistiques
     } catch (err) {
@@ -202,26 +201,17 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   }, [loadStats]);
 
   // Rechercher des employés
-  const searchEmployees = useCallback(async (query: string): Promise<Employe[]> => {
+  const searchEmployees = useCallback(async (query: string): Promise<Employee[]> => {
     try {
-      // Recherche dans tous les partenaires
-      const allResults: Employe[] = [];
-      for (const partner of partners) {
-        try {
-          const results = await partenaireService.employeService.search(query, partner.id);
-          allResults.push(...results);
-        } catch (err) {
-          console.error(`Erreur lors de la recherche dans le partenaire ${partner.id}:`, err);
-        }
-      }
-      return allResults;
+      const results = await employeService.search(query);
+      return results;
     } catch (err) {
       console.error('Erreur lors de la recherche d\'employés:', err);
-      throw err;
+      return [];
     }
-  }, [partners]);
+  }, []);
 
-  // Rafraîchir les données
+  // Rafraîchir les employés
   const refreshEmployees = useCallback(async () => {
     await loadEmployees();
   }, [loadEmployees]);
@@ -246,6 +236,6 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
     createEmployee,
     updateEmployee,
     deleteEmployee,
-    searchEmployees,
+    searchEmployees
   };
 }; 

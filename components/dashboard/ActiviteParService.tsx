@@ -1,46 +1,75 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { CreditCard, Wallet, LineChart, BarChart, CheckCircle, XCircle, Clock, Activity } from 'lucide-react';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
+import { serviceService } from '@/services/serviceService';
 import { transactionService } from '@/services/transactionService';
-import { salaryAdvanceService } from '@/services/salaryAdvanceService';
-import { Transaction } from '@/types/transaction';
-import { SalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
-import serviceActivityService, { getTransactionsParService, getDemandeStats, ServiceActivity, DemandeStats } from '@/services/serviceActivityService';
 
 export default function ActiviteParService() {
-  // Utiliser nos hooks pour récupérer les transactions et demandes
-  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection<Transaction>(transactionService);
-  const { data: demandes, loading: loadingDemandes } = useSupabaseCollection<SalaryAdvanceRequest>(salaryAdvanceService);
+  // Utiliser nos hooks pour récupérer les services et transactions
+  const { data: services, loading: loadingServices } = useSupabaseCollection(serviceService);
+  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection(transactionService);
   
-  // États pour les statistiques d'activité par service
-  const [servicesActivity, setServicesActivity] = useState<ServiceActivity[]>([]);
-  const [demandeStats, setDemandeStats] = useState<DemandeStats>({ approuvees: 0, rejetees: 0, enCours: 0 });
-  const [loading, setLoading] = useState<boolean>(true);
-  
-  // Charger les données d'activité par service
-  useEffect(() => {
-    const loadServiceActivity = async () => {
-      try {
-        const [servicesData, demandesData] = await Promise.all([
-          getTransactionsParService(),
-          getDemandeStats()
-        ]);
-        
-        setServicesActivity(servicesData);
-        setDemandeStats(demandesData);
-      } catch (error) {
-        console.error('Erreur lors du chargement des données d\'activité par service:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    if (!loadingTransactions && !loadingDemandes) {
-      loadServiceActivity();
+  // Calculer les statistiques d'activité par service
+  const stats = useMemo(() => {
+    if (loadingServices || loadingTransactions || !services.length) {
+      return {
+        servicesActivity: [],
+        demandeStats: { approuvees: 0, rejetees: 0, enCours: 0 }
+      };
     }
-  }, [transactions, demandes, loadingTransactions, loadingDemandes]);
+
+    // Calculer l'activité par service
+    const servicesActivity = services.map(service => {
+      // Compter les transactions pour ce service
+      const serviceTransactions = transactions.filter(t => t.service_id === service.id);
+      const count = serviceTransactions.length;
+      
+      // Déterminer l'icône et la couleur en fonction de la catégorie
+      let icon = 'Activity';
+      let color = 'blue';
+      
+      switch (service.categorie?.toLowerCase()) {
+        case 'finance':
+          icon = 'CreditCard';
+          color = 'blue';
+          break;
+        case 'avance':
+          icon = 'Wallet';
+          color = 'success';
+          break;
+        case 'analyse':
+          icon = 'LineChart';
+          color = 'warning';
+          break;
+        case 'rapport':
+          icon = 'BarChart';
+          color = 'purple';
+          break;
+        default:
+          icon = 'Activity';
+          color = 'blue';
+      }
+      
+      return {
+        nom: service.nom,
+        count,
+        icon,
+        color
+      };
+    }).sort((a, b) => b.count - a.count).slice(0, 4);
+
+    // Calculer les statistiques des demandes (basées sur les transactions)
+    const approuvees = transactions.filter(t => t.statut === 'Validé' || t.statut === 'Effectué').length;
+    const rejetees = transactions.filter(t => t.statut === 'Rejeté').length;
+    const enCours = transactions.filter(t => t.statut === 'En attente').length;
+
+    return {
+      servicesActivity,
+      demandeStats: { approuvees, rejetees, enCours }
+    };
+  }, [services, transactions, loadingServices, loadingTransactions]);
   
   // Fonction pour obtenir l'icône appropriée en fonction du nom du service
   const getServiceIcon = (iconName: string) => {
@@ -95,10 +124,10 @@ export default function ActiviteParService() {
   };
   
   // Calculer le total des activités pour les pourcentages
-  const totalActivities = servicesActivity.reduce((sum, service) => sum + service.count, 0);
+  const totalActivities = stats.servicesActivity.reduce((sum, service) => sum + service.count, 0);
   
   // Afficher un spinner pendant le chargement
-  if (loading) {
+  if (loadingServices || loadingTransactions) {
     return (
       <div>
         <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Activité par service</h2>
@@ -115,7 +144,7 @@ export default function ActiviteParService() {
       
       {/* Grille des services */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        {servicesActivity.slice(0, 4).map((service, index) => {
+        {stats.servicesActivity.map((service, index) => {
           const colorClasses = getColorClass(service.color);
           const percentage = totalActivities > 0 ? (service.count / totalActivities) * 100 : 0;
           
@@ -138,7 +167,7 @@ export default function ActiviteParService() {
       
       {/* Statut des demandes */}
       <div className="bg-[var(--zalama-bg-light)] rounded-lg p-3 border border-[var(--zalama-border)]">
-        <div className="text-sm font-medium mb-3 text-[var(--zalama-text)]">Statut des demandes</div>
+        <div className="text-sm font-medium mb-3 text-[var(--zalama-text)]">Statut des transactions</div>
         <div className="grid grid-cols-3 gap-2">
           {/* Approuvés */}
           <div className="flex items-center gap-2">
@@ -146,8 +175,8 @@ export default function ActiviteParService() {
               <CheckCircle className="h-4 w-4 text-[var(--zalama-success)]" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--zalama-text)]">{demandeStats.approuvees}</div>
-              <div className="text-xs text-[var(--zalama-text-secondary)]">Approuvés</div>
+              <div className="text-base font-bold text-[var(--zalama-text)]">{stats.demandeStats.approuvees}</div>
+              <div className="text-xs text-[var(--zalama-text-secondary)]">Validés</div>
             </div>
           </div>
           
@@ -157,7 +186,7 @@ export default function ActiviteParService() {
               <XCircle className="h-4 w-4 text-[var(--zalama-danger)]" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--zalama-text)]">{demandeStats.rejetees}</div>
+              <div className="text-base font-bold text-[var(--zalama-text)]">{stats.demandeStats.rejetees}</div>
               <div className="text-xs text-[var(--zalama-text-secondary)]">Rejetés</div>
             </div>
           </div>
@@ -168,8 +197,8 @@ export default function ActiviteParService() {
               <Clock className="h-4 w-4 text-[var(--zalama-warning)]" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--zalama-text)]">{demandeStats.enCours}</div>
-              <div className="text-xs text-[var(--zalama-text-secondary)]">En Cours</div>
+              <div className="text-base font-bold text-[var(--zalama-text)]">{stats.demandeStats.enCours}</div>
+              <div className="text-xs text-[var(--zalama-text-secondary)]">En Attente</div>
             </div>
           </div>
         </div>

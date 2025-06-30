@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Employe } from '@/types/partenaire';
-import { Partenaire } from '@/types/partenaire';
+import { Employee, Partner } from '@/types/employee';
 
 interface ModaleEditionUtilisateurProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (formData: FormData) => Promise<void>;
-  utilisateur: Employe;
+  utilisateur: Employee;
   types?: string[];
-  partners?: Partenaire[];
+  partners?: Partner[];
 }
 
 const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
@@ -213,7 +212,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                 type="date"
                 id="date_embauche"
                 name="date_embauche"
-                defaultValue={utilisateur.date_embauche ? utilisateur.date_embauche.split('T')[0] : ''}
+                defaultValue={utilisateur.date_embauche ? new Date(utilisateur.date_embauche).toISOString().split('T')[0] : ''}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
               />
             </div>
@@ -231,7 +230,7 @@ const ModaleEditionUtilisateur: React.FC<ModaleEditionUtilisateurProps> = ({
                 type="submit"
                 className="flex-1 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
               >
-                Mettre à jour
+                Mettre à jour l'employé
               </button>
             </div>
           </div>

@@ -71,7 +71,7 @@ const ModaleEditionService: React.FC<ModaleEditionServiceProps> = ({
                   type="number"
                   id="edit-frais"
                   name="frais_attribues"
-                  defaultValue={service.fraisAttribues || service.frais_attribues || 0}
+                  defaultValue={service.frais_attribues || 0}
                   placeholder="0"
                   className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />
@@ -85,7 +85,7 @@ const ModaleEditionService: React.FC<ModaleEditionServiceProps> = ({
                   type="number"
                   id="edit-pourcentage"
                   name="pourcentage_max"
-                  defaultValue={service.pourcentageMax || service.pourcentage_max || 0}
+                  defaultValue={service.pourcentage_max || 0}
                   placeholder="0"
                   className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
                 />

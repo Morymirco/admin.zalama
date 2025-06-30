@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Users, GraduationCap, Briefcase, Building } from 'lucide-react';
+import { RefreshCw, Users, Briefcase, Building, UserCheck, UserX } from 'lucide-react';
 
 interface StatistiqueUtilisateur {
   type: string;
@@ -23,31 +23,31 @@ const StatistiquesUtilisateurs: React.FC<StatistiquesUtilisateursProps> = ({
   // Données par défaut si aucune statistique n'est fournie
   const defaultStats: StatistiqueUtilisateur[] = [
     {
-      type: 'Étudiants',
+      type: 'Total Employés',
       nombre: 0,
       nouveauxCeMois: 0,
       actifs: 0,
       inactifs: 0,
       tendance: 'stable',
-      icon: <GraduationCap className="h-6 w-6 text-[var(--zalama-blue)]" />
+      icon: <Users className="h-6 w-6 text-[var(--zalama-blue)]" />
     },
     {
-      type: 'Salariés',
+      type: 'Employés Actifs',
       nombre: 0,
       nouveauxCeMois: 0,
       actifs: 0,
       inactifs: 0,
       tendance: 'stable',
-      icon: <Briefcase className="h-6 w-6 text-[var(--zalama-green)]" />
+      icon: <UserCheck className="h-6 w-6 text-[var(--zalama-green)]" />
     },
     {
-      type: 'Entreprises',
+      type: 'Employés Inactifs',
       nombre: 0,
       nouveauxCeMois: 0,
       actifs: 0,
       inactifs: 0,
       tendance: 'stable',
-      icon: <Building className="h-6 w-6 text-[var(--zalama-orange)]" />
+      icon: <UserX className="h-6 w-6 text-[var(--zalama-orange)]" />
     }
   ];
 
@@ -56,7 +56,7 @@ const StatistiquesUtilisateurs: React.FC<StatistiquesUtilisateursProps> = ({
 
   return (
     <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Activité par type d&apos;utilisateur</h2>
+      <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Statistiques des employés</h2>
       
       {isLoading ? (
         <div className="flex justify-center items-center h-40">

@@ -1,46 +1,41 @@
 import { createClient } from '@supabase/supabase-js';
 import { Service, ServiceFormData } from '@/types/service';
 
-// Configuration Supabase - Variables définies directement
+// Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
 
-const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey
-);
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Fonction utilitaire pour convertir les données de la DB vers l'interface
 const convertFromDB = (dbService: any): Service => {
   return {
     id: dbService.id,
     nom: dbService.nom,
-    description: dbService.description,
+    description: dbService.description || '',
     categorie: dbService.categorie,
+    frais_attribues: dbService.frais_attribues || 0,
     pourcentage_max: dbService.pourcentage_max || 0,
     duree: dbService.duree || '',
     disponible: dbService.disponible ?? true,
-    frais_attribues: dbService.frais_attribues || 0,
     image_url: dbService.image_url,
     date_creation: dbService.date_creation ? new Date(dbService.date_creation) : undefined,
     createdAt: dbService.created_at ? { toDate: () => new Date(dbService.created_at) } as any : undefined
   };
 };
 
-// Fonction utilitaire pour convertir les données vers la DB
-const convertToDB = (serviceData: Partial<Service>): any => {
-  const dbData: any = {};
-  
-  if (serviceData.nom !== undefined) dbData.nom = serviceData.nom;
-  if (serviceData.description !== undefined) dbData.description = serviceData.description;
-  if (serviceData.categorie !== undefined) dbData.categorie = serviceData.categorie;
-  if (serviceData.pourcentage_max !== undefined) dbData.pourcentage_max = serviceData.pourcentage_max;
-  if (serviceData.duree !== undefined) dbData.duree = serviceData.duree;
-  if (serviceData.disponible !== undefined) dbData.disponible = serviceData.disponible;
-  if (serviceData.frais_attribues !== undefined) dbData.frais_attribues = serviceData.frais_attribues;
-  if (serviceData.image_url !== undefined) dbData.image_url = serviceData.image_url;
-  
-  return dbData;
+// Fonction utilitaire pour convertir vers la DB
+const convertToDB = (serviceData: Partial<Service> | ServiceFormData): any => {
+  return {
+    nom: serviceData.nom,
+    description: serviceData.description,
+    categorie: serviceData.categorie,
+    frais_attribues: serviceData.frais_attribues,
+    pourcentage_max: serviceData.pourcentage_max,
+    duree: serviceData.duree,
+    disponible: serviceData.disponible,
+    image_url: serviceData.image_url
+  };
 };
 
 class ServiceService {
@@ -191,6 +186,7 @@ class ServiceService {
     disponibles: number;
     indisponibles: number;
     parCategorie: Record<string, number>;
+    fraisTotal: number;
   }> {
     try {
       const { data, error } = await supabase
@@ -199,25 +195,33 @@ class ServiceService {
 
       if (error) throw error;
 
-      const services = data || [];
+      const services = (data || []).map(convertFromDB);
+      
       const total = services.length;
-      const disponibles = services.filter(s => s.disponible).length;
+      const disponibles = services.filter(service => service.disponible).length;
       const indisponibles = total - disponibles;
 
       const parCategorie = services.reduce((acc, service) => {
-        const categorie = service.categorie || 'Non définie';
-        acc[categorie] = (acc[categorie] || 0) + 1;
+        acc[service.categorie] = (acc[service.categorie] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
-      return { total, disponibles, indisponibles, parCategorie };
+      const fraisTotal = services.reduce((sum, service) => sum + (service.frais_attribues || 0), 0);
+
+      return {
+        total,
+        disponibles,
+        indisponibles,
+        parCategorie,
+        fraisTotal
+      };
     } catch (error) {
       console.error('Erreur lors de la récupération des statistiques:', error);
       throw error;
     }
   }
 
-  // Obtenir les catégories avec le nombre de services
+  // Obtenir les catégories avec leur nombre de services
   async getCategoriesWithCount(): Promise<Record<string, number>> {
     try {
       const { data, error } = await supabase
@@ -226,23 +230,44 @@ class ServiceService {
 
       if (error) throw error;
 
-      const services = data || [];
-      return services.reduce((acc, service) => {
-        const categorie = service.categorie || 'Non définie';
-        acc[categorie] = (acc[categorie] || 0) + 1;
+      const categories = (data || []).reduce((acc, service) => {
+        acc[service.categorie] = (acc[service.categorie] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
+
+      return categories;
     } catch (error) {
       console.error('Erreur lors de la récupération des catégories:', error);
       throw error;
     }
   }
+
+  // Obtenir les nouveaux services de ce mois
+  async getNewThisMonth(): Promise<Service[]> {
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .gte('created_at', startOfMonth.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(convertFromDB);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des nouveaux services:', error);
+      throw error;
+    }
+  }
 }
 
-// Instance singleton
 const serviceService = new ServiceService();
 
-// Exports pour la compatibilité
 export default serviceService;
+
+// Exports utilitaires
 export const getAvailableServices = () => serviceService.getAvailable();
 export const getCategoriesWithCount = () => serviceService.getCategoriesWithCount();

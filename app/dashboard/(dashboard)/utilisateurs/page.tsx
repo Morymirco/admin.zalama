@@ -16,12 +16,13 @@ import {
 
 // Importation du hook Supabase pour les employés
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
-import { Employe } from '@/types/partenaire';
+import { Employee } from '@/types/employee';
+import { Partner } from '@/types/employee';
 
-export default function UtilisateursPage() {
+export default function EmployesPage() {
   // Utilisation du hook Supabase pour les employés
   const {
-    filteredEmployees: filteredUtilisateurs,
+    filteredEmployees: filteredEmployes,
     partners,
     isLoading,
     stats,
@@ -42,7 +43,7 @@ export default function UtilisateursPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [currentUtilisateur, setCurrentUtilisateur] = useState<Employe | null>(null);
+  const [currentEmploye, setCurrentEmploye] = useState<Employee | null>(null);
 
   // Fonction pour transformer les statistiques en format attendu
   const transformStats = () => {
@@ -96,13 +97,13 @@ export default function UtilisateursPage() {
     setShowAddModal(true);
   };
 
-  const handleEditUser = (user: Employe) => {
-    setCurrentUtilisateur(user);
+  const handleEditUser = (employe: Employee) => {
+    setCurrentEmploye(employe);
     setShowEditModal(true);
   };
 
-  const handleDeleteUser = (user: Employe) => {
-    setCurrentUtilisateur(user);
+  const handleDeleteUser = (employe: Employee) => {
+    setCurrentEmploye(employe);
     setShowDeleteModal(true);
   };
 
@@ -138,7 +139,7 @@ export default function UtilisateursPage() {
 
   // Formulaire d'édition d'employé
   const handleSubmitEditUser = async (formData: FormData) => {
-    if (!currentUtilisateur) return;
+    if (!currentEmploye) return;
     
     try {
       const employeeData = {
@@ -155,10 +156,10 @@ export default function UtilisateursPage() {
         genre: formData.get('genre') as 'Homme' | 'Femme' | 'Autre'
       };
 
-      await updateEmployee(currentUtilisateur.id, employeeData);
+      await updateEmployee(currentEmploye.id, employeeData);
       
       setShowEditModal(false);
-      setCurrentUtilisateur(null);
+      setCurrentEmploye(null);
       toast.success('Employé mis à jour avec succès');
       
     } catch (error) {
@@ -168,13 +169,13 @@ export default function UtilisateursPage() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!currentUtilisateur) return;
+    if (!currentEmploye) return;
     
     try {
-      await deleteEmployee(currentUtilisateur.id);
+      await deleteEmployee(currentEmploye.id);
       
       setShowDeleteModal(false);
-      setCurrentUtilisateur(null);
+      setCurrentEmploye(null);
       toast.success('Employé supprimé avec succès');
       
     } catch (error) {
@@ -186,7 +187,7 @@ export default function UtilisateursPage() {
   // Calculer les éléments de la page courante
   const startIndex = (currentPage - 1) * 10;
   const endIndex = startIndex + 10;
-  const currentItems = (filteredUtilisateurs || []).slice(startIndex, endIndex);
+  const currentItems = (filteredEmployes || []).slice(startIndex, endIndex);
 
   // Préparer les options de filtre par partenaire
   const partnerOptions = [
@@ -249,16 +250,16 @@ export default function UtilisateursPage() {
       
       {/* Résumé des employés */}
       <ResumeUtilisateurs 
-        totalUtilisateurs={filteredUtilisateurs.length}
-        utilisateursActifs={filteredUtilisateurs.filter(u => u.actif).length}
-        utilisateursInactifs={filteredUtilisateurs.filter(u => !u.actif).length}
+        totalUtilisateurs={filteredEmployes.length}
+        utilisateursActifs={filteredEmployes.filter(u => u.actif).length}
+        utilisateursInactifs={filteredEmployes.filter(u => !u.actif).length}
         isLoading={isLoading}
       />
       
       {/* Liste des employés */}
       <ListeUtilisateurs 
         utilisateurs={currentItems}
-        filteredUtilisateurs={filteredUtilisateurs || []}
+        filteredUtilisateurs={filteredEmployes || []}
         searchTerm={searchTerm}
         typeFilter={partnerFilter}
         types={partnerOptions.map(p => p.value)}
@@ -282,29 +283,29 @@ export default function UtilisateursPage() {
         partners={partners}
       />
       
-      {showEditModal && currentUtilisateur && (
+      {showEditModal && currentEmploye && (
         <ModaleEditionUtilisateur 
           isOpen={showEditModal}
           onClose={() => {
             setShowEditModal(false);
-            setCurrentUtilisateur(null);
+            setCurrentEmploye(null);
           }}
           onSubmit={handleSubmitEditUser}
-          utilisateur={currentUtilisateur}
+          utilisateur={currentEmploye}
           types={partnerOptions.filter(p => p.value !== 'tous').map(p => p.value)}
           partners={partners}
         />
       )}
       
-      {showDeleteModal && currentUtilisateur && (
+      {showDeleteModal && currentEmploye && (
         <ModaleSuppressionUtilisateur 
           isOpen={showDeleteModal}
           onClose={() => {
             setShowDeleteModal(false);
-            setCurrentUtilisateur(null);
+            setCurrentEmploye(null);
           }}
           onConfirm={handleConfirmDelete}
-          utilisateur={currentUtilisateur}
+          utilisateur={currentEmploye}
         />
       )}
     </div>

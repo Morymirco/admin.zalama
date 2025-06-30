@@ -5,9 +5,8 @@ import { Star, MapPin } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import dynamic from 'next/dynamic';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
-import { userService } from '@/services/userService';
-import { Utilisateur } from '@/types/utilisateur';
-import demographieService, { getUtilisateursParAge, getUtilisateursParRegion, getUtilisateursParType, getNoteMoyenne } from '@/services/demographieService';
+import { employeeService } from '@/services/employeeService';
+import { partnerService } from '@/services/partnerService';
 
 // Chargement dynamique du composant de carte pour éviter les problèmes de rendu côté serveur
 const GuineaMap = dynamic(() => import('./GuineaMap'), {
@@ -19,62 +18,83 @@ const GuineaMap = dynamic(() => import('./GuineaMap'), {
   )
 });
 
-export default function DonneesUtilisateurs() {
-  // Utiliser notre hook pour récupérer les utilisateurs
-  const { data: utilisateurs, loading: loadingUtilisateurs } = useSupabaseCollection<Utilisateur>(userService);
+export default function DonneesEmployes() {
+  // Utiliser notre hook pour récupérer les employés
+  const { data: employees, loading: loadingEmployees } = useSupabaseCollection(employeeService);
+  const { data: partners, loading: loadingPartners } = useSupabaseCollection(partnerService);
   
   // États pour les statistiques démographiques
-  const [ageStats, setAgeStats] = useState<{
-    tranches: Record<string, number>;
+  const [genreStats, setGenreStats] = useState<{
+    genres: Record<string, number>;
     pourcentages: Record<string, number>;
-  }>({ tranches: {}, pourcentages: {} });
+  }>({ genres: {}, pourcentages: {} });
   
-  const [regionStats, setRegionStats] = useState<{
-    regions: Record<string, number>;
+  const [contratStats, setContratStats] = useState<{
+    contrats: Record<string, number>;
     pourcentages: Record<string, number>;
-  }>({ regions: {}, pourcentages: {} });
+  }>({ contrats: {}, pourcentages: {} });
   
-  const [typeStats, setTypeStats] = useState<{
-    types: Record<string, number>;
-    pourcentages: Record<string, number>;
-  }>({ types: {}, pourcentages: {} });
-  
-  const [noteMoyenne, setNoteMoyenne] = useState<number>(0);
+  const [salaireMoyen, setSalaireMoyen] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   
   // Couleurs personnalisées pour le graphique
   const COLORS = ['#4f46e5', '#60a5fa', '#34d399', '#f97316', '#ec4899'];
   
-  // Données pour le graphique circulaire des types d'utilisateurs
-  const [typeUtilisateursData, setTypeUtilisateursData] = useState<Array<{ name: string; value: number; color: string }>>([]);
+  // Données pour le graphique circulaire des genres d'employés
+  const [genreEmployeesData, setGenreEmployeesData] = useState<Array<{ name: string; value: number; color: string }>>([]);
 
-  // Charger les données démographiques à partir des utilisateurs
+  // Charger les données démographiques à partir des employés
   useEffect(() => {
     const loadDemographicData = async () => {
       try {
-        // Si les utilisateurs sont chargés depuis le hook, nous pouvons les utiliser directement
-        if (!loadingUtilisateurs && utilisateurs.length > 0) {
-          // Calculer les statistiques à partir des utilisateurs
-          const [ageData, regionData, typeData, noteData] = await Promise.all([
-            getUtilisateursParAge(),
-            getUtilisateursParRegion(),
-            getUtilisateursParType(),
-            getNoteMoyenne()
-          ]);
+        // Si les employés sont chargés depuis le hook, nous pouvons les utiliser directement
+        if (!loadingEmployees && employees.length > 0) {
+          // Calculer les statistiques à partir des employés
+          const totalEmployees = employees.length;
           
-          setAgeStats(ageData);
-          setRegionStats(regionData);
-          setTypeStats(typeData);
-          setNoteMoyenne(noteData);
+          // Statistiques par genre
+          const genres = employees.reduce((acc, emp) => {
+            acc[emp.genre] = (acc[emp.genre] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+          
+          const genrePourcentages = Object.keys(genres).reduce((acc, genre) => {
+            acc[genre] = (genres[genre] / totalEmployees) * 100;
+            return acc;
+          }, {} as Record<string, number>);
+          
+          // Statistiques par type de contrat
+          const contrats = employees.reduce((acc, emp) => {
+            acc[emp.type_contrat] = (acc[emp.type_contrat] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+          
+          const contratPourcentages = Object.keys(contrats).reduce((acc, contrat) => {
+            acc[contrat] = (contrats[contrat] / totalEmployees) * 100;
+            return acc;
+          }, {} as Record<string, number>);
+          
+          // Salaire moyen
+          const salaires = employees
+            .filter(emp => emp.salaire_net && emp.salaire_net > 0)
+            .map(emp => emp.salaire_net!);
+          
+          const salaireMoyen = salaires.length > 0 
+            ? salaires.reduce((sum, salaire) => sum + salaire, 0) / salaires.length 
+            : 0;
+          
+          setGenreStats({ genres, pourcentages: genrePourcentages });
+          setContratStats({ contrats, pourcentages: contratPourcentages });
+          setSalaireMoyen(salaireMoyen);
           
           // Préparer les données pour le graphique circulaire
-          const typesData = Object.entries(typeData.types).map(([type, count], index) => ({
-            name: type.charAt(0).toUpperCase() + type.slice(1),
+          const genresData = Object.entries(genres).map(([genre, count], index) => ({
+            name: genre.charAt(0).toUpperCase() + genre.slice(1),
             value: count,
             color: COLORS[index % COLORS.length]
           }));
           
-          setTypeUtilisateursData(typesData);
+          setGenreEmployeesData(genresData);
         }
       } catch (error) {
         console.error('Erreur lors du chargement des données démographiques:', error);
@@ -84,13 +104,13 @@ export default function DonneesUtilisateurs() {
     };
     
     loadDemographicData();
-  }, [utilisateurs, loadingUtilisateurs]);
+  }, [employees, loadingEmployees]);
 
   // Afficher un spinner pendant le chargement
   if (loading) {
     return (
       <div>
-        <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Données utilisateurs</h2>
+        <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Données employés</h2>
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--zalama-primary)]"></div>
         </div>
@@ -100,15 +120,15 @@ export default function DonneesUtilisateurs() {
 
   return (
     <div>
-        <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Données utilisateurs</h2>
+        <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Données employés</h2>
         <div className="flex flex-col space-y-4">
           <div>
-            <h3 className="text-sm font-medium mb-2 text-[var(--zalama-text)]">Répartition par âge</h3>
+            <h3 className="text-sm font-medium mb-2 text-[var(--zalama-text)]">Répartition par genre</h3>
             <div className="space-y-2">
-              {Object.entries(ageStats.pourcentages).map(([tranche, pourcentage]) => (
-                <div key={tranche}>
+              {Object.entries(genreStats.pourcentages).map(([genre, pourcentage]) => (
+                <div key={genre}>
                   <div className="flex justify-between mb-1">
-                    <span className="text-xs text-[var(--zalama-text)]">{tranche} ans</span>
+                    <span className="text-xs text-[var(--zalama-text)]">{genre}</span>
                     <span className="text-xs text-[var(--zalama-text-secondary)]">{Math.round(pourcentage)}%</span>
                   </div>
                   <div className="w-full bg-[var(--zalama-bg-light)] h-2 rounded-full overflow-hidden">
@@ -123,43 +143,33 @@ export default function DonneesUtilisateurs() {
           </div>
           
           <div>
-            <h3 className="text-sm font-medium mb-2 text-[var(--zalama-text)]">Localisation géographique</h3>
-            <div className="relative h-64 w-full bg-[var(--zalama-bg-light)] rounded-lg overflow-hidden">
-              {/* Carte interactive de la Guinée Conakry */}
-              <GuineaMap />
-              
-              {/* Légende de la carte avec données dynamiques */}
-              <div className="absolute bottom-2 right-2 bg-white bg-opacity-80 p-2 rounded-md text-xs z-[1000]">
-                <div className="font-semibold mb-1">Répartition par région</div>
-                {Object.entries(regionStats.pourcentages)
-                  .sort(([, a], [, b]) => b - a)
-                  .slice(0, 3)
-                  .map(([region, pourcentage], index) => (
-                    <div key={region} className="flex items-center gap-1">
+            <h3 className="text-sm font-medium mb-2 text-[var(--zalama-text)]">Répartition par type de contrat</h3>
+            <div className="space-y-2">
+              {Object.entries(contratStats.pourcentages).map(([contrat, pourcentage]) => (
+                <div key={contrat}>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-xs text-[var(--zalama-text)]">{contrat}</span>
+                    <span className="text-xs text-[var(--zalama-text-secondary)]">{Math.round(pourcentage)}%</span>
+                  </div>
+                  <div className="w-full bg-[var(--zalama-bg-light)] h-2 rounded-full overflow-hidden">
                       <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      className="bg-[var(--zalama-green)] h-full" 
+                      style={{ width: `${pourcentage}%` }}
                       ></div>
-                      <div>{region}: {Math.round(pourcentage)}%</div>
                     </div>
-                  ))
-                }
               </div>
+              ))}
             </div>
           </div>
           
           <div className="flex items-center gap-2 mt-2">
-            <div className="text-2xl font-bold text-[var(--zalama-text)]">{noteMoyenne.toFixed(1)}</div>
-            <div className="text-sm text-[var(--zalama-text-secondary)]">stars</div>
-            <div className="flex ml-1">
-              {[...Array(5)].map((_, i) => (
-                <Star 
-                  key={i} 
-                  className={`w-3 h-3 ${i < Math.round(noteMoyenne) ? 'text-[var(--zalama-blue)]' : 'text-gray-300'}`} 
-                  fill={i < Math.round(noteMoyenne) ? 'currentColor' : 'none'}
-                />
-              ))}
+            <div className="text-2xl font-bold text-[var(--zalama-text)]">{salaireMoyen.toLocaleString('fr-FR', { style: 'currency', currency: 'GNF' })}</div>
+            <div className="text-sm text-[var(--zalama-text-secondary)]">salaire moyen</div>
             </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-[var(--zalama-text)]">{employees.length}</div>
+            <div className="text-sm text-[var(--zalama-text-secondary)]">employés total</div>
           </div>
         </div>
       </div>

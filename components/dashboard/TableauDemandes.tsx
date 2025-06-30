@@ -1,10 +1,9 @@
-"use client";
-
 import React, { useState } from 'react';
-import { PartnershipRequest } from '@/types/partnershipRequest';
-import { CheckCircle, XCircle, Clock, Eye, Search, Filter, MoreVertical, Calendar, Users, Building, FileText } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { Search, Users, Calendar, CheckCircle, XCircle, Eye, MoreHorizontal, Download, FileText } from 'lucide-react';
+import { PartnershipRequest } from '@/types/partnership';
+import { PDFService } from '@/services/pdfService';
+import { toast } from 'react-hot-toast';
+import DetailDemandeModal from './DetailDemandeModal';
 
 interface TableauDemandesProps {
   requests: PartnershipRequest[];
@@ -29,37 +28,21 @@ const TableauDemandes: React.FC<TableauDemandesProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<PartnershipRequest | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: {
-        label: 'En attente',
-        color: 'bg-[var(--zalama-warning)]/20 text-[var(--zalama-warning)] border-[var(--zalama-warning)]/30',
-        icon: <Clock className="w-4 h-4" />
-      },
-      approved: {
-        label: 'Approuvée',
-        color: 'bg-[var(--zalama-success)]/20 text-[var(--zalama-success)] border-[var(--zalama-success)]/30',
-        icon: <CheckCircle className="w-4 h-4" />
-      },
-      rejected: {
-        label: 'Rejetée',
-        color: 'bg-[var(--zalama-danger)]/20 text-[var(--zalama-danger)] border-[var(--zalama-danger)]/30',
-        icon: <XCircle className="w-4 h-4" />
-      },
-      in_review: {
-        label: 'En révision',
-        color: 'bg-[var(--zalama-blue)]/20 text-[var(--zalama-blue)] border-[var(--zalama-blue)]/30',
-        icon: <Eye className="w-4 h-4" />
-      }
+      pending: { label: 'En attente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      in_review: { label: 'En révision', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+      approved: { label: 'Approuvée', color: 'bg-green-100 text-green-800 border-green-200' },
+      rejected: { label: 'Rejetée', color: 'bg-red-100 text-red-800 border-red-200' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
 
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${config.color}`}>
-        {config.icon}
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.color}`}>
         {config.label}
       </span>
     );
@@ -77,10 +60,46 @@ const TableauDemandes: React.FC<TableauDemandesProps> = ({
 
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy à HH:mm', { locale: fr });
+      return new Date(dateString).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     } catch {
       return 'Date invalide';
     }
+  };
+
+  const handleExportPDF = (request: PartnershipRequest) => {
+    try {
+      PDFService.generatePartnershipRequestPDF(request);
+      toast.success('PDF généré avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      toast.error('Erreur lors de la génération du PDF');
+    }
+  };
+
+  const handleExportAllPDF = () => {
+    try {
+      PDFService.generateMultipleRequestsPDF(requests);
+      toast.success('PDF de la liste généré avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      toast.error('Erreur lors de la génération du PDF');
+    }
+  };
+
+  const handleViewDetails = (request: PartnershipRequest) => {
+    setSelectedRequest(request);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedRequest(null);
   };
 
   if (loading) {
@@ -135,6 +154,15 @@ const TableauDemandes: React.FC<TableauDemandesProps> = ({
             <option value="approved">Approuvées</option>
             <option value="rejected">Rejetées</option>
           </select>
+          
+          <button
+            onClick={handleExportAllPDF}
+            className="flex items-center gap-2 px-3 py-2 bg-[var(--zalama-success)] hover:bg-[var(--zalama-success)]/80 text-white rounded-lg transition-colors"
+            title="Exporter toutes les demandes en PDF"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export PDF</span>
+          </button>
         </div>
       </div>
 
@@ -169,162 +197,115 @@ const TableauDemandes: React.FC<TableauDemandesProps> = ({
             </thead>
             <tbody className="divide-y divide-[var(--zalama-border)]">
               {requests.map((request) => (
-                <React.Fragment key={request.id}>
-                  <tr className="hover:bg-[var(--zalama-bg-light)] transition-colors">
-                    <td className="px-4 py-4">
-                      <div>
-                        <div className="font-medium text-[var(--zalama-text)]">
-                          {request.company_name}
-                        </div>
-                        <div className="text-sm text-[var(--zalama-text-secondary)]">
-                          {request.legal_status} • {request.rccm}
-                        </div>
+                <tr key={request.id} className="hover:bg-[var(--zalama-bg-light)] transition-colors">
+                  <td className="px-4 py-4">
+                    <div>
+                      <div className="font-medium text-[var(--zalama-text)]">
+                        {request.company_name}
                       </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div>
-                        <div className="font-medium text-[var(--zalama-text)]">
-                          {request.rep_full_name}
-                        </div>
-                        <div className="text-sm text-[var(--zalama-text-secondary)]">
-                          {request.rep_position}
-                        </div>
+                      <div className="text-sm text-[var(--zalama-text-secondary)]">
+                        {request.legal_status} • {request.rccm}
                       </div>
-                    </td>
-                    <td className="px-4 py-4">
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div>
+                      <div className="font-medium text-[var(--zalama-text)]">
+                        {request.rep_full_name}
+                      </div>
+                      <div className="text-sm text-[var(--zalama-text-secondary)]">
+                        {request.rep_position}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="text-[var(--zalama-text)]">
+                      {request.activity_domain}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                       <span className="text-[var(--zalama-text)]">
-                        {request.activity_domain}
+                        {request.employees_count}
                       </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
-                        <span className="text-[var(--zalama-text)]">
-                          {request.employees_count}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      {getStatusBadge(request.status)}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
-                        <span className="text-sm text-[var(--zalama-text-secondary)]">
-                          {formatDate(request.created_at)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        {request.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => onApprove(request.id)}
-                              className="p-1 text-[var(--zalama-success)] hover:bg-[var(--zalama-success)]/10 rounded"
-                              title="Approuver"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => onReject(request.id)}
-                              className="p-1 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded"
-                              title="Rejeter"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => onSetInReview(request.id)}
-                              className="p-1 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
-                              title="Mettre en révision"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => setExpandedRow(expandedRow === request.id ? null : request.id)}
-                          className="p-1 text-[var(--zalama-text-secondary)] hover:bg-[var(--zalama-bg-light)] rounded"
-                          title="Voir détails"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  
-                  {/* Ligne détaillée */}
-                  {expandedRow === request.id && (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-4 bg-[var(--zalama-bg-light)]">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {/* Informations de l'entreprise */}
-                          <div>
-                            <h4 className="font-medium text-[var(--zalama-text)] mb-2 flex items-center gap-2">
-                              <Building className="w-4 h-4" />
-                              Informations de l'entreprise
-                            </h4>
-                            <div className="space-y-1 text-sm">
-                              <div><span className="text-[var(--zalama-text-secondary)]">Adresse:</span> {request.headquarters_address}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">Téléphone:</span> {request.phone}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">Email:</span> {request.email}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">NIF:</span> {request.nif}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">Masse salariale:</span> {request.payroll}</div>
-                            </div>
-                          </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    {getStatusBadge(request.status)}
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
+                      <span className="text-sm text-[var(--zalama-text-secondary)]">
+                        {formatDate(request.created_at)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      {/* Bouton Voir détails */}
+                      <button
+                        onClick={() => handleViewDetails(request)}
+                        className="p-1 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
+                        title="Voir les détails"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
 
-                          {/* Informations du représentant */}
-                          <div>
-                            <h4 className="font-medium text-[var(--zalama-text)] mb-2">Représentant</h4>
-                            <div className="space-y-1 text-sm">
-                              <div><span className="text-[var(--zalama-text-secondary)]">Email:</span> {request.rep_email}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">Téléphone:</span> {request.rep_phone}</div>
-                            </div>
-                          </div>
+                      {/* Bouton Export PDF */}
+                      <button
+                        onClick={() => handleExportPDF(request)}
+                        className="p-1 text-[var(--zalama-success)] hover:bg-[var(--zalama-success)]/10 rounded"
+                        title="Exporter en PDF"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
 
-                          {/* Informations RH */}
-                          <div>
-                            <h4 className="font-medium text-[var(--zalama-text)] mb-2">Responsable RH</h4>
-                            <div className="space-y-1 text-sm">
-                              <div><span className="text-[var(--zalama-text-secondary)]">Nom:</span> {request.hr_full_name}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">Email:</span> {request.hr_email}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">Téléphone:</span> {request.hr_phone}</div>
-                            </div>
-                          </div>
-
-                          {/* Détails employés */}
-                          <div>
-                            <h4 className="font-medium text-[var(--zalama-text)] mb-2">Détails employés</h4>
-                            <div className="space-y-1 text-sm">
-                              <div><span className="text-[var(--zalama-text-secondary)]">CDI:</span> {request.cdi_count}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">CDD:</span> {request.cdd_count}</div>
-                              <div><span className="text-[var(--zalama-text-secondary)]">Date de paiement:</span> {request.payment_date}</div>
-                            </div>
-                          </div>
-
-                          {/* Accord */}
-                          <div>
-                            <h4 className="font-medium text-[var(--zalama-text)] mb-2">Accord</h4>
-                            <div className="text-sm">
-                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                request.agreement 
-                                  ? 'bg-[var(--zalama-success)]/20 text-[var(--zalama-success)]' 
-                                  : 'bg-[var(--zalama-danger)]/20 text-[var(--zalama-danger)]'
-                              }`}>
-                                {request.agreement ? 'Accepté' : 'Non accepté'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
+                      {/* Actions conditionnelles pour les demandes en attente */}
+                      {request.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => onApprove(request.id)}
+                            className="p-1 text-[var(--zalama-success)] hover:bg-[var(--zalama-success)]/10 rounded"
+                            title="Approuver"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onReject(request.id)}
+                            className="p-1 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded"
+                            title="Rejeter"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onSetInReview(request.id)}
+                            className="p-1 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
+                            title="Mettre en révision"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Modal de détails */}
+      <DetailDemandeModal
+        request={selectedRequest}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onApprove={onApprove}
+        onReject={onReject}
+        onSetInReview={onSetInReview}
+      />
     </div>
   );
 };

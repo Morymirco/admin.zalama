@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { Partenaire, Employe, PartenaireAvecEmployes, StatistiquesPartenaire } from '@/types/partenaire';
+import { Partenaire, PartenaireAvecEmployes, Employe, StatistiquesPartenaire } from '@/types/partenaire';
 import smsService from './smsService';
 import employeeAccountService from './employeeAccountService';
 import partnerAccountService from './partnerAccountService';
 import { employeeSyncService } from './employeeSyncService';
-import { generatePassword, validateEmail } from '@/lib/utils';
+import { generatePassword, validateEmail, sendSMS } from '@/lib/utils';
+import employeeService from './employeeService';
 
 // Configuration Supabase - Variables définies directement
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -243,7 +244,7 @@ export const partenaireService = {
         console.log('✅ Résultats création comptes:', accountResults);
 
       } catch (accountError) {
-        console.error('❌ Erreur lors de la création des comptes:', accountError);
+        console.error('Erreur lors de la création des comptes:', accountError);
         accountResults.rh.error = `Erreur générale création compte RH: ${accountError instanceof Error ? accountError.message : String(accountError)}`;
         accountResults.responsable.error = `Erreur générale création compte responsable: ${accountError instanceof Error ? accountError.message : String(accountError)}`;
       }
@@ -546,139 +547,24 @@ export const employeService = {
     };
   }> {
     try {
-      // Vérifier que l'email est fourni pour la création du compte
-      if (!employeData.email) {
-        throw new Error('L\'email est requis pour créer un compte de connexion');
-      }
+      console.log('🔄 Création d\'employé avec le nouveau service...');
 
-      // Valider l'email
-      if (!validateEmail(employeData.email)) {
-        throw new Error('Format d\'email invalide');
-      }
-
-      console.log('🔄 Création d\'employé avec synchronisation automatique...');
-
-      // Utiliser l'API route pour la synchronisation
-      const response = await fetch('/api/employees/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'create_with_auth',
-          employeeData: employeData
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
+      // Utiliser le nouveau service employeeService
+      const result = await employeeService.createEmployee(employeData);
 
       if (!result.success) {
-        throw new Error(result.error || 'Erreur lors de la création avec synchronisation');
+        throw new Error(result.error || 'Erreur lors de la création de l\'employé');
       }
 
-      console.log('✅ Employé créé avec synchronisation:', result);
-
-      // Récupérer l'employé créé
-      const { data: employe, error: fetchError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', result.result.employee.id)
-        .single();
-
-      if (fetchError || !employe) {
-        throw new Error('Erreur lors de la récupération de l\'employé créé');
-      }
-
-      // Envoyer un SMS de confirmation si le compte a été créé avec succès
-      let smsResult = { success: false, error: 'SMS non envoyé' };
-
-      try {
-        // Préparer les données pour la création du compte
-        const accountData = {
-          ...employeData,
-          id: employe.id, // ID de l'employé créé
-          partner_id: employeData.partner_id
-        };
-
-        // Créer le compte avec mot de passe généré
-        accountResult = await employeeAccountService.createEmployeeAccount(accountData);
-
-        // Si le compte a été créé avec succès, mettre à jour l'employé avec l'UID auth
-        if (accountResult.success && accountResult.account) {
-          const { error: updateError } = await supabase
-            .from('employees')
-            .update({ user_id: accountResult.account.id })
-            .eq('id', employe.id);
-
-          if (updateError) {
-            console.error('Erreur lors de la mise à jour du user_id:', updateError);
-            // Ne pas faire échouer le processus pour cette erreur
-          } else {
-            console.log('✅ user_id mis à jour avec succès:', accountResult.account.id);
-            // Mettre à jour l'objet employe retourné
-            employe.user_id = accountResult.account.id;
-          }
-        }
-
-        // Envoyer un SMS de confirmation si le compte a été créé avec succès
-        if (accountResult.success && employeData.telephone) {
-          console.log('📱 Préparation de l\'envoi SMS:', {
-            telephone: employeData.telephone,
-            prenom: employeData.prenom,
-            email: employeData.email,
-            password: accountResult.account?.password
-          });
-          
-          const smsMessage = `Bonjour ${employeData.prenom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeData.email}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
-          
-          try {
-            console.log('📤 Tentative d\'envoi SMS...');
-            const smsSent = await sendSMS(employeData.telephone, smsMessage);
-            console.log('📱 Résultat SMS:', smsSent);
-            
-            smsResult = {
-              success: smsSent,
-              error: smsSent ? undefined : 'Échec de l\'envoi du SMS'
-            };
-          } catch (smsError) {
-            console.error('❌ Erreur lors de l\'envoi du SMS:', smsError);
-            smsResult = {
-              success: false,
-              error: `Erreur SMS: ${smsError instanceof Error ? smsError.message : String(smsError)}`
-            };
-          }
-        } else {
-          console.log('📱 SMS non envoyé:', {
-            accountSuccess: accountResult.success,
-            hasTelephone: !!employeData.telephone,
-            telephone: employeData.telephone
-          });
-        }
-
-      } catch (accountError) {
-        console.error('Erreur lors de la création du compte:', accountError);
-        accountResult = {
-          success: false,
-          error: result.success ? 'Numéro de téléphone manquant' : 'Compte non créé'
-        };
-      }
+      console.log('✅ Employé créé avec succès:', result.employee);
 
       // Mettre à jour les statistiques du partenaire
       await partenaireService.updatePartnerStats(employeData.partner_id);
 
       return {
-        employe,
-        account: {
-          success: result.success,
-          password: result.result.password,
-          error: result.error
-        },
-        sms: smsResult
+        employe: result.employee!,
+        account: result.account,
+        sms: result.sms
       };
     } catch (error) {
       console.error('Erreur employeService.create:', error);

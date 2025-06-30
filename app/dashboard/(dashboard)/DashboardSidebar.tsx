@@ -1,5 +1,5 @@
 "use client";
-import { Home, Users, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, CreditCard, Briefcase, FileText } from 'lucide-react';
+import { Home, Users, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, CreditCard, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -12,7 +12,6 @@ const navItems = [
   { label: 'Finances', icon: CreditCard, href: '/dashboard/finances' },
   { label: 'Services', icon: Briefcase, href: '/dashboard/services' },
   { label: 'Partenaires', icon: Briefcase, href: '/dashboard/partenaires' },
-  { label: 'Demandes', icon: FileText, href: '/dashboard/demandes' },
   { label: 'Alertes', icon: AlertCircle, href: '/dashboard/alertes' },
   { label: 'Performance', icon: Target, href: '/dashboard/performance' },
   { label: 'Visualisations', icon: PieChart, href: '/dashboard/visualisations' },

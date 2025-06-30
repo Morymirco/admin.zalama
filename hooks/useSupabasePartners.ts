@@ -197,8 +197,16 @@ export const useSupabaseEmployees = (partnerId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await employeService.getByPartnerId(partnerId);
-      setEmployes(data);
+      
+      // Utiliser l'API au lieu du service direct
+      const response = await fetch(`/api/employees?partner_id=${partnerId}`);
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erreur lors du chargement des employés');
+      }
+
+      setEmployes(result.employees);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des employés');
     } finally {
@@ -210,7 +218,23 @@ export const useSupabaseEmployees = (partnerId?: string) => {
   const createEmploye = useCallback(async (employeData: Omit<Employe, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       setError(null);
-      const nouvelEmploye = await employeService.create(employeData);
+      
+      // Utiliser l'API au lieu du service direct
+      const response = await fetch('/api/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(employeData)
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erreur lors de la création de l\'employé');
+      }
+
+      const nouvelEmploye = result.employee;
       setEmployes(prev => [nouvelEmploye, ...prev]);
       return nouvelEmploye;
     } catch (err) {
@@ -266,8 +290,20 @@ export const useSupabaseEmployees = (partnerId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await employeService.search(searchTerm, partnerId);
-      setEmployes(data);
+      
+      // Utiliser l'API au lieu du service direct
+      const url = partnerId 
+        ? `/api/employees?search=${encodeURIComponent(searchTerm)}&partner_id=${partnerId}`
+        : `/api/employees?search=${encodeURIComponent(searchTerm)}`;
+        
+      const response = await fetch(url);
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erreur lors de la recherche des employés');
+      }
+
+      setEmployes(result.employees);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la recherche des employés');
     } finally {

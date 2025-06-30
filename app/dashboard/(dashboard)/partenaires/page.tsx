@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Building, Filter, Globe, Plus, Search, Users } from 'lucide-react';
+import { Building, Filter, Globe, Plus, Search, Users, FileText, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 // Importation des composants
@@ -14,8 +14,13 @@ import {
   StatistiquesPartenaires
 } from '@/components/dashboard/partenaires';
 
+// Importation des composants demandes
+import StatistiquesDemandes from '@/components/dashboard/StatistiquesDemandes';
+import TableauDemandes from '@/components/dashboard/TableauDemandes';
+
 // Importation du hook Supabase
 import { useSupabasePartners } from '@/hooks/useSupabasePartners';
+import { useSupabasePartnershipRequests } from '@/hooks/useSupabasePartnershipRequests';
 
 // Types
 import { Partenaire } from '@/types/partenaire';
@@ -30,8 +35,11 @@ interface StatistiquePartenaire {
   icon: React.ReactNode;
 }
 
+type TabType = 'gestion' | 'demandes';
+
 export default function PartenairesPage() {
   // États locaux
+  const [activeTab, setActiveTab] = useState<TabType>('gestion');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
@@ -54,6 +62,22 @@ export default function PartenairesPage() {
     filterByType,
     loadStatistiques
   } = useSupabasePartners();
+
+  // Utilisation du hook Supabase pour les demandes
+  const {
+    requests,
+    stats: demandeStats,
+    loading: demandeLoading,
+    error: demandeError,
+    filters,
+    updateFilters,
+    approveRequest,
+    rejectRequest,
+    setInReview,
+    deleteRequest,
+    searchRequests,
+    refresh: refreshDemandes
+  } = useSupabasePartnershipRequests();
 
   // Liste des types de partenaires
   const types = ['tous', 'Entreprise', 'Institution', 'Organisation'];
@@ -137,7 +161,10 @@ export default function PartenairesPage() {
     if (error) {
       toast.error(error);
     }
-  }, [error]);
+    if (demandeError) {
+      toast.error(demandeError);
+    }
+  }, [error, demandeError]);
 
   // Handlers
   const handleSearch = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,322 +201,42 @@ export default function PartenairesPage() {
     setShowDeleteModal(true);
   };
 
-  const handleSubmitAddPartenaire = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    try {
-      // Récupérer les données du formulaire depuis window.formData (défini dans la modale)
-      const formData = (window as any).formData;
-      
-      if (!formData) {
-        throw new Error('Données du formulaire non trouvées');
-      }
-
-      // Créer le partenaire avec Supabase
-      const result = await createPartenaire({
-        nom: formData.nom,
-        type: formData.type,
-        secteur: formData.secteur,
-        description: formData.description,
-        
-        // Représentant
-        nom_representant: formData.nom_representant,
-        email_representant: formData.email_representant,
-        telephone_representant: formData.telephone_representant,
-        
-        // Responsable RH
-        nom_rh: formData.nom_rh,
-        email_rh: formData.email_rh,
-        telephone_rh: formData.telephone_rh,
-        
-        // Informations légales
-        rccm: formData.rccm,
-        nif: formData.nif,
-        
-        // Contact
-        email: formData.email,
-        telephone: formData.telephone,
-        adresse: formData.adresse,
-        site_web: formData.site_web,
-        
-        // Autres informations
-        logo_url: formData.logo_url,
-        actif: formData.actif,
-        nombre_employes: 0,
-        salaire_net_total: 0
-      });
-
-      // Afficher le toast principal de succès
-      toast.success(`Partenaire "${result.partenaire.nom}" ajouté avec succès !`);
-
-      // Afficher les toasts pour les SMS
-      if (result.smsResults) {
-        // SMS au représentant
-        if (result.smsResults.representant.success) {
-          toast.success(`✅ ${result.smsResults.representant.message}`, {
-            duration: 4000,
-            icon: '📱'
-          });
-        } else if (result.smsResults.representant.error) {
-          toast.error(`❌ ${result.smsResults.representant.error}`, {
-            duration: 4000,
-            icon: '📱'
-          });
-        }
-
-        // SMS au responsable RH
-        if (result.smsResults.rh.success) {
-          toast.success(`✅ ${result.smsResults.rh.message}`, {
-            duration: 4000,
-            icon: '👥'
-          });
-        } else if (result.smsResults.rh.error) {
-          toast.error(`❌ ${result.smsResults.rh.error}`, {
-            duration: 4000,
-            icon: '👥'
-          });
-        }
-
-        // SMS de notification admin
-        if (result.smsResults.admin.success) {
-          toast.success(`✅ ${result.smsResults.admin.message}`, {
-            duration: 3000,
-            icon: '🔔'
-          });
-        } else if (result.smsResults.admin.error) {
-          toast.error(`❌ ${result.smsResults.admin.error}`, {
-            duration: 3000,
-            icon: '🔔'
-          });
-        }
-
-        // Résumé des SMS
-        const smsSuccessCount = [
-          result.smsResults.representant.success,
-          result.smsResults.rh.success,
-          result.smsResults.admin.success
-        ].filter(Boolean).length;
-
-        const totalSMS = 3;
-        
-        if (smsSuccessCount === totalSMS) {
-          toast.success(`🎉 Tous les SMS (${totalSMS}) ont été envoyés avec succès !`, {
-            duration: 5000,
-            icon: '🎉'
-          });
-        } else if (smsSuccessCount > 0) {
-          toast.warning(`⚠️ ${smsSuccessCount}/${totalSMS} SMS envoyés avec succès`, {
-            duration: 5000,
-            icon: '⚠️'
-          });
-        } else {
-          toast.error(`❌ Aucun SMS n'a pu être envoyé`, {
-            duration: 5000,
-            icon: '❌'
-          });
-        }
-      }
-
-      // Afficher les toasts pour les emails
-      if (result.emailResults) {
-        // Email au représentant
-        if (result.emailResults.responsable.success) {
-          toast.success(`✅ ${result.emailResults.responsable.message}`, {
-            duration: 4000,
-            icon: '📧'
-          });
-        } else if (result.emailResults.responsable.error) {
-          toast.error(`❌ ${result.emailResults.responsable.error}`, {
-            duration: 4000,
-            icon: '📧'
-          });
-        }
-
-        // Email au responsable RH
-        if (result.emailResults.rh.success) {
-          toast.success(`✅ ${result.emailResults.rh.message}`, {
-            duration: 4000,
-            icon: '📧'
-          });
-        } else if (result.emailResults.rh.error) {
-          toast.error(`❌ ${result.emailResults.rh.error}`, {
-            duration: 4000,
-            icon: '📧'
-          });
-        }
-
-        // Résumé des emails
-        const emailSuccessCount = [
-          result.emailResults.responsable.success,
-          result.emailResults.rh.success
-        ].filter(Boolean).length;
-
-        const totalEmails = 2;
-        
-        if (emailSuccessCount === totalEmails) {
-          toast.success(`🎉 Tous les emails (${totalEmails}) ont été envoyés avec succès !`, {
-            duration: 5000,
-            icon: '🎉'
-          });
-        } else if (emailSuccessCount > 0) {
-          toast.warning(`⚠️ ${emailSuccessCount}/${totalEmails} emails envoyés avec succès`, {
-            duration: 5000,
-            icon: '⚠️'
-          });
-        } else {
-          toast.error(`❌ Aucun email n'a pu être envoyé`, {
-            duration: 5000,
-            icon: '❌'
-          });
-        }
-      }
-
-      setShowAddModal(false);
-      
-      // Nettoyer les données temporaires
-      delete (window as any).formData;
-      
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout du partenaire:', error);
-      toast.error('Erreur lors de l\'ajout du partenaire');
+  // Handlers pour les demandes
+  const handleSearchDemandes = (term: string) => {
+    if (term.trim()) {
+      searchRequests(term);
+    } else {
+      refreshDemandes();
     }
-  }, [createPartenaire]);
+  };
 
-  const handleSubmitEditPartenaire = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    if (!currentPartenaire) return;
-    
-    try {
-      const formData = (window as any).formData;
-      
-      if (!formData) {
-        throw new Error('Données du formulaire non trouvées');
-      }
+  const handleFilterByStatus = (status: string) => {
+    updateFilters({ status: status as any });
+  };
 
-      // Mettre à jour le partenaire
-      await updatePartenaire(currentPartenaire.id, {
-        nom: formData.nom,
-        type: formData.type,
-        secteur: formData.secteur,
-        description: formData.description,
-        
-        // Représentant
-        nom_representant: formData.nom_representant,
-        email_representant: formData.email_representant,
-        telephone_representant: formData.telephone_representant,
-        
-        // Responsable RH
-        nom_rh: formData.nom_rh,
-        email_rh: formData.email_rh,
-        telephone_rh: formData.telephone_rh,
-        
-        // Informations légales
-        rccm: formData.rccm,
-        nif: formData.nif,
-        
-        // Contact
-        email: formData.email,
-        telephone: formData.telephone,
-        adresse: formData.adresse,
-        site_web: formData.site_web,
-        
-        // Autres informations
-        logo_url: formData.logo_url,
-        actif: formData.actif
-      });
-
-      toast.success('Partenaire mis à jour avec succès !');
-      setShowEditModal(false);
-      setCurrentPartenaire(null);
-      
-      // Nettoyer les données temporaires
-      delete (window as any).formData;
-      
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du partenaire:', error);
-      toast.error('Erreur lors de la mise à jour du partenaire');
-    }
-  }, [updatePartenaire, currentPartenaire]);
-
-  const handleConfirmDeletePartenaire = useCallback(async () => {
-    if (!currentPartenaire) return;
-    
-    try {
-      await deletePartenaire(currentPartenaire.id);
-      toast.success('Partenaire supprimé avec succès !');
-      setShowDeleteModal(false);
-      setCurrentPartenaire(null);
-    } catch (error) {
-      console.error('Erreur lors de la suppression du partenaire:', error);
-      toast.error('Erreur lors de la suppression du partenaire');
-    }
-  }, [deletePartenaire, currentPartenaire]);
-
-  return (
-    <div className="p-4 md:p-6">
-      {/* En-tête de la page */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Gestion des Partenaires</h1>
-          <p className="text-[var(--zalama-text-secondary)]">
-            Gérez vos partenaires et leurs informations
-          </p>
-        </div>
-        <button
-          onClick={handleAddPartenaire}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors mt-4 md:mt-0"
-        >
-          <Plus className="h-4 w-4" />
-          Ajouter un partenaire
-        </button>
-      </div>
-
-      {/* Statistiques */}
-      <div className="mb-6">
-        {/* Résumé des partenaires */}
-        <ResumePartenaires 
-          totalPartenaires={partenaires.length}
-          partenairesActifs={partenaires.filter(p => p.actif).length}
-          partenairesInactifs={partenaires.filter(p => !p.actif).length}
-          nouveauxCeMois={partenaires.filter(p => {
-            const now = new Date();
-            const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            return new Date(p.created_at) >= firstDayOfMonth;
-          }).length}
-          isLoading={isLoading}
-        />
-        
-        {/* Statistiques détaillées par type */}
-        <StatistiquesPartenaires 
-          statistiques={statistiquesCalculées} 
-          isLoading={isLoading}
-        />
-      </div>
-
-      {/* Filtres et recherche */}
-      <div className="bg-[var(--zalama-card)] rounded-xl p-4 border border-[var(--zalama-border)] mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Recherche */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--zalama-text-secondary)]" />
-              <input
-                type="text"
-                placeholder="Rechercher un partenaire..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:border-[var(--zalama-blue)] focus:outline-none"
-              />
-            </div>
+  // Rendu de l'onglet Gestion des partenaires
+  const renderGestionPartenaires = () => (
+    <div className="space-y-6">
+      {/* En-tête avec recherche et filtres */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--zalama-text-secondary)]" />
+            <input
+              type="text"
+              placeholder="Rechercher un partenaire..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="pl-10 pr-4 py-2 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20 w-full sm:w-80"
+            />
           </div>
-
-          {/* Filtre par type */}
-          <div className="flex gap-2">
+          
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
             <select
               value={typeFilter}
               onChange={(e) => handleTypeFilterChange(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:border-[var(--zalama-blue)] focus:outline-none"
+              className="px-3 py-2 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20"
             >
               {types.map((type) => (
                 <option key={type} value={type}>
@@ -499,48 +246,263 @@ export default function PartenairesPage() {
             </select>
           </div>
         </div>
+        
+        <button
+          onClick={handleAddPartenaire}
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Ajouter un partenaire
+        </button>
+      </div>
+
+      {/* Statistiques */}
+      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+        <StatistiquesPartenaires statistiques={statistiquesCalculées} />
+      </div>
+
+      {/* Résumé */}
+      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+        <ResumePartenaires statistiques={statistiques} />
       </div>
 
       {/* Liste des partenaires */}
-      <ListePartenaires
-        partenaires={currentItems}
-        onEdit={handleEditPartenaire}
-        onDelete={handleDeletePartenaire}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-        isLoading={isLoading}
-      />
-
-      {/* Modales */}
-      <ModaleAjoutPartenaire
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={handleSubmitAddPartenaire}
-        types={types.filter(t => t !== 'tous')}
-      />
-
-      <ModaleEditionPartenaire
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setCurrentPartenaire(null);
-        }}
-        onSubmit={handleSubmitEditPartenaire}
-        partenaire={currentPartenaire}
-        types={types.filter(t => t !== 'tous')}
-      />
-
-      <ModaleSuppressionPartenaire
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setCurrentPartenaire(null);
-        }}
-        onConfirm={handleConfirmDeletePartenaire}
-        partenaire={currentPartenaire}
-      />
+      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+        <ListePartenaires
+          partenaires={currentItems}
+          loading={isLoading}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          onEdit={handleEditPartenaire}
+          onDelete={handleDeletePartenaire}
+        />
+      </div>
     </div>
   );
+
+  // Rendu de l'onglet Demandes partenaires
+  const renderDemandesPartenaires = () => (
+    <div className="space-y-6">
+      {/* En-tête de la page */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-[var(--zalama-text)] flex items-center gap-2">
+            <FileText className="w-5 h-5 text-[var(--zalama-blue)]" />
+            Demandes de Partenariat
+          </h2>
+          <p className="text-[var(--zalama-text-secondary)] mt-1">
+            Gérez les demandes de partenariat et suivez leur progression
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={refreshDemandes}
+            disabled={demandeLoading}
+            className="flex items-center gap-2 px-3 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${demandeLoading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </button>
+        </div>
+      </div>
+
+      {/* Statistiques */}
+      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+        <StatistiquesDemandes stats={demandeStats} />
+      </div>
+
+      {/* Tableau des demandes */}
+      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-[var(--zalama-text)] mb-2">
+            Liste des Demandes
+          </h3>
+          <p className="text-[var(--zalama-text-secondary)] text-sm">
+            {requests.length} demande{requests.length !== 1 ? 's' : ''} trouvée{requests.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        
+        <TableauDemandes
+          requests={requests}
+          loading={demandeLoading}
+          onApprove={approveRequest}
+          onReject={rejectRequest}
+          onSetInReview={setInReview}
+          onDelete={deleteRequest}
+          onSearch={handleSearchDemandes}
+          onFilterByStatus={handleFilterByStatus}
+        />
+      </div>
+
+      {/* Informations supplémentaires */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Guide des statuts */}
+        <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+          <h3 className="text-lg font-semibold text-[var(--zalama-text)] mb-4">
+            Guide des Statuts
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-[var(--zalama-warning)] rounded-full"></div>
+              <div>
+                <p className="text-sm font-medium text-[var(--zalama-text)]">En attente</p>
+                <p className="text-xs text-[var(--zalama-text-secondary)]">Demande soumise, en attente de traitement</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-[var(--zalama-blue)] rounded-full"></div>
+              <div>
+                <p className="text-sm font-medium text-[var(--zalama-text)]">En révision</p>
+                <p className="text-xs text-[var(--zalama-text-secondary)]">Demande en cours d'analyse approfondie</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-[var(--zalama-success)] rounded-full"></div>
+              <div>
+                <p className="text-sm font-medium text-[var(--zalama-text)]">Approuvée</p>
+                <p className="text-xs text-[var(--zalama-text-secondary)]">Demande acceptée, partenariat validé</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-[var(--zalama-danger)] rounded-full"></div>
+              <div>
+                <p className="text-sm font-medium text-[var(--zalama-text)]">Rejetée</p>
+                <p className="text-xs text-[var(--zalama-text-secondary)]">Demande refusée, partenariat non validé</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions rapides */}
+        <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+          <h3 className="text-lg font-semibold text-[var(--zalama-text)] mb-4">
+            Actions Rapides
+          </h3>
+          <div className="space-y-3">
+            <button
+              onClick={() => updateFilters({ status: 'pending' })}
+              className="w-full text-left p-3 bg-[var(--zalama-bg-light)] hover:bg-[var(--zalama-bg-lighter)] rounded-lg transition-colors"
+            >
+              <p className="text-sm font-medium text-[var(--zalama-text)]">Voir les demandes en attente</p>
+              <p className="text-xs text-[var(--zalama-text-secondary)]">{demandeStats.pending} demande{demandeStats.pending !== 1 ? 's' : ''}</p>
+            </button>
+            <button
+              onClick={() => updateFilters({ status: 'in_review' })}
+              className="w-full text-left p-3 bg-[var(--zalama-bg-light)] hover:bg-[var(--zalama-bg-lighter)] rounded-lg transition-colors"
+            >
+              <p className="text-sm font-medium text-[var(--zalama-text)]">Voir les demandes en révision</p>
+              <p className="text-xs text-[var(--zalama-text-secondary)]">{demandeStats.in_review} demande{demandeStats.in_review !== 1 ? 's' : ''}</p>
+            </button>
+            <button
+              onClick={() => updateFilters({ status: 'approved' })}
+              className="w-full text-left p-3 bg-[var(--zalama-bg-light)] hover:bg-[var(--zalama-bg-lighter)] rounded-lg transition-colors"
+            >
+              <p className="text-sm font-medium text-[var(--zalama-text)]">Voir les partenariats approuvés</p>
+              <p className="text-xs text-[var(--zalama-text-secondary)]">{demandeStats.approved} partenariat{demandeStats.approved !== 1 ? 's' : ''}</p>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      {/* En-tête principal */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--zalama-text)] flex items-center gap-2">
+            <Building className="w-6 h-6 text-[var(--zalama-blue)]" />
+            Gestion des Partenaires
+          </h1>
+          <p className="text-[var(--zalama-text-secondary)] mt-1">
+            Gérez vos partenaires et leurs demandes de partenariat
+          </p>
+        </div>
+      </div>
+
+      {/* Onglets */}
+      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm border border-[var(--zalama-border)]">
+        <div className="flex border-b border-[var(--zalama-border)]">
+          <button
+            onClick={() => setActiveTab('gestion')}
+            className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+              activeTab === 'gestion'
+                ? 'text-[var(--zalama-blue)] border-b-2 border-[var(--zalama-blue)] bg-[var(--zalama-bg-light)]'
+                : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Building className="w-4 h-4" />
+              Gestion des Partenaires
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('demandes')}
+            className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+              activeTab === 'demandes'
+                ? 'text-[var(--zalama-blue)] border-b-2 border-[var(--zalama-blue)] bg-[var(--zalama-bg-light)]'
+                : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <FileText className="w-4 h-4" />
+              Demandes Partenaires
+              {demandeStats.pending > 0 && (
+                <span className="bg-[var(--zalama-warning)] text-white text-xs px-2 py-1 rounded-full">
+                  {demandeStats.pending}
+                </span>
+              )}
+            </div>
+          </button>
+        </div>
+        
+        <div className="p-6">
+          {activeTab === 'gestion' ? renderGestionPartenaires() : renderDemandesPartenaires()}
+        </div>
+      </div>
+
+      {/* Modales */}
+      {showAddModal && (
+        <ModaleAjoutPartenaire
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleSubmitAddPartenaire}
+        />
+      )}
+
+      {showEditModal && currentPartenaire && (
+        <ModaleEditionPartenaire
+          partenaire={currentPartenaire}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleSubmitEditPartenaire}
+        />
+      )}
+
+      {showDeleteModal && currentPartenaire && (
+        <ModaleSuppressionPartenaire
+          partenaire={currentPartenaire}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleSubmitDeletePartenaire}
+        />
+      )}
+    </div>
+  );
+
+  // Handlers pour les formulaires (à compléter selon votre logique existante)
+  async function handleSubmitAddPartenaire(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    // Votre logique existante pour l'ajout
+  }
+
+  async function handleSubmitEditPartenaire(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    // Votre logique existante pour l'édition
+  }
+
+  async function handleSubmitDeletePartenaire() {
+    // Votre logique existante pour la suppression
+  }
 }
 

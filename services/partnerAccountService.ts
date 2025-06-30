@@ -1,5 +1,22 @@
-import { sendSMS } from '@/lib/utils';
+import smsService from './smsService';
 import emailService from './emailService';
+import { createClient } from '@supabase/supabase-js';
+import { generatePassword, validateEmail } from '@/lib/utils';
+
+// Configuration Supabase
+const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseServiceKey) {
+  console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY non définie - mode test activé');
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey || 'test-key', {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
 
 interface AccountResult {
   success: boolean;
@@ -18,37 +35,71 @@ interface EmailResult {
 }
 
 class PartnerAccountService {
-  // Créer un compte RH
+  // Créer un compte RH directement avec Supabase
   async createRHAccount(rhData: any): Promise<AccountResult> {
     try {
-      const response = await fetch('/api/auth/create-rh-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          rhData: {
-            email: rhData.email_rh,
-            nom: rhData.nom_rh,
-            partenaire_id: rhData.id
-          }
-        }),
-      });
+      // Vérifier si l'email existe déjà
+      const { data: existingUser, error: checkError } = await supabase
+        .from('admin_users')
+        .select('id, email')
+        .eq('email', rhData.email_rh)
+        .single();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error(`Erreur vérification email: ${checkError.message}`);
       }
 
-      const result = await response.json();
+      if (existingUser) {
+        return { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' };
+      }
 
-      if (!result.success) {
-        return { success: false, error: result.error };
+      // Générer un mot de passe
+      const password = generatePassword();
+
+      // Créer le compte dans Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: rhData.email_rh,
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          display_name: rhData.nom_rh,
+          role: 'rh',
+          partenaire_id: rhData.id
+        }
+      });
+
+      if (authError) {
+        throw new Error(`Erreur création compte auth: ${authError.message}`);
+      }
+
+      // Créer l'enregistrement dans admin_users
+      const accountData = {
+        id: authData.user.id,
+        email: rhData.email_rh,
+        display_name: rhData.nom_rh,
+        role: 'rh',
+        partenaire_id: rhData.id,
+        active: true
+      };
+
+      const { data: accountRecord, error: accountError } = await supabase
+        .from('admin_users')
+        .insert([accountData])
+        .select()
+        .single();
+
+      if (accountError) {
+        // Supprimer le compte auth créé en cas d'erreur
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error(`Erreur création compte admin: ${accountError.message}`);
       }
 
       return { 
         success: true, 
-        account: result.account
+        account: {
+          ...accountRecord,
+          password: password
+        }
       };
 
     } catch (error) {
@@ -57,37 +108,71 @@ class PartnerAccountService {
     }
   }
 
-  // Créer un compte responsable
+  // Créer un compte responsable directement avec Supabase
   async createResponsableAccount(responsableData: any): Promise<AccountResult> {
     try {
-      const response = await fetch('/api/auth/create-responsable-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          responsableData: {
-            email: responsableData.email_representant,
-            nom: responsableData.nom_representant,
-            partenaire_id: responsableData.id
-          }
-        }),
-      });
+      // Vérifier si l'email existe déjà
+      const { data: existingUser, error: checkError } = await supabase
+        .from('admin_users')
+        .select('id, email')
+        .eq('email', responsableData.email_representant)
+        .single();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error(`Erreur vérification email: ${checkError.message}`);
       }
 
-      const result = await response.json();
+      if (existingUser) {
+        return { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' };
+      }
 
-      if (!result.success) {
-        return { success: false, error: result.error };
+      // Générer un mot de passe
+      const password = generatePassword();
+
+      // Créer le compte dans Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: responsableData.email_representant,
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          display_name: responsableData.nom_representant,
+          role: 'responsable',
+          partenaire_id: responsableData.id
+        }
+      });
+
+      if (authError) {
+        throw new Error(`Erreur création compte auth: ${authError.message}`);
+      }
+
+      // Créer l'enregistrement dans admin_users
+      const accountData = {
+        id: authData.user.id,
+        email: responsableData.email_representant,
+        display_name: responsableData.nom_representant,
+        role: 'responsable',
+        partenaire_id: responsableData.id,
+        active: true
+      };
+
+      const { data: accountRecord, error: accountError } = await supabase
+        .from('admin_users')
+        .insert([accountData])
+        .select()
+        .single();
+
+      if (accountError) {
+        // Supprimer le compte auth créé en cas d'erreur
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error(`Erreur création compte admin: ${accountError.message}`);
       }
 
       return { 
         success: true, 
-        account: result.account
+        account: {
+          ...accountRecord,
+          password: password
+        }
       };
 
     } catch (error) {
@@ -105,11 +190,15 @@ class PartnerAccountService {
     try {
       const smsMessage = `Bonjour ${rhData.nom_rh}, votre compte ZaLaMa RH a été créé avec succès.\nEmail: ${rhData.email_rh}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
       
-      const smsSent = await sendSMS(rhData.telephone_rh, smsMessage);
+      const smsResponse = await smsService.sendSMS({
+        to: [rhData.telephone_rh],
+        message: smsMessage,
+        sender_name: 'ZaLaMa'
+      });
       
       return {
-        success: smsSent,
-        error: smsSent ? undefined : 'Échec de l\'envoi du SMS'
+        success: !!smsResponse,
+        error: smsResponse ? undefined : 'Échec de l\'envoi du SMS'
       };
     } catch (error) {
       console.error('Erreur lors de l\'envoi du SMS RH:', error);
@@ -157,11 +246,15 @@ class PartnerAccountService {
     try {
       const smsMessage = `Bonjour ${responsableData.nom_representant}, votre compte ZaLaMa responsable a été créé avec succès.\nEmail: ${responsableData.email_representant}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
       
-      const smsSent = await sendSMS(responsableData.telephone_representant, smsMessage);
+      const smsResponse = await smsService.sendSMS({
+        to: [responsableData.telephone_representant],
+        message: smsMessage,
+        sender_name: 'ZaLaMa'
+      });
       
       return {
-        success: smsSent,
-        error: smsSent ? undefined : 'Échec de l\'envoi du SMS'
+        success: !!smsResponse,
+        error: smsResponse ? undefined : 'Échec de l\'envoi du SMS'
       };
     } catch (error) {
       console.error('Erreur lors de l\'envoi du SMS responsable:', error);

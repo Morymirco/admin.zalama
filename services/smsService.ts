@@ -1,5 +1,15 @@
 // Service SMS utilisant l'API route Next.js pour éviter les problèmes CORS
 
+import { Client } from 'nimbasms';
+
+// Configuration Nimba SMS
+const config = {
+  SERVICE_ID: '9d83d5b67444c654c702f109dd837167',
+  SECRET_TOKEN: 'qf_bpb4CVfEalTU5eVEFC05wpoqlo17M-mozkZVbIHT_3xfOIjB7Oac-lkXZ6Pg2VqO2LXVy6BUlYTZe73y411agSC0jVh3OcOU92s8Rplc',
+};
+
+const client = new Client(config);
+
 export interface SMSMessage {
   to: string[];
   message: string;
@@ -20,40 +30,23 @@ class SMSService {
   }
 
   /**
-   * Obtenir l'URL de base selon l'environnement
-   */
-  private getBaseUrl(): string {
-    return process.env.NODE_ENV === 'production' 
-      ? 'https://admin.zalama.com' 
-      : 'http://localhost:3001';
-  }
-
-  /**
    * Envoyer un SMS simple selon le format Nimba SMS
    */
   async sendSMS(message: SMSMessage): Promise<any> {
     try {
-      // Utiliser l'API route Next.js avec l'URL complète
-      const response = await fetch(`${this.getBaseUrl()}/api/sms/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: message.to,
-          message: message.message,
-          sender_name: message.sender_name || this.senderName,
-        }),
-      });
+      // Utiliser directement le client Nimba SMS au lieu de l'API HTTP
+      const smsData = {
+        to: message.to,
+        message: message.message,
+        sender_name: message.sender_name || this.senderName,
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erreur HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('SMS envoyé avec succès via API route:', result);
-      return result.data;
+      console.log('Envoi SMS via client Nimba:', smsData);
+      
+      const response = await client.messages.create(smsData);
+      
+      console.log('SMS envoyé avec succès via client Nimba:', response);
+      return response;
     } catch (error) {
       console.error('Erreur lors de l\'envoi du SMS:', error);
       
@@ -257,18 +250,11 @@ Les SMS de bienvenue ont été envoyés aux contacts.`;
    */
   async checkBalance(): Promise<any> {
     try {
-      const response = await fetch(`${this.getBaseUrl()}/api/sms/send`, {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erreur HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Solde du compte SMS:', result.balance);
-      return { balance: result.balance };
+      // Utiliser directement le client Nimba SMS au lieu de l'API HTTP
+      const account = await client.accounts.get();
+      
+      console.log('Solde du compte SMS:', account.balance);
+      return { balance: account.balance };
     } catch (error) {
       console.error('Erreur lors de la vérification du solde:', error);
       throw error;

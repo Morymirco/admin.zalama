@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS admin_users CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS demandes_avance_salaire CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS partnership_requests CASCADE;
 
 -- Supprimer tous les types ENUM existants
 DROP TYPE IF EXISTS notification_type CASCADE;
@@ -268,6 +269,45 @@ CREATE TABLE transactions (
 );
 
 -- =====================================================
+-- TABLE: partnership_requests (Demandes de partenariat)
+-- =====================================================
+CREATE TABLE partnership_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  
+  -- Informations de l'entreprise (Étape 1)
+  company_name VARCHAR(200) NOT NULL,
+  legal_status VARCHAR(100) NOT NULL,
+  rccm VARCHAR(100) NOT NULL,
+  nif VARCHAR(100) NOT NULL,
+  activity_domain VARCHAR(200) NOT NULL,
+  headquarters_address TEXT NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  employees_count INTEGER NOT NULL,
+  payroll VARCHAR(100) NOT NULL,
+  cdi_count INTEGER NOT NULL DEFAULT 0,
+  cdd_count INTEGER NOT NULL DEFAULT 0,
+  payment_date VARCHAR(50) NOT NULL,
+  
+  -- Informations du représentant (Étape 2)
+  rep_full_name VARCHAR(200) NOT NULL,
+  rep_position VARCHAR(100) NOT NULL,
+  rep_email VARCHAR(255) NOT NULL,
+  rep_phone VARCHAR(20) NOT NULL,
+  
+  -- Informations du responsable RH (Étape 3)
+  hr_full_name VARCHAR(200) NOT NULL,
+  hr_email VARCHAR(255) NOT NULL,
+  hr_phone VARCHAR(20) NOT NULL,
+  agreement BOOLEAN NOT NULL DEFAULT false,
+  
+  -- Statut et métadonnées
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'in_review')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
 -- INDEXES
 -- =====================================================
 
@@ -329,6 +369,14 @@ CREATE INDEX idx_transactions_entreprise_id ON transactions(entreprise_id);
 CREATE INDEX idx_transactions_numero_transaction ON transactions(numero_transaction);
 CREATE INDEX idx_transactions_date_transaction ON transactions(date_transaction);
 CREATE INDEX idx_transactions_statut ON transactions(statut);
+
+-- Index pour partnership_requests
+CREATE INDEX idx_partnership_requests_status ON partnership_requests(status);
+CREATE INDEX idx_partnership_requests_company_name ON partnership_requests(company_name);
+CREATE INDEX idx_partnership_requests_activity_domain ON partnership_requests(activity_domain);
+CREATE INDEX idx_partnership_requests_created_at ON partnership_requests(created_at);
+CREATE INDEX idx_partnership_requests_rep_full_name ON partnership_requests(rep_full_name);
+CREATE INDEX idx_partnership_requests_hr_full_name ON partnership_requests(hr_full_name);
 
 -- =====================================================
 -- VUES
@@ -458,6 +506,17 @@ LEFT JOIN employees e ON p.id = e.partner_id
 LEFT JOIN demandes_avance_salaire das ON e.id = das.employe_id
 GROUP BY p.id, p.nom;
 
+-- Vue des statistiques de partenariat
+CREATE VIEW partnership_requests_stats AS
+SELECT 
+  COUNT(*) as total_requests,
+  COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_requests,
+  COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_requests,
+  COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected_requests,
+  COUNT(CASE WHEN status = 'in_review' THEN 1 END) as in_review_requests,
+  COUNT(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 END) as recent_requests
+FROM partnership_requests;
+
 -- =====================================================
 -- TRIGGERS ET FONCTIONS
 -- =====================================================
@@ -525,6 +584,12 @@ CREATE TRIGGER trigger_update_transactions_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Triggers pour partnership_requests
+CREATE TRIGGER trigger_update_partnership_requests_updated_at
+  BEFORE UPDATE ON partnership_requests
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- =====================================================
 -- FONCTIONS MÉTIER
 -- =====================================================
@@ -586,6 +651,7 @@ ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE demandes_avance_salaire ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partnership_requests ENABLE ROW LEVEL SECURITY;
 
 -- Politiques simplifiées pour admin_users (éviter la récursion)
 CREATE POLICY "Users can view their own profile" ON admin_users
@@ -628,6 +694,10 @@ CREATE POLICY "Authenticated users have full access to demandes_avance_salaire" 
 
 -- Politiques pour transactions
 CREATE POLICY "Authenticated users have full access to transactions" ON transactions
+  FOR ALL USING (auth.role() = 'authenticated');
+
+-- Politiques pour partnership_requests
+CREATE POLICY "Authenticated users have full access to partnership_requests" ON partnership_requests
   FOR ALL USING (auth.role() = 'authenticated');
 
 -- =====================================================

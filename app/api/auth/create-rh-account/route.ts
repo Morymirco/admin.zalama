@@ -44,6 +44,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Vérifier si l'email existe déjà dans admin_users
+    const { data: existingUser, error: checkError } = await supabase
+      .from('admin_users')
+      .select('id, email')
+      .eq('email', rhData.email)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('Erreur lors de la vérification de l\'email RH:', checkError);
+      return NextResponse.json(
+        { success: false, error: 'Erreur lors de la vérification de l\'email' },
+        { status: 500 }
+      );
+    }
+
+    if (existingUser) {
+      console.log('❌ Email RH déjà existant dans admin_users:', rhData.email);
+      return NextResponse.json(
+        { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' },
+        { status: 409 }
+      );
+    }
+
+    // Vérifier aussi dans Supabase Auth
+    try {
+      const { data: authUsers, error: authCheckError } = await supabase.auth.admin.listUsers();
+      
+      if (!authCheckError && authUsers.users) {
+        const existingAuthUser = authUsers.users.find(user => user.email === rhData.email);
+        if (existingAuthUser) {
+          console.log('❌ Email RH déjà existant dans Supabase Auth:', rhData.email);
+          return NextResponse.json(
+            { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' },
+            { status: 409 }
+          );
+        }
+      }
+    } catch (authCheckError) {
+      console.log('⚠️ Impossible de vérifier dans Supabase Auth:', authCheckError);
+      // Continuer même si on ne peut pas vérifier dans Auth
+    }
+
     // Générer un mot de passe sécurisé
     const password = generatePassword();
 
@@ -61,6 +103,17 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       console.error('Erreur lors de la création du compte auth RH:', authError);
+      
+      // Détecter spécifiquement les erreurs d'email en double
+      if (authError.message.includes('already been registered') || 
+          authError.message.includes('already exists') ||
+          authError.message.includes('duplicate')) {
+        return NextResponse.json(
+          { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' },
+          { status: 409 }
+        );
+      }
+      
       return NextResponse.json(
         { success: false, error: authError.message },
         { status: 500 }

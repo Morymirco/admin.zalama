@@ -3,20 +3,7 @@ import { Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Mail,
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
-interface Partenaire {
-  id: string;
-  nom: string;
-  type: string;
-  secteur: string;
-  description: string;
-  adresse: string;
-  email: string;
-  telephone: string;
-  siteWeb: string;
-  logo: string;
-  datePartenariat: string;
-  actif: boolean;
-}
+import { Partenaire } from '@/types/partenaire';
 
 interface ListePartenairesProps {
   partenaires: Partenaire[];
@@ -78,7 +65,7 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
                   <div className="w-20 h-20 rounded-xl bg-white shadow-md flex items-center justify-center p-1">
                     <Image 
                       priority
-                      src={partenaire.logo} 
+                      src={partenaire.logo_url || '/images/partners/default.svg'} 
                       alt={`Logo ${partenaire.nom}`}
                       height={80}
                       width={80}
@@ -117,7 +104,7 @@ const ListePartenaires: React.FC<ListePartenairesProps> = ({
                   </div>
                   <div className="flex items-center text-sm">
                     <Globe className="h-4 w-4 text-[var(--zalama-text-secondary)] mr-2" />
-                    <a href={`https://${partenaire.siteWeb}`} target="_blank" rel="noopener noreferrer" className="text-[var(--zalama-blue)] hover:underline truncate">{partenaire.siteWeb}</a>
+                    <a href={`https://${partenaire.site_web}`} target="_blank" rel="noopener noreferrer" className="text-[var(--zalama-blue)] hover:underline truncate">{partenaire.site_web}</a>
                   </div>
                 </div>
                 

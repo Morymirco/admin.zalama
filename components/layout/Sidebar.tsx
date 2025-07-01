@@ -1,5 +1,5 @@
 "use client";
-import { Home, Users, BarChart2, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, ChevronDown, ChevronUp, Database, FileText, MessageSquare, RefreshCw } from 'lucide-react';
+import { Home, Users, BarChart2, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, ChevronDown, ChevronUp, Database, FileText, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -12,8 +12,6 @@ const navItems = [
   { label: 'Services', icon: PieChart, href: '/dashboard/services' },
   { label: 'Partenaires', icon: Users, href: '/dashboard/partenaires' },
   { label: 'Demandes', icon: FileText, href: '/dashboard/demandes' },
-  { label: 'Synchronisation Employés', icon: RefreshCw, href: '/dashboard/employee-sync' },
-  { label: 'Test Synchronisation', icon: RefreshCw, href: '/dashboard/test-employee-sync' },
   { label: 'Alertes & Risques', icon: AlertCircle, href: '/dashboard/alertes' },
   { label: 'Objectifs & Performances', icon: Target, href: '/dashboard/performance' },
   { label: 'Visualisations', icon: BarChart2, href: '/dashboard/visualisations' },

@@ -182,17 +182,8 @@ export const useSupabaseSalaryAdvance = (itemsPerPage: number = 10): UseSupabase
   const fetchRequests = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('salary_advance_requests')
-        .select(`
-          *,
-          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
-          partenaire:partners(nom, type, secteur, email, telephone)
-        `)
-        .order('date_creation', { ascending: false });
-
-      if (error) throw error;
-      const uiRequests = data?.map(convertToUIRequest) || [];
+      const requestsData = await salaryAdvanceService.getAll();
+      const uiRequests = requestsData.map(convertToUIRequest);
       setRequests(uiRequests);
       setFilteredRequests(uiRequests);
     } catch (error) {

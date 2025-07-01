@@ -25,6 +25,7 @@ import { SalaryAdvanceRequestFormData, UISalaryAdvanceRequest } from '@/types/sa
 export default function DemandesPage() {
   // Utilisation du hook Supabase pour les demandes d'avance
   const {
+    requests,
     filteredRequests,
     isLoading,
     stats,
@@ -187,6 +188,8 @@ export default function DemandesPage() {
   const safePartners = partners || ['toutes'];
   const safeFilteredRequests = filteredRequests || [];
 
+
+
   return (
     <div className="p-6">
       {/* En-tête avec recherche et filtres */}
@@ -277,7 +280,7 @@ export default function DemandesPage() {
           
           {/* Résumé des demandes */}
           <ResumeDemandes 
-            requests={safeFilteredRequests}
+            requests={requests}
             isLoading={isLoading}
           />
           

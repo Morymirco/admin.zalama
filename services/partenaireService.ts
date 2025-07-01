@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 import { Employee, Partner } from '@/types/employee';
 import smsService from './smsService';
 import employeeAccountService from './employeeAccountService';
-import partnerAccountService from './partnerAccountService';
 import { employeeSyncService } from './employeeSyncService';
 import { generatePassword, validateEmail, sendSMS } from '@/lib/utils';
 import employeeService from './employeeService';
@@ -128,53 +127,71 @@ export const partenaireService = {
         responsable: { success: false, password: undefined, error: '' }
       };
 
-      // Créer les comptes RH et responsable automatiquement
+      // Créer les comptes RH et responsable automatiquement via API
       try {
         console.log('🔐 Création automatique des comptes RH et responsable...');
         
         const partnerWithId = { ...partenaireData, id: data.id };
-        const accountCreationResults = await partnerAccountService.createPartnerAccounts(partnerWithId);
+        
+        // Appeler l'API route pour créer les comptes
+        const response = await fetch('/api/auth/create-partner-accounts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ partenaireData: partnerWithId }),
+        });
+
+        if (!response.ok) {
+          // Supprimer le partenaire créé
+          await supabase.from('partners').delete().eq('id', data.id);
+          throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
+        }
+
+        const apiResult = await response.json();
+        
+        if (!apiResult.success) {
+          // Supprimer le partenaire créé
+          await supabase.from('partners').delete().eq('id', data.id);
+          throw new Error(apiResult.error || 'Erreur création comptes via API');
+        }
+
+        const accountCreationResults = apiResult.results;
+
+        // Si la création du compte RH ou responsable échoue, supprimer le partenaire
+        if (!accountCreationResults.rh.success || !accountCreationResults.responsable.success) {
+          await supabase.from('partners').delete().eq('id', data.id);
+          let errorMsg = 'Erreur création comptes : ';
+          if (!accountCreationResults.rh.success) errorMsg += 'RH: ' + (accountCreationResults.rh.error || '');
+          if (!accountCreationResults.responsable.success) errorMsg += ' Responsable: ' + (accountCreationResults.responsable.error || '');
+          throw new Error(errorMsg);
+        }
 
         // Traiter les résultats RH
-        if (accountCreationResults.rh.account.success) {
+        if (accountCreationResults.rh.success) {
           accountResults.rh = {
             success: true,
-            password: accountCreationResults.rh.account.account?.password,
+            password: accountCreationResults.rh.account?.password,
             error: ''
           };
           
-          if (accountCreationResults.rh.sms.success) {
-            smsResults.rh = {
-              success: true,
-              message: `Compte RH créé et SMS envoyé à ${partenaireData.nom_rh} (${partenaireData.telephone_rh})`,
-              error: ''
-            };
-          } else {
-            smsResults.rh = {
-              success: false,
-              message: '',
-              error: `Compte RH créé mais SMS non envoyé: ${accountCreationResults.rh.sms.error}`
-            };
-          }
+          // Pour l'instant, pas de SMS/email dans l'API, on met des valeurs par défaut
+          smsResults.rh = {
+            success: false,
+            message: '',
+            error: 'SMS non implémenté dans l\'API'
+          };
 
-          if (accountCreationResults.rh.email.success) {
-            emailResults.rh = {
-              success: true,
-              message: `Compte RH créé et email envoyé à ${partenaireData.nom_rh} (${partenaireData.email_rh})`,
-              error: ''
-            };
-          } else {
-            emailResults.rh = {
-              success: false,
-              message: '',
-              error: `Compte RH créé mais email non envoyé: ${accountCreationResults.rh.email.error}`
-            };
-          }
+          emailResults.rh = {
+            success: false,
+            message: '',
+            error: 'Email non implémenté dans l\'API'
+          };
         } else {
           accountResults.rh = {
             success: false,
             password: undefined,
-            error: accountCreationResults.rh.account.error || 'Erreur création compte RH'
+            error: accountCreationResults.rh.error || 'Erreur création compte RH'
           };
           smsResults.rh = {
             success: false,
@@ -189,45 +206,30 @@ export const partenaireService = {
         }
 
         // Traiter les résultats responsable
-        if (accountCreationResults.responsable.account.success) {
+        if (accountCreationResults.responsable.success) {
           accountResults.responsable = {
             success: true,
-            password: accountCreationResults.responsable.account.account?.password,
+            password: accountCreationResults.responsable.account?.password,
             error: ''
           };
           
-          if (accountCreationResults.responsable.sms.success) {
-            smsResults.representant = {
-              success: true,
-              message: `Compte responsable créé et SMS envoyé à ${partenaireData.nom_representant} (${partenaireData.telephone_representant})`,
-              error: ''
-            };
-          } else {
-            smsResults.representant = {
-              success: false,
-              message: '',
-              error: `Compte responsable créé mais SMS non envoyé: ${accountCreationResults.responsable.sms.error}`
-            };
-          }
+          // Pour l'instant, pas de SMS/email dans l'API, on met des valeurs par défaut
+          smsResults.representant = {
+            success: false,
+            message: '',
+            error: 'SMS non implémenté dans l\'API'
+          };
 
-          if (accountCreationResults.responsable.email.success) {
-            emailResults.responsable = {
-              success: true,
-              message: `Compte responsable créé et email envoyé à ${partenaireData.nom_representant} (${partenaireData.email_representant})`,
-              error: ''
-            };
-          } else {
-            emailResults.responsable = {
-              success: false,
-              message: '',
-              error: `Compte responsable créé mais email non envoyé: ${accountCreationResults.responsable.email.error}`
-            };
-          }
+          emailResults.responsable = {
+            success: false,
+            message: '',
+            error: 'Email non implémenté dans l\'API'
+          };
         } else {
           accountResults.responsable = {
             success: false,
             password: undefined,
-            error: accountCreationResults.responsable.account.error || 'Erreur création compte responsable'
+            error: accountCreationResults.responsable.error || 'Erreur création compte responsable'
           };
           smsResults.representant = {
             success: false,

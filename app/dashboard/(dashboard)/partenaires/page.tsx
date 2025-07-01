@@ -54,13 +54,13 @@ export default function PartenairesPage() {
     partenaires,
     loading: isLoading,
     error,
-    statistiques,
+    statistics,
     createPartenaire,
     updatePartenaire,
     deletePartenaire,
     searchPartenaires,
-    filterByType,
-    loadStatistiques
+    getPartenairesByType,
+    refreshPartenaires
   } = useSupabasePartners();
 
   // Utilisation du hook Supabase pour les demandes
@@ -178,9 +178,9 @@ export default function PartenairesPage() {
   const handleTypeFilterChange = useCallback(async (type: string) => {
     setTypeFilter(type);
     if (type !== 'tous') {
-      await filterByType(type);
+      await getPartenairesByType(type);
     }
-  }, [filterByType]);
+  }, [getPartenairesByType]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -263,7 +263,7 @@ export default function PartenairesPage() {
 
       {/* Résumé */}
       <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
-        <ResumePartenaires statistiques={statistiques} />
+        <ResumePartenaires statistiques={statistics} />
       </div>
 
       {/* Liste des partenaires */}
@@ -465,44 +465,134 @@ export default function PartenairesPage() {
       </div>
 
       {/* Modales */}
-      {showAddModal && (
-        <ModaleAjoutPartenaire
-          onClose={() => setShowAddModal(false)}
-          onSubmit={handleSubmitAddPartenaire}
-        />
-      )}
+      <ModaleAjoutPartenaire
+        isOpen={showAddModal}
+        types={types}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleSubmitAddPartenaire}
+      />
 
-      {showEditModal && currentPartenaire && (
-        <ModaleEditionPartenaire
-          partenaire={currentPartenaire}
-          onClose={() => setShowEditModal(false)}
-          onSubmit={handleSubmitEditPartenaire}
-        />
-      )}
+      <ModaleEditionPartenaire
+        isOpen={showEditModal}
+        types={types}
+        partenaire={currentPartenaire}
+        onClose={() => setShowEditModal(false)}
+        onSubmit={handleSubmitEditPartenaire}
+      />
 
-      {showDeleteModal && currentPartenaire && (
-        <ModaleSuppressionPartenaire
-          partenaire={currentPartenaire}
-          onClose={() => setShowDeleteModal(false)}
-          onConfirm={handleSubmitDeletePartenaire}
-        />
-      )}
+      <ModaleSuppressionPartenaire
+        isOpen={showDeleteModal}
+        partenaire={currentPartenaire}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleSubmitDeletePartenaire}
+      />
     </div>
   );
 
-  // Handlers pour les formulaires (à compléter selon votre logique existante)
+  // Handlers pour les formulaires CRUD
   async function handleSubmitAddPartenaire(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Votre logique existante pour l'ajout
+    
+    try {
+      const form = e.currentTarget;
+      
+      // Récupérer les données du formulaire depuis le stockage temporaire
+      const formData = (window as any).formData;
+      
+      if (!formData) {
+        toast.error('Aucune donnée de formulaire trouvée');
+        return;
+      }
+
+      // Créer le partenaire
+      const result = await createPartenaire(formData);
+      
+      // Afficher les résultats
+      toast.success('Partenaire créé avec succès !');
+      
+      // Afficher les détails des comptes créés
+      if (result.accountResults.rh.success) {
+        toast.success(`Compte RH créé - Mot de passe: ${result.accountResults.rh.password}`);
+      }
+      if (result.accountResults.responsable.success) {
+        toast.success(`Compte responsable créé - Mot de passe: ${result.accountResults.responsable.password}`);
+      }
+      
+      // Fermer la modale
+      setShowAddModal(false);
+      
+      // Nettoyer le stockage temporaire
+      delete (window as any).formData;
+      
+    } catch (error) {
+      console.error('Erreur lors de la création du partenaire:', error);
+      toast.error('Erreur lors de la création du partenaire');
+    }
   }
 
   async function handleSubmitEditPartenaire(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Votre logique existante pour l'édition
+    
+    if (!currentPartenaire) {
+      toast.error('Aucun partenaire sélectionné');
+      return;
+    }
+    
+    try {
+      const form = e.currentTarget;
+      
+      // Récupérer les données du formulaire
+      const formData = {
+        nom: (form.querySelector('#nom') as HTMLInputElement)?.value || '',
+        type: (form.querySelector('#type') as HTMLSelectElement)?.value || '',
+        secteur: (form.querySelector('#domaine') as HTMLInputElement)?.value || '',
+        description: (form.querySelector('#description') as HTMLTextAreaElement)?.value || '',
+        nom_representant: (form.querySelector('#nomRepresentant') as HTMLInputElement)?.value || '',
+        email_representant: (form.querySelector('#emailRepresentant') as HTMLInputElement)?.value || '',
+        telephone_representant: (form.querySelector('#telephoneRepresentant') as HTMLInputElement)?.value || '',
+        nom_rh: (form.querySelector('#nomRH') as HTMLInputElement)?.value || '',
+        email_rh: (form.querySelector('#emailRH') as HTMLInputElement)?.value || '',
+        telephone_rh: (form.querySelector('#telephoneRH') as HTMLInputElement)?.value || '',
+        rccm: (form.querySelector('#rccm') as HTMLInputElement)?.value || '',
+        nif: (form.querySelector('#nif') as HTMLInputElement)?.value || '',
+        email: (form.querySelector('#email') as HTMLInputElement)?.value || '',
+        telephone: (form.querySelector('#telephone') as HTMLInputElement)?.value || '',
+        adresse: (form.querySelector('#adresse') as HTMLInputElement)?.value || '',
+        site_web: (form.querySelector('#siteWeb') as HTMLInputElement)?.value || '',
+        actif: (form.querySelector('#actif') as HTMLInputElement)?.checked || false
+      };
+
+      // Mettre à jour le partenaire
+      await updatePartenaire(currentPartenaire.id, formData);
+      
+      toast.success('Partenaire mis à jour avec succès !');
+      setShowEditModal(false);
+      setCurrentPartenaire(null);
+      
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du partenaire:', error);
+      toast.error('Erreur lors de la mise à jour du partenaire');
+    }
   }
 
   async function handleSubmitDeletePartenaire() {
-    // Votre logique existante pour la suppression
+    if (!currentPartenaire) {
+      toast.error('Aucun partenaire sélectionné');
+      return;
+    }
+    
+    try {
+      // Supprimer le partenaire
+      await deletePartenaire(currentPartenaire.id);
+      
+      toast.success('Partenaire supprimé avec succès !');
+      setShowDeleteModal(false);
+      setCurrentPartenaire(null);
+      
+    } catch (error) {
+      console.error('Erreur lors de la suppression du partenaire:', error);
+      toast.error('Erreur lors de la suppression du partenaire');
+    }
   }
 }
 

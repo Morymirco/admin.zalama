@@ -1,20 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-
-interface Partenaire {
-  id: string;
-  nom: string;
-  type: string;
-  secteur: string;
-  description: string;
-  adresse: string;
-  email: string;
-  telephone: string;
-  siteWeb: string;
-  logo: string;
-  datePartenariat: string;
-  actif: boolean;
-}
+import { Partenaire } from '@/types/partenaire';
 
 interface ModaleSuppressionPartenaireProps {
   isOpen: boolean;

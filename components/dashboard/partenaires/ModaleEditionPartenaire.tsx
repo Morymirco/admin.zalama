@@ -1,20 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-interface Partenaire {
-  id: string;
-  nom: string;
-  type: string;
-  secteur: string;
-  description: string;
-  adresse: string;
-  email: string;
-  telephone: string;
-  siteWeb: string;
-  logo: string;
-  datePartenariat: string;
-  actif: boolean;
-}
+import { Partenaire } from '@/types/partenaire';
 
 interface ModaleEditionPartenaireProps {
   isOpen: boolean;
@@ -49,10 +36,10 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
         <form onSubmit={onSubmit} className="p-5">
           <div className="space-y-4">
             <div>
-              <label htmlFor="edit-nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom du partenaire</label>
+              <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom du partenaire</label>
               <input
                 type="text"
-                id="edit-nom"
+                id="nom"
                 required
                 defaultValue={partenaire.nom}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
@@ -61,9 +48,9 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="edit-type" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Type</label>
+                <label htmlFor="type" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Type</label>
                 <select
-                  id="edit-type"
+                  id="type"
                   required
                   defaultValue={partenaire.type}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
@@ -75,10 +62,10 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
               </div>
               
               <div>
-                <label htmlFor="edit-secteur" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Secteur</label>
+                <label htmlFor="domaine" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Secteur</label>
                 <input
                   type="text"
-                  id="edit-secteur"
+                  id="domaine"
                   required
                   defaultValue={partenaire.secteur}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
@@ -87,9 +74,9 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
             </div>
             
             <div>
-              <label htmlFor="edit-description" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Description</label>
+              <label htmlFor="description" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Description</label>
               <textarea
-                id="edit-description"
+                id="description"
                 required
                 rows={3}
                 defaultValue={partenaire.description}
@@ -98,10 +85,10 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
             </div>
             
             <div>
-              <label htmlFor="edit-adresse" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Adresse</label>
+              <label htmlFor="adresse" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Adresse</label>
               <input
                 type="text"
-                id="edit-adresse"
+                id="adresse"
                 required
                 defaultValue={partenaire.adresse}
                 className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
@@ -110,10 +97,10 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="edit-email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email</label>
+                <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email</label>
                 <input
                   type="email"
-                  id="edit-email"
+                  id="email"
                   required
                   defaultValue={partenaire.email}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
@@ -121,10 +108,10 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
               </div>
               
               <div>
-                <label htmlFor="edit-telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone</label>
+                <label htmlFor="telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone</label>
                 <input
                   type="tel"
-                  id="edit-telephone"
+                  id="telephone"
                   required
                   defaultValue={partenaire.telephone}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
@@ -132,22 +119,22 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
               </div>
             </div>
             
-            <div>
-              <label htmlFor="edit-siteWeb" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Site Web</label>
-              <input
-                type="text"
-                id="edit-siteWeb"
-                required
-                defaultValue={partenaire.siteWeb}
-                className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-              />
-            </div>
+                          <div>
+                <label htmlFor="siteWeb" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Site Web</label>
+                <input
+                  type="text"
+                  id="siteWeb"
+                  required
+                  defaultValue={partenaire.site_web}
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+                />
+              </div>
             
             <div className="flex items-center">
               <label className="flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  id="edit-actif"
+                  id="actif"
                   className="sr-only peer"
                   defaultChecked={partenaire.actif}
                 />

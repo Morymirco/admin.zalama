@@ -164,12 +164,12 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
                         <div className="h-10 w-10 flex-shrink-0">
                           <Image 
                             className="h-10 w-10 rounded-full object-cover" 
-                            src={employe.photo_url || '/images/avatar-placeholder.png'} 
+                            src={employe.photo_url || '/images/avatar-placeholder.svg'} 
                             width={40}
                             height={40}
                             alt={`${employe.prenom} ${employe.nom}`}
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/images/avatar-placeholder.png';
+                              (e.target as HTMLImageElement).src = '/images/avatar-placeholder.svg';
                             }}
                           />
                         </div>

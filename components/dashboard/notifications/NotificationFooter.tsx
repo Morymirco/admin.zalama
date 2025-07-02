@@ -1,27 +1,34 @@
 import React from 'react';
-import { Check, Trash2 } from 'lucide-react';
+import { CheckCircle, Trash2 } from 'lucide-react';
 
 interface NotificationFooterProps {
-  onMarkAllAsRead: () => void;
+  onMarkAllAsRead: () => Promise<void>;
+  totalCount: number;
+  unreadCount: number;
 }
 
-export default function NotificationFooter({ onMarkAllAsRead }: NotificationFooterProps) {
+export default function NotificationFooter({ onMarkAllAsRead, totalCount, unreadCount }: NotificationFooterProps) {
   return (
-    <div className="p-3 border-t border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/50">
+    <div className="p-4 border-t border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]">
       <div className="flex items-center justify-between">
-        <button
-          onClick={onMarkAllAsRead}
-          className="flex items-center px-3 py-1.5 rounded-md text-sm text-[var(--zalama-text)]/70 hover:bg-[var(--zalama-bg-light)] hover:text-[var(--zalama-text)] transition-colors"
-        >
-          <Check className="w-4 h-4 mr-1.5" />
-          Tout marquer comme lu
-        </button>
-        <button
-          className="flex items-center px-3 py-1.5 rounded-md text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-        >
-          <Trash2 className="w-4 h-4 mr-1.5" />
-          Effacer l&apos;historique
-        </button>
+        <div className="text-sm text-[var(--zalama-text-secondary)]">
+          {totalCount} notification{totalCount > 1 ? 's' : ''}
+          {unreadCount > 0 && (
+            <span className="ml-2 text-[var(--zalama-blue)] font-medium">
+              ({unreadCount} non lue{unreadCount > 1 ? 's' : ''})
+            </span>
+          )}
+        </div>
+        
+        {unreadCount > 0 && (
+          <button
+            onClick={onMarkAllAsRead}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded-lg transition-colors"
+          >
+            <CheckCircle className="w-4 h-4" />
+            Tout marquer comme lu
+          </button>
+        )}
       </div>
     </div>
   );

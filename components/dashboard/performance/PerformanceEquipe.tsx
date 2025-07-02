@@ -135,7 +135,7 @@ const PerformanceEquipe: React.FC<PerformanceEquipeProps> = ({
                               width={50}
                               height={50}
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/images/avatar-placeholder.png';
+                                (e.target as HTMLImageElement).src = '/images/avatar-placeholder.svg';
                               }}
                             />
                           </div>

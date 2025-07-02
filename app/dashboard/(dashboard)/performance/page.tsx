@@ -76,7 +76,7 @@ export default function PerformancePage() {
   const membresEquipe = [
     {
       nom: 'Mamadou Diallo',
-      avatar: '/images/avatars/avatar-1.jpg',
+              avatar: '/images/avatars/avatar-1.svg',
       poste: 'Service client',
       metriques: {
         tempsReponse: 12,
@@ -86,7 +86,7 @@ export default function PerformancePage() {
     },
     {
       nom: 'Fatoumata Camara',
-      avatar: '/images/avatars/avatar-2.jpg',
+              avatar: '/images/avatars/avatar-2.svg',
       poste: 'Support technique',
       metriques: {
         tempsReponse: 18,
@@ -96,7 +96,7 @@ export default function PerformancePage() {
     },
     {
       nom: 'Ibrahim Soumah',
-      avatar: '/images/avatars/avatar-3.jpg',
+              avatar: '/images/avatars/avatar-3.svg',
       poste: 'Service client',
       metriques: {
         tempsReponse: 15,
@@ -106,7 +106,7 @@ export default function PerformancePage() {
     },
     {
       nom: 'Aissatou Barry',
-      avatar: '/images/avatars/avatar-4.jpg',
+              avatar: '/images/avatars/avatar-4.svg',
       poste: 'Support technique',
       metriques: {
         tempsReponse: 20,
@@ -116,7 +116,7 @@ export default function PerformancePage() {
     },
     {
       nom: 'Ousmane Sylla',
-      avatar: '/images/avatars/avatar-5.jpg',
+              avatar: '/images/avatars/avatar-5.svg',
       poste: 'Service client',
       metriques: {
         tempsReponse: 10,

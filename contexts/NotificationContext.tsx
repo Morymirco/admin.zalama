@@ -1,16 +1,24 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getUnreadNotificationsCount, markNotificationAsRead, markAllNotificationsAsRead } from '@/components/dashboard/notifications/notificationService';
-import { Notification } from '@/components/dashboard/notifications/types';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useNotifications as useNotificationsHook } from '@/hooks/useNotifications';
+import { Notification } from '@/services/notificationService';
 
 interface NotificationContextType {
   unreadCount: number;
   notifications: Notification[];
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  stats: {
+    total: number;
+    non_lues: number;
+    par_type: Record<string, number>;
+    recentes: number;
+  };
+  loading: boolean;
+  error: string | null;
   refreshUnreadCount: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -28,72 +36,33 @@ interface NotificationProviderProps {
 }
 
 export const NotificationProvider = ({ children }: NotificationProviderProps) => {
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const {
+    notifications,
+    unreadNotifications,
+    stats,
+    loading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    loadNotifications
+  } = useNotificationsHook();
 
   const refreshUnreadCount = async () => {
-    try {
-      const count = await getUnreadNotificationsCount();
-      setUnreadCount(count);
-    } catch (error) {
-      console.error('Erreur lors du rafraîchissement du compteur de notifications:', error);
-    }
+    await loadNotifications();
   };
-  
-  // Marquer une notification comme lue
-  const markAsRead = async (id: string) => {
-    const success = await markNotificationAsRead(id);
-    
-    if (success) {
-      setNotifications(prevNotifications => 
-        prevNotifications.map(notification => 
-          notification.id === id ? { ...notification, lue: true } : notification
-        )
-      );
-      // Rafraîchir le compteur après avoir marqué comme lu
-      refreshUnreadCount();
-    }
-  };
-  
-  // Marquer toutes les notifications comme lues
-  const markAllAsRead = async () => {
-    const unreadNotificationIds = notifications
-      .filter(notification => !notification.lue)
-      .map(notification => notification.id);
-    
-    if (unreadNotificationIds.length === 0) return;
-    
-    const success = await markAllNotificationsAsRead(unreadNotificationIds);
-    
-    if (success) {
-      setNotifications(prevNotifications => 
-        prevNotifications.map(notification => ({
-          ...notification,
-          lue: true
-        }))
-      );
-      // Rafraîchir le compteur après avoir tout marqué comme lu
-      refreshUnreadCount();
-    }
-  };
-
-  useEffect(() => {
-    refreshUnreadCount();
-    
-    // Rafraîchir le compteur toutes les 60 secondes
-    const interval = setInterval(refreshUnreadCount, 60000);
-    
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <NotificationContext.Provider value={{ 
-      unreadCount, 
+      unreadCount: stats.non_lues,
       notifications, 
-      setNotifications, 
+      stats,
+      loading,
+      error,
       refreshUnreadCount, 
       markAsRead, 
-      markAllAsRead 
+      markAllAsRead,
+      deleteNotification
     }}>
       {children}
     </NotificationContext.Provider>

@@ -1,43 +1,53 @@
 import React from 'react';
-import { Filter, CheckCircle, AlertTriangle, Info, AlertCircle } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
+import { Badge } from '@/components/ui/badge';
 
 interface NotificationFiltersProps {
   currentFilter: string;
   onFilterChange: (filter: string) => void;
+  stats: {
+    total: number;
+    non_lues: number;
+    par_type: Record<string, number>;
+    recentes: number;
+  };
 }
 
-export default function NotificationFilters({ currentFilter, onFilterChange }: NotificationFiltersProps) {
-  const { theme } = useTheme();
-  const filters = [
-    { id: 'all', label: 'Toutes', icon: Filter },
-    { id: 'info', label: 'Info', icon: Info, color: 'text-blue-500' },
-    { id: 'success', label: 'Succès', icon: CheckCircle, color: 'text-green-500' },
-    { id: 'warning', label: 'Avertissement', icon: AlertTriangle, color: 'text-amber-500' },
-    { id: 'error', label: 'Erreur', icon: AlertCircle, color: 'text-red-500' }
-  ];
+const filterOptions = [
+  { value: 'all', label: 'Toutes', color: 'bg-blue-100 text-blue-800' },
+  { value: 'Information', label: 'Informations', color: 'bg-blue-100 text-blue-800' },
+  { value: 'Alerte', label: 'Alertes', color: 'bg-red-100 text-red-800' },
+  { value: 'Succès', label: 'Succès', color: 'bg-green-100 text-green-800' },
+  { value: 'Erreur', label: 'Erreurs', color: 'bg-orange-100 text-orange-800' }
+];
 
+export default function NotificationFilters({ currentFilter, onFilterChange, stats }: NotificationFiltersProps) {
   return (
-    <div className="p-2 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/50">
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-hide" style={{scrollbarWidth: 'none'}}>
-        {filters.map((filter) => {
-          const isActive = currentFilter === filter.id;
-          const Icon = filter.icon;
+    <div className="p-4 border-b border-[var(--zalama-border)]">
+      <div className="flex flex-wrap gap-2">
+        {filterOptions.map((option) => {
+          const count = option.value === 'all' 
+            ? stats.total 
+            : stats.par_type[option.value] || 0;
           
           return (
             <button
-              key={filter.id}
-              onClick={() => onFilterChange(filter.id)}
-              className={`flex items-center px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
-                isActive 
-                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
-                  : theme === 'dark'
-                    ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                    : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+              key={option.value}
+              onClick={() => onFilterChange(option.value)}
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                currentFilter === option.value
+                  ? 'bg-[var(--zalama-blue)] text-white'
+                  : 'bg-[var(--zalama-bg-light)] text-[var(--zalama-text-secondary)] hover:bg-[var(--zalama-bg-lighter)]'
               }`}
             >
-              <Icon className={`w-4 h-4 mr-1.5 ${filter.color || ''}`} />
-              {filter.label}
+              {option.label}
+              {count > 0 && (
+                <Badge 
+                  variant="secondary" 
+                  className="ml-1 text-xs"
+                >
+                  {count > 99 ? '99+' : count}
+                </Badge>
+              )}
             </button>
           );
         })}

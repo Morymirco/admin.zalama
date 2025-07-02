@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Notification } from './types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Notification } from '@/services/notificationService';
 import NotificationHeader from './NotificationHeader';
 import NotificationFilters from './NotificationFilters';
 import NotificationList from './NotificationList';
-import { fetchUnreadNotifications, fetchNotificationsByType } from './notificationService';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import NotificationFooter from './NotificationFooter';
@@ -18,40 +17,22 @@ interface NotificationDrawerProps {
 export default function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<string>('all');
-  const [loading, setLoading] = useState<boolean>(false);
-  const { notifications, setNotifications, markAsRead, markAllAsRead, refreshUnreadCount } = useNotifications();
+  const { 
+    notifications, 
+    stats, 
+    loading, 
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification,
+    refreshUnreadCount 
+  } = useNotifications();
 
-  // Charger les notifications depuis Firebase
+  // Rafraîchir les notifications quand le drawer s'ouvre
   useEffect(() => {
     if (isOpen) {
-      loadNotifications();
-    }
-  }, [isOpen, filter]);
-  
-  // Fonction pour charger les notifications
-  const loadNotifications = async () => {
-    setLoading(true);
-    try {
-      let data: Notification[];
-      
-      if (filter === 'all') {
-        console.log('Chargement des notifications non lues');
-        data = await fetchUnreadNotifications();
-      } else {
-        console.log(`Chargement des notifications de type: ${filter}`);
-        data = await fetchNotificationsByType(filter);
-      }
-      
-      console.log('Notifications récupérées dans NotificationDrawer:', data.length, data);
-      setNotifications(data);
-      // Rafraîchir le compteur après avoir chargé les notifications
       refreshUnreadCount();
-    } catch (error) {
-      console.error('Erreur lors du chargement des notifications:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [isOpen, refreshUnreadCount]);
   
   // Fermer le drawer si on clique en dehors
   useEffect(() => {
@@ -83,15 +64,13 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
     };
   }, [isOpen]);
   
-  // Obtenir le nombre de notifications non lues pour l'affichage local
-  const localUnreadCount = notifications.filter((notification: Notification) => !notification.lue).length;
-  
-  // Filtrer les notifications
+  // Filtrer les notifications selon le type sélectionné
   const filteredNotifications = filter === 'all' 
     ? notifications 
     : notifications.filter((notification: Notification) => notification.type === filter);
     
-  console.log('Notifications filtrées à afficher:', filteredNotifications.length, filteredNotifications);
+  // Obtenir le nombre de notifications non lues pour l'affichage local
+  const localUnreadCount = filteredNotifications.filter((notification: Notification) => !notification.lu).length;
   
   return (
     <>
@@ -118,19 +97,23 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
           {/* Filtres */}
           <NotificationFilters 
             currentFilter={filter} 
-            onFilterChange={setFilter} 
+            onFilterChange={setFilter}
+            stats={stats}
           />
           
           {/* Liste des notifications */}
           <NotificationList 
             notifications={filteredNotifications} 
             onMarkAsRead={markAsRead}
+            onDelete={deleteNotification}
             loading={loading}
           />
           
           {/* Pied de page */}
           <NotificationFooter 
             onMarkAllAsRead={markAllAsRead} 
+            totalCount={filteredNotifications.length}
+            unreadCount={localUnreadCount}
           />
         </div>
       </div>

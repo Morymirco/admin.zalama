@@ -15,7 +15,7 @@ const ParametresProfil: React.FC<ParametresProfilProps> = ({ isLoading }) => {
     telephone: '+224 621 12 34 56',
     adresse: 'Conakry, Guinée',
     bio: 'Responsable marketing chez ZaLaMa, spécialisé dans le développement de stratégies digitales pour les entreprises guinéennes.',
-    photo: '/images/avatars/avatar-1.jpg'
+    photo: '/images/avatars/avatar-1.svg'
   });
 
   const [isEditing, setIsEditing] = useState(false);

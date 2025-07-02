@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { employeeService } from '@/services/employeeService';
 import { employeeSyncService } from '@/services/employeeSyncService';
-import { smsService } from '@/services/smsService';
+import smsServiceInstance from '@/services/smsService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     let employees;
 
     if (searchTerm) {
-      employees = await employeeService.search(searchTerm, partnerId || undefined);
+      employees = await employeeService.search(searchTerm);
     } else if (partnerId) {
       employees = await employeeService.getByPartner(partnerId);
     } else {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       try {
         const smsMessage = `Bonjour ${body.prenom} ${body.nom}, votre compte ZaLaMa a été créé.\nEmail: ${body.email}\nMot de passe: ${result.password}\nConnectez-vous sur l'application ZaLaMa.`;
         
-        smsResult = await smsService.sendSMS({
+        smsResult = await smsServiceInstance.sendSMS({
           to: [body.telephone],
           message: smsMessage
         });

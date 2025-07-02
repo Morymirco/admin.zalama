@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generatePassword } from '@/lib/utils';
+import { Client } from 'nimbasms';
+import { Resend } from 'resend';
 
 // Configuration Supabase côté serveur
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -24,9 +26,23 @@ const emailConfig = {
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
 };
 
+interface SMSResult {
+  success: boolean;
+  response?: unknown;
+  message: string;
+  error?: string;
+}
+
+interface EmailResult {
+  success: boolean;
+  response?: unknown;
+  message: string;
+  error?: string;
+}
+
 // Service SMS direct (sans passer par l'API route)
 class DirectSMSService {
-  async sendSMS(to: string[], message: string): Promise<any> {
+  async sendSMS(to: string[], message: string): Promise<SMSResult> {
     try {
       // Vérifier si le service SMS est configuré
       if (!smsConfig.SERVICE_ID || !smsConfig.SECRET_TOKEN) {
@@ -39,7 +55,6 @@ class DirectSMSService {
       }
 
       // Utiliser directement l'API Nimba SMS
-      const { Client } = require('nimbasms');
       const client = new Client({
         SERVICE_ID: smsConfig.SERVICE_ID,
         SECRET_TOKEN: smsConfig.SECRET_TOKEN
@@ -70,7 +85,7 @@ class DirectSMSService {
 
 // Service Email direct (sans passer par l'API route)
 class DirectEmailService {
-  async sendEmail(to: string, subject: string, html: string): Promise<any> {
+  async sendEmail(to: string, subject: string, html: string): Promise<EmailResult> {
     try {
       // Vérifier si le service email est configuré
       if (!emailConfig.RESEND_API_KEY) {
@@ -83,7 +98,6 @@ class DirectEmailService {
       }
 
       // Utiliser directement l'API Resend
-      const { Resend } = require('resend');
       const resend = new Resend(emailConfig.RESEND_API_KEY);
 
       const result = await resend.emails.send({
@@ -115,13 +129,35 @@ const directEmailService = new DirectEmailService();
 
 interface AccountResult {
   success: boolean;
-  account?: any;
+  account?: {
+    id: string;
+    email: string;
+    display_name: string;
+    role: string;
+    partenaire_id: string;
+    active: boolean;
+    last_login: string | null;
+    created_at: string;
+    updated_at: string;
+    password: string;
+  };
   error?: string;
+}
+
+interface PartnerData {
+  id: string;
+  nom: string;
+  email_rh: string;
+  email_representant: string;
+  telephone_rh: string;
+  telephone_representant: string;
+  nom_rh: string;
+  nom_representant: string;
 }
 
 class PartnerAccountService {
   // Créer un compte RH
-  async createRHAccount(rhData: any): Promise<AccountResult> {
+  async createRHAccount(rhData: PartnerData): Promise<AccountResult> {
     try {
       // Vérifier si l'email existe déjà
       const { data: existingUser, error: checkError } = await supabase
@@ -194,7 +230,7 @@ class PartnerAccountService {
   }
 
   // Créer un compte responsable
-  async createResponsableAccount(responsableData: any): Promise<AccountResult> {
+  async createResponsableAccount(responsableData: PartnerData): Promise<AccountResult> {
     try {
       // Vérifier si l'email existe déjà
       const { data: existingUser, error: checkError } = await supabase
@@ -267,7 +303,7 @@ class PartnerAccountService {
   }
 
   // Créer tous les comptes partenaire
-  async createPartnerAccounts(partenaireData: any): Promise<{
+  async createPartnerAccounts(partenaireData: PartnerData): Promise<{
     rh: AccountResult;
     responsable: AccountResult;
   }> {

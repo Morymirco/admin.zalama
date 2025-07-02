@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { CreditCard, Wallet, LineChart, BarChart, CheckCircle, XCircle, Clock, Activity } from 'lucide-react';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
-import { serviceService } from '@/services/serviceService';
+import serviceService from '@/services/serviceService';
 import { transactionService } from '@/services/transactionService';
 
 export default function ActiviteParService() {

@@ -9,7 +9,6 @@ import {
   AlertCircle, 
   Loader2, 
   Database,
-  Sync,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -261,7 +260,7 @@ export default function EmployeeSyncPage() {
             {syncing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Sync className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
             )}
             Synchroniser tous ({unsyncedEmployees})
           </button>
@@ -351,7 +350,7 @@ export default function EmployeeSyncPage() {
                           {syncing ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
-                            <Sync className="h-3 w-3" />
+                            <RefreshCw className="h-3 w-3" />
                           )}
                           Sync
                         </button>

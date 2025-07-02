@@ -15,8 +15,8 @@ import {
   Filter,
   Download
 } from "lucide-react";
-import { FinanceCharts } from "@/components/dashboard/finances/FinanceCharts";
-import { FinanceStats } from "@/components/dashboard/finances/FinanceStats";
+import FinanceCharts from "@/components/dashboard/finances/FinanceCharts";
+import FinanceStats from "@/components/dashboard/finances/FinanceStats";
 
 // Types pour les données financières
 interface Transaction {
@@ -161,7 +161,28 @@ const FinancesPage = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <FinanceCharts transactions={filteredTransactions} />
+          <FinanceCharts 
+            chartData={{
+              evolutionMensuelle: [
+                { mois: 'Jan', revenus: 150000, depenses: 80000 },
+                { mois: 'Fév', revenus: 180000, depenses: 90000 },
+                { mois: 'Mar', revenus: 220000, depenses: 110000 },
+                { mois: 'Avr', revenus: 200000, depenses: 95000 },
+                { mois: 'Mai', revenus: 250000, depenses: 120000 },
+                { mois: 'Juin', revenus: 280000, depenses: 130000 }
+              ],
+              repartitionCategories: [
+                { categorie: 'Avances salaire', pourcentage: 40, type: 'depense' },
+                { categorie: 'Commissions', pourcentage: 35, type: 'revenu' },
+                { categorie: 'Frais opérationnels', pourcentage: 15, type: 'depense' },
+                { categorie: 'Services premium', pourcentage: 10, type: 'revenu' }
+              ],
+              tendances: {
+                croissance: 12.5
+              }
+            }}
+            loading={loading}
+          />
         </TabsContent>
 
         <TabsContent value="transactions" className="space-y-4">

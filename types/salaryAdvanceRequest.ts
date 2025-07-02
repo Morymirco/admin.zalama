@@ -1,18 +1,16 @@
-import { Timestamp } from 'firebase/firestore';
-
 // Type pour les demandes d'avance sur salaire (correspond à la table demandes_avance_salaire)
 export interface DemandeAvanceSalaire {
   id: string;
   employe_id: string;
   montant_demande: number;
   motif: string;
-  date_demande: Date;
+  date_demande: string; // ISO string au lieu de Date
   statut: 'EN_ATTENTE' | 'APPROUVE' | 'REFUSE' | 'PAYE';
   commentaire?: string;
-  date_traitement?: Date;
+  date_traitement?: string; // ISO string au lieu de Date
   numero_reception?: string;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string; // ISO string au lieu de Date
+  updated_at: string; // ISO string au lieu de Date
   
   // Relations (pour l'affichage)
   employe?: {
@@ -42,12 +40,12 @@ export interface Transaction {
   methode_paiement: 'VIREMENT_BANCAIRE' | 'MOBILE_MONEY' | 'ESPECES' | 'CHEQUE';
   numero_compte?: string;
   numero_reception?: string;
-  date_transaction: Date;
+  date_transaction: string; // ISO string au lieu de Date
   recu_url?: string;
-  date_creation: Date;
+  date_creation: string; // ISO string au lieu de Date
   statut: 'EFFECTUEE' | 'ANNULEE';
-  created_at: Date;
-  updated_at: Date;
+  created_at: string; // ISO string au lieu de Date
+  updated_at: string; // ISO string au lieu de Date
   
   // Relations (pour l'affichage)
   employe?: {
@@ -92,22 +90,23 @@ export type TransactionStatut = 'EFFECTUEE' | 'EN_COURS' | 'ECHEC' | 'ANNULEE';
 export interface SalaryAdvanceRequest {
   id: string;
   employe_id: string;
+  employe_nom: string;
+  employe_prenom: string;
+  employe_email: string;
   partenaire_id: string;
+  partenaire_nom: string;
   montant_demande: number;
-  type_motif: string;
+  montant_net: number;
+  pourcentage_salaire: number;
   motif: string;
-  numero_reception?: string;
-  frais_service: number;
-  montant_total: number;
-  salaire_disponible?: number;
-  avance_disponible?: number;
-  statut: TransactionStatus;
-  date_creation: Date;
-  date_validation?: Date;
-  date_rejet?: Date;
-  motif_rejet?: string;
-  created_at: Date;
-  updated_at: Date;
+  statut: 'en_attente' | 'approuvee' | 'rejetee' | 'en_cours' | 'terminee';
+  date_demande: string; // ISO string au lieu de Timestamp
+  date_traitement?: string; // ISO string au lieu de Timestamp
+  date_versement?: string; // ISO string au lieu de Timestamp
+  commentaires?: string;
+  justificatifs?: string[];
+  created_at: string;
+  updated_at: string;
   // Relations
   employe?: Employee;
   partenaire?: Partner;
@@ -124,12 +123,12 @@ export interface Transaction {
   methode_paiement: PaymentMethod;
   numero_compte?: string;
   numero_reception?: string;
-  date_transaction: Date;
+  date_transaction: string; // ISO string au lieu de Date
   recu_url?: string;
-  date_creation: Date;
+  date_creation: string; // ISO string au lieu de Date
   statut: TransactionStatut;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string; // ISO string au lieu de Date
+  updated_at: string; // ISO string au lieu de Date
   // Relations
   employe?: Employee;
   entreprise?: Partner;

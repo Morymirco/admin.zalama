@@ -1,14 +1,28 @@
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, DollarSign, Calendar, Edit } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, MapPin, Users, Building } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArrowLeft, FileText, DollarSign, Edit } from "lucide-react";
 import { ServiceDetail } from "@/types/service-detail";
 import { format as formatDate } from "date-fns/format";
 import { fr } from "date-fns/locale/fr";
-import { Timestamp } from "firebase/firestore";
 
 interface ServiceHeaderProps {
-  service: ServiceDetail;
+  service: {
+    id: string;
+    nom: string;
+    description?: string;
+    categorie: string;
+    prix: number;
+    duree?: string;
+    disponible: boolean;
+    image_url?: string;
+    date_creation: string;
+    created_at: string;
+    updated_at: string;
+  };
   onBack: () => void;
 }
 

@@ -97,6 +97,8 @@ export const partenaireService = {
     };
   }> {
     try {
+      console.log('🚀 Création du partenaire:', partenaireData.nom);
+      
       const { data, error } = await supabase
         .from('partners')
         .insert([partenaireData])
@@ -104,9 +106,11 @@ export const partenaireService = {
         .single();
 
       if (error) {
-        console.error('Erreur lors de la création du partenaire:', error);
+        console.error('❌ Erreur lors de la création du partenaire:', error);
         throw error;
       }
+
+      console.log('✅ Partenaire créé avec succès:', data.id);
 
       // Résultats des SMS
       const smsResults = {
@@ -143,29 +147,18 @@ export const partenaireService = {
         });
 
         if (!response.ok) {
-          // Supprimer le partenaire créé
-          await supabase.from('partners').delete().eq('id', data.id);
+          console.error('❌ Erreur API:', response.status, response.statusText);
           throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
         }
 
         const apiResult = await response.json();
         
         if (!apiResult.success) {
-          // Supprimer le partenaire créé
-          await supabase.from('partners').delete().eq('id', data.id);
+          console.error('❌ Erreur API result:', apiResult);
           throw new Error(apiResult.error || 'Erreur création comptes via API');
         }
 
         const accountCreationResults = apiResult.results;
-
-        // Si la création du compte RH ou responsable échoue, supprimer le partenaire
-        if (!accountCreationResults.rh.success || !accountCreationResults.responsable.success) {
-          await supabase.from('partners').delete().eq('id', data.id);
-          let errorMsg = 'Erreur création comptes : ';
-          if (!accountCreationResults.rh.success) errorMsg += 'RH: ' + (accountCreationResults.rh.error || '');
-          if (!accountCreationResults.responsable.success) errorMsg += ' Responsable: ' + (accountCreationResults.responsable.error || '');
-          throw new Error(errorMsg);
-        }
 
         // Traiter les résultats RH
         if (accountCreationResults.rh.success) {
@@ -174,6 +167,8 @@ export const partenaireService = {
             password: accountCreationResults.rh.account?.password,
             error: ''
           };
+          
+          console.log('✅ Compte RH créé avec succès');
           
           // Pour l'instant, pas de SMS/email dans l'API, on met des valeurs par défaut
           smsResults.rh = {
@@ -203,6 +198,7 @@ export const partenaireService = {
             message: '',
             error: accountResults.rh.error
           };
+          console.log('❌ Échec création compte RH:', accountResults.rh.error);
         }
 
         // Traiter les résultats responsable
@@ -212,6 +208,8 @@ export const partenaireService = {
             password: accountCreationResults.responsable.account?.password,
             error: ''
           };
+          
+          console.log('✅ Compte responsable créé avec succès');
           
           // Pour l'instant, pas de SMS/email dans l'API, on met des valeurs par défaut
           smsResults.representant = {
@@ -241,6 +239,7 @@ export const partenaireService = {
             message: '',
             error: accountResults.responsable.error
           };
+          console.log('❌ Échec création compte responsable:', accountResults.responsable.error);
         }
 
         // Envoyer un SMS à l'administrateur
@@ -261,9 +260,30 @@ export const partenaireService = {
         }
 
       } catch (accountError) {
-        console.error('Erreur lors de la création des comptes:', accountError);
-        // Continuer même si la création des comptes échoue
+        console.error('❌ Erreur lors de la création des comptes:', accountError);
+        
+        // NE PAS supprimer automatiquement le partenaire
+        // Laisser l'utilisateur décider s'il veut continuer ou annuler
+        console.log('⚠️ Partenaire créé mais comptes non créés. L\'utilisateur peut les créer manuellement.');
+        
+        // Mettre à jour les résultats d'erreur
+        accountResults.rh = {
+          success: false,
+          password: undefined,
+          error: `Erreur création comptes: ${accountError instanceof Error ? accountError.message : String(accountError)}`
+        };
+        accountResults.responsable = {
+          success: false,
+          password: undefined,
+          error: `Erreur création comptes: ${accountError instanceof Error ? accountError.message : String(accountError)}`
+        };
       }
+
+      console.log('✅ Création partenaire terminée');
+      console.log('📊 Résultats finaux:');
+      console.log('  - Partenaire:', data.id);
+      console.log('  - Compte RH:', accountResults.rh.success ? '✅' : '❌');
+      console.log('  - Compte Responsable:', accountResults.responsable.success ? '✅' : '❌');
 
       return {
         partenaire: data,
@@ -272,7 +292,7 @@ export const partenaireService = {
         accountResults
       };
     } catch (error) {
-      console.error('Erreur partenaireService.create:', error);
+      console.error('❌ Erreur partenaireService.create:', error);
       throw error;
     }
   },

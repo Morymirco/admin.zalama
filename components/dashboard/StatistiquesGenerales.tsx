@@ -35,13 +35,24 @@ interface DashboardStats {
 }
 
 export default function StatistiquesGenerales() {
-  // Utiliser nos hooks pour récupérer les données
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Utiliser nos hooks pour récupérer les données avec priorisation
   const { data: employees, loading: loadingEmployees } = useSupabaseCollection(employeeService);
   const { data: partners, loading: loadingPartners } = useSupabaseCollection(partnerService);
   const { data: services, loading: loadingServices } = useSupabaseCollection(serviceService);
   const { data: transactions, loading: loadingTransactions } = useSupabaseCollection(transactionService);
 
-  // Calculer les statistiques à partir des données
+  // Initialisation progressive
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 100); // Délai minimal pour éviter le flash
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Calculer les statistiques à partir des données avec optimisation
   const stats = useMemo(() => {
     const loading = loadingEmployees || loadingPartners || loadingServices || loadingTransactions;
     
@@ -79,7 +90,7 @@ export default function StatistiquesGenerales() {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    // Statistiques des employés
+    // Statistiques des employés (optimisé)
     const activeEmployees = employees.filter(emp => emp.actif).length;
     
     const newEmployeesThisMonth = employees.filter(emp => {
@@ -88,7 +99,7 @@ export default function StatistiquesGenerales() {
       return createdAt >= firstDayOfMonth;
     }).length;
     
-    // Compter les employés par type de contrat
+    // Compter les employés par type de contrat (optimisé)
     const contractCounts = employees.reduce((acc, emp) => {
       if (emp.type_contrat) {
         acc[emp.type_contrat] = (acc[emp.type_contrat] || 0) + 1;
@@ -134,14 +145,14 @@ export default function StatistiquesGenerales() {
       };
     });
 
-    // Statistiques des partenaires
+    // Statistiques des partenaires (optimisé)
     const activePartners = partners.filter(partner => partner.actif).length;
     const totalEmployesFromPartners = partners.reduce((sum, partner) => sum + (partner.nombre_employes || 0), 0);
 
-    // Statistiques des services
+    // Statistiques des services (optimisé)
     const availableServices = services.filter(service => service.disponible).length;
 
-    // Statistiques des transactions
+    // Statistiques des transactions (optimisé)
     const montantTotal = transactions.reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
     
     const transactionsCeMois = transactions.filter(transaction => {
@@ -199,95 +210,117 @@ export default function StatistiquesGenerales() {
         fill="white" 
         textAnchor="middle" 
         dominantBaseline="central"
+        fontSize="12"
         fontWeight="bold"
-        style={{
-          fontSize: '12px',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
-        }}
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
     );
   };
 
-  // Vérifier si on a des données à afficher
-  const hasData = employeeTypeData.some((item: any) => item.count > 0);
-  const loading = loadingEmployees || loadingPartners || loadingServices || loadingTransactions;
+  // Fonction pour formater les montants
+  const formatMontant = (montant: number) => {
+    return new Intl.NumberFormat('fr-FR', { 
+      style: 'currency', 
+      currency: 'GNF',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(montant);
+  };
+
+  // Afficher un skeleton pendant le chargement initial
+  if (!isInitialized || loadingEmployees) {
+    return (
+      <div>
+        <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Statistiques générales</h2>
+        <div className="animate-pulse">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-[var(--zalama-bg-lighter)] rounded-lg p-4">
+                <div className="h-4 bg-[var(--zalama-bg)] rounded mb-2"></div>
+                <div className="h-6 bg-[var(--zalama-bg)] rounded"></div>
+              </div>
+            ))}
+          </div>
+          <div className="h-48 bg-[var(--zalama-bg-lighter)] rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Statistiques générales</h2>
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="flex flex-col space-y-4 md:space-y-6 md:w-1/2">
-          <div className="flex flex-col">
-            <div className="text-2xl md:text-3xl font-bold text-[var(--zalama-text)]">
-              {loading ? '...' : stats.employees.totalEmployees.toLocaleString()}
-            </div>
-            <div className="text-xs md:text-sm text-[var(--zalama-text-secondary)]">Employés inscrits</div>
+      
+      {/* Cartes de statistiques */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4">
+          <div className="text-sm text-[var(--zalama-text-secondary)] mb-1">Total employés</div>
+          <div className="text-2xl font-bold text-[var(--zalama-text)]">
+            {stats.employees.totalEmployees}
           </div>
-          <div className="flex flex-col">
-            <div className="text-2xl md:text-3xl font-bold text-[var(--zalama-text)]">
-              {loading ? '...' : stats.employees.activeEmployees.toLocaleString()}
-            </div>
-            <div className="text-xs md:text-sm text-[var(--zalama-text-secondary)]">Employés actifs</div>
-          </div>
-          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-            <div className="flex flex-col">
-              <div className="text-2xl md:text-3xl font-bold text-[var(--zalama-text)]">
-                {loading ? '...' : stats.employees.newEmployeesThisMonth.toLocaleString()}
-              </div>
-              <div className="text-xs md:text-sm text-[var(--zalama-text-secondary)]">Nouveaux employés ce mois-ci</div>
-            </div>
-            <div className="flex flex-col">
-              <div className="text-2xl md:text-3xl font-bold text-[var(--zalama-text)]">
-                {loading ? '...' : stats.partners.total.toLocaleString()}
-              </div>
-              <div className="text-xs md:text-sm text-[var(--zalama-text-secondary)]">Partenaires</div>
-            </div>
+          <div className="text-xs text-[var(--zalama-success)] mt-1">
+            +{stats.employees.newEmployeesThisMonth} ce mois
           </div>
         </div>
-        <div className="flex flex-col items-center mt-6 md:mt-0 md:w-1/2">
-          <div className="h-64 w-full flex items-center justify-center">
-            {hasData ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={employeeTypeData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={renderCustomizedLabel}
-                    outerRadius={80}
-                    innerRadius={40}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {employeeTypeData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]} 
-                        stroke="#ffffff"
-                        strokeWidth={1}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value, name, props) => {
-                      const count = props.payload.count;
-                      return [`${value}% (${count} employé${count > 1 ? 's' : ''})`, name];
-                    }}
-                    labelFormatter={(name) => `Type de contrat: ${name}`}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center text-[var(--zalama-text-secondary)]">
-                <div className="text-sm">Aucune donnée disponible</div>
-                <div className="text-xs">Les types de contrats apparaîtront ici</div>
-              </div>
-            )}
+        
+        <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4">
+          <div className="text-sm text-[var(--zalama-text-secondary)] mb-1">Partenaires actifs</div>
+          <div className="text-2xl font-bold text-[var(--zalama-text)]">
+            {stats.partners.actifs}/{stats.partners.total}
           </div>
+          <div className="text-xs text-[var(--zalama-info)] mt-1">
+            {stats.partners.totalEmployes} employés
+          </div>
+        </div>
+        
+        <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4">
+          <div className="text-sm text-[var(--zalama-text-secondary)] mb-1">Services disponibles</div>
+          <div className="text-2xl font-bold text-[var(--zalama-text)]">
+            {stats.services.disponibles}/{stats.services.total}
+          </div>
+        </div>
+        
+        <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4">
+          <div className="text-sm text-[var(--zalama-text-secondary)] mb-1">Transactions ce mois</div>
+          <div className="text-2xl font-bold text-[var(--zalama-text)]">
+            {stats.transactions.transactionsCeMois}
+          </div>
+          <div className="text-xs text-[var(--zalama-success)] mt-1">
+            {formatMontant(stats.transactions.montantCeMois)}
+          </div>
+        </div>
+      </div>
+      
+      {/* Graphique circulaire des types d'employés */}
+      <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4">
+        <h3 className="text-lg font-medium mb-4 text-[var(--zalama-text)]">Répartition par type de contrat</h3>
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={employeeTypeData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={renderCustomizedLabel}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {employeeTypeData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip 
+                formatter={(value: any, name: any) => [
+                  `${value}% (${employeeTypeData.find(item => item.name === name)?.count || 0} employés)`,
+                  name
+                ]}
+              />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

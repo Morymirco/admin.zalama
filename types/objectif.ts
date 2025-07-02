@@ -1,17 +1,16 @@
-import { Timestamp } from 'firebase/firestore';
-
 export interface Objectif {
   id: string;
   nom: string;
   description?: string;
-  valeurCible: number;
-  valeurActuelle: number;
+  type: 'financier' | 'utilisateur' | 'partenaire' | 'service';
+  valeur_cible: number;
+  valeur_actuelle: number;
   unite: string;
-  categorie: 'financier' | 'utilisateur' | 'partenariat' | 'performance' | 'autre';
-  dateDebut: Timestamp;
-  dateFin: Timestamp;
-  statut: 'en cours' | 'atteint' | 'non atteint' | 'annule';
-  responsableId?: string;
-  equipeId?: string;
-  metadata?: Record<string, any>;
+  periode: 'quotidien' | 'hebdomadaire' | 'mensuel' | 'trimestriel' | 'annuel';
+  date_debut: string;
+  date_fin: string;
+  statut: 'en_cours' | 'atteint' | 'depasse' | 'en_retard';
+  priorite: 'basse' | 'moyenne' | 'haute';
+  created_at: string;
+  updated_at: string;
 }

@@ -1,5 +1,3 @@
-import { Timestamp } from 'firebase/firestore';
-
 // Type pour les utilisateurs finaux (table users)
 export interface Utilisateur {
   id: string;
@@ -15,22 +13,22 @@ export interface Utilisateur {
   poste?: string;
   niveau_etudes?: string;
   etablissement?: string;
-  date_inscription?: Date;
-  derniere_connexion?: Date;
+  date_inscription: string;
+  derniere_connexion?: string;
   actif: boolean;
-  created_at?: Date;
-  updated_at?: Date;
+  created_at: string;
+  updated_at: string;
   
   // Propriétés pour la compatibilité UI (camelCase)
   displayName?: string; // Alias pour nom + prenom
   phoneNumber?: string; // Alias pour telephone
   active?: boolean; // Alias pour actif
-  createdAt?: Timestamp; // Pour la compatibilité Firebase
-  lastLogin?: any; // Alias pour derniere_connexion
+  createdAt?: string; // ISO string au lieu de Timestamp
+  lastLogin?: string; // Alias pour derniere_connexion
   photoURL?: string; // Alias pour photo_url
   organization?: string; // Alias pour organisation
   address?: string; // Alias pour adresse
-  dateNaissance?: Timestamp;
+  dateNaissance?: string; // ISO string au lieu de Timestamp
   sexe?: string;
   region?: string;
   note?: number;
@@ -47,7 +45,7 @@ export interface AdminUser {
   role: 'admin' | 'user' | 'rh' | 'responsable';
   partenaire_id?: string;
   active: boolean;
-  last_login?: Date;
-  created_at?: Date;
-  updated_at?: Date;
+  last_login?: string; // ISO string au lieu de Date
+  created_at?: string; // ISO string au lieu de Date
+  updated_at?: string; // ISO string au lieu de Date
 }

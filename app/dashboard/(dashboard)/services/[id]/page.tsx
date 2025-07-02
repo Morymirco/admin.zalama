@@ -1,350 +1,285 @@
 "use client";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { FileText, Download, ArrowLeft, CheckCircle2, XCircle, Clock, Search, Filter, ChevronDown, Users, Settings, Plus, DollarSign, CheckCircle, Edit } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArrowLeft, FileText, DollarSign, Calendar, Edit } from "lucide-react";
+import { ServiceDetail } from "@/types/service-detail";
+import { format as formatDate } from "date-fns/format";
 import { fr } from "date-fns/locale/fr";
-import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, doc, getDoc, query, where, getDocs, Timestamp } from "firebase/firestore";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "react-hot-toast";
+import { createClient } from '@supabase/supabase-js';
 
-// Import des composants
-import { ServiceHeader } from "@/components/dashboard/services/ServiceHeader";
-import { ServiceStats } from "@/components/dashboard/services/ServiceStats";
-import { ServiceDemandes } from "@/components/dashboard/services/ServiceDemandes";
-import { ServiceTransactions } from "@/components/dashboard/services/ServiceTransactions";
-import { ServiceSidebar } from "@/components/dashboard/services/ServiceSidebar";
+// Configuration Supabase
+const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
 
-// Types pour les données du service
-import { ServiceDetail, DemandeService, TransactionService } from "@/types/service-detail";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export default function ServiceDetailPage() {
+interface ServiceHeaderProps {
+  service: ServiceDetail;
+  onBack: () => void;
+}
+
+const ServiceHeader: React.FC<ServiceHeaderProps> = ({ service, onBack }) => {
+  return (
+    <div className="flex items-center gap-4 mb-6">
+      <Button variant="outline" size="sm" onClick={onBack}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Retour
+      </Button>
+      <div className="flex items-center gap-3">
+        <Avatar className="h-12 w-12">
+          <AvatarImage src={service.logo} alt={service.nom} />
+          <AvatarFallback>{service.nom.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div>
+          <h1 className="text-2xl font-bold">{service.nom}</h1>
+          <p className="text-muted-foreground">{service.description}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ServiceDetailPage = () => {
   const params = useParams();
   const router = useRouter();
   const serviceId = params.id as string;
   
-  // Types pour les composants enfants
-  type DemandeServiceForComponent = {
-    id: string;
-    reference: string;
-    demandeurNom: string;
-    dateDemande: string;
-    statut: 'EN_ATTENTE' | 'EN_COURS' | 'TRAITEE' | 'REJETEE' | 'ANNULEE';
-    priorite: 'BASSE' | 'MOYENNE' | 'HAUTE' | 'URGENTE';
-  };
-  
-  type TransactionServiceForComponent = {
-    id: string;
-    reference: string;
-    demandeurNom: string;
-    dateTransaction: string;
-    montant: number;
-    typePaiement: string;
-    statut: 'EN_ATTENTE' | 'VALIDEE' | 'REJETEE' | 'ANNULEE' | 'REMBOURSEE';
-  };
-  
-  // Types pour les données brutes
-  type RawDemandeService = DemandeService & {
-    dateDemande: string | Timestamp;
-  };
-  
-  type RawTransactionService = TransactionService & {
-    dateTransaction: string | Timestamp;
-  };
-  
-  // États pour les données
   const [service, setService] = useState<ServiceDetail | null>(null);
-  const [rawDemandes, setRawDemandes] = useState<RawDemandeService[]>([]);
-  const [rawTransactions, setRawTransactions] = useState<RawTransactionService[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('demandes');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('TOUS');
-  
-  // Convertir les données brutes pour les composants
-  const demandes: DemandeServiceForComponent[] = rawDemandes.map(demande => ({
-    id: demande.id,
-    reference: demande.reference,
-    demandeurNom: demande.demandeurNom,
-    dateDemande: typeof demande.dateDemande === 'string' 
-      ? demande.dateDemande 
-      : demande.dateDemande.toDate().toISOString(),
-    statut: demande.statut as 'EN_ATTENTE' | 'EN_COURS' | 'TRAITEE' | 'REJETEE' | 'ANNULEE',
-    priorite: demande.priorite as 'BASSE' | 'MOYENNE' | 'HAUTE' | 'URGENTE'
-  }));
-  
-  const transactions: TransactionServiceForComponent[] = rawTransactions.map(transaction => ({
-    id: transaction.id,
-    reference: transaction.reference,
-    demandeurNom: transaction.demandeurNom,
-    dateTransaction: typeof transaction.dateTransaction === 'string'
-      ? transaction.dateTransaction
-      : transaction.dateTransaction.toDate().toISOString(),
-    montant: transaction.montant,
-    typePaiement: transaction.typePaiement,
-    statut: transaction.statut as 'EN_ATTENTE' | 'VALIDEE' | 'REJETEE' | 'ANNULEE' | 'REMBOURSEE'
-  }));
-  
-  // Charger les données du service
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    const chargerDonneesService = async () => {
+    const fetchService = async () => {
       try {
         setLoading(true);
         
-        // Simulation de chargement des données
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Données simulées pour le service
-        const serviceSimule: ServiceDetail = {
-          id: serviceId,
-          nom: 'Service Client Premium',
-          description: 'Service dédié à la gestion des clients premium avec support prioritaire',
-          responsable: 'Marie Dupont',
-          emailResponsable: 'marie.dupont@example.com',
-          telephoneResponsable: '+225 07 12 34 56 78',
-          dateCreation: '2024-01-15T10:30:00',
-          actif: true,
-          nombreDemandes: 124,
-          nombreTransactions: 98,
-          montantTotal: 2450000,
-          categorie: 'Support Client',
-          statut: 'actif',
-          logo: '/images/service-client.png',
-          derniereMiseAJour: '2024-06-10T14:25:00'
-        };
-        
-        // Données simulées pour les demandes
-        const demandesSimulees: RawDemandeService[] = [
-          {
-            id: 'dem1',
-            reference: 'DEM-2024-001',
-            serviceId: serviceId,
-            serviceNom: 'Service Client Premium',
-            demandeurId: 'user1',
-            demandeurNom: 'Jean Dupont',
-            demandeurEmail: 'jean.dupont@example.com',
-            dateDemande: '2024-06-10T09:15:00',
-            statut: 'EN_ATTENTE',
-            priorite: 'HAUTE',
-            description: 'Problème de connexion à la plateforme',
-            commentaires: 'Le client ne parvient pas à se connecter depuis ce matin'
-          },
-          // Ajoutez d'autres demandes simulées ici...
-        ];
-        
-        // Données simulées pour les transactions
-        const transactionsSimulees: RawTransactionService[] = [
-          {
-            id: 'trans1',
-            reference: 'TRX-2024-001',
-            serviceId: serviceId,
-            serviceNom: 'Service Client Premium',
-            demandeId: 'dem1',
-            demandeurId: 'user1',
-            demandeurNom: 'Jean Dupont',
-            demandeurEmail: 'jean.dupont@example.com',
-            montant: 25000,
-            dateTransaction: '2024-06-10T10:30:00',
-            statut: 'VALIDEE',
-            typePaiement: 'Mobile Money',
-            referencePaiement: 'MOB123456789',
-            commentaire: 'Paiement pour service premium'
-          },
-          // Ajoutez d'autres transactions simulées ici...
-        ];
-        
-        setService(serviceSimule);
-        setRawDemandes(demandesSimulees);
-        setRawTransactions(transactionsSimulees);
-        
-      } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-        toast.error('Une erreur est survenue lors du chargement des données');
+        // Récupérer les détails du service depuis Supabase
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .eq('id', serviceId)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          setService(data as ServiceDetail);
+        } else {
+          setError('Service non trouvé');
+        }
+      } catch (err) {
+        console.error('Erreur lors de la récupération du service:', err);
+        setError('Erreur lors du chargement du service');
       } finally {
         setLoading(false);
       }
     };
     
     if (serviceId) {
-      chargerDonneesService();
+      fetchService();
     }
   }, [serviceId]);
   
-  // Gérer la navigation entre les onglets
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-  };
-  
-  // Gérer la vue des détails d'une demande
-  const handleViewDemandeDetails = (demande: DemandeServiceForComponent) => {
-    // Implémenter la logique pour afficher les détails d'une demande
-    console.log('Détails de la demande:', demande);
-    // Ici, vous pourriez ouvrir une modale ou naviguer vers une page de détails
-  };
-  
-  // Gérer la vue des détails d'une transaction
-  const handleViewTransactionDetails = (transaction: TransactionServiceForComponent) => {
-    // Implémenter la logique pour afficher les détails d'une transaction
-    console.log('Détails de la transaction:', transaction);
-    // Ici, vous pourriez ouvrir une modale ou naviguer vers une page de détails
+  const handleBack = () => {
+    router.push('/dashboard/services');
   };
   
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center space-x-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-[250px]" />
-            <Skeleton className="h-4 w-[200px]" />
-          </div>
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-[110px] w-full" />
-          ))}
-        </div>
-        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
   
-  if (!service) {
+  if (error || !service) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-muted-foreground">Service non trouvé</p>
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">
+            {error || 'Service non trouvé'}
+          </h2>
+          <Button onClick={handleBack} variant="outline">
+            Retour aux services
+          </Button>
+        </div>
       </div>
     );
   }
   
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Barre latérale */}
-      <div className="hidden md:flex md:flex-shrink-0">
-        <div className="flex flex-col w-64 border-r">
-          <ServiceSidebar 
-            serviceId={serviceId} 
-            activeTab={activeTab} 
-            onTabChange={handleTabChange} 
-          />
+    <div className="container mx-auto p-6">
+      <ServiceHeader service={service} onBack={handleBack} />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Informations principales */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Informations du service
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Nom du service
+                  </label>
+                  <p className="text-lg">{service.nom}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Catégorie
+                  </label>
+                  <Badge variant="secondary">{service.categorie}</Badge>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Prix
+                  </label>
+                  <p className="text-lg font-semibold text-green-600">
+                    {service.prix?.toLocaleString('fr-FR')} GNF
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Durée
+                  </label>
+                  <p className="text-lg">{service.duree || 'Non spécifiée'}</p>
         </div>
       </div>
       
-      {/* Contenu principal */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-6 space-y-6">
-          {/* En-tête du service */}
-          <ServiceHeader 
-            service={service} 
-            onBack={() => router.push('/dashboard/services')} 
-          />
-          
-          {/* Statistiques du service */}
-          <ServiceStats service={service} />
-          
-          {/* Onglets pour les demandes et transactions */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-              <TabsTrigger value="demandes">Demandes</TabsTrigger>
-              <TabsTrigger value="transactions">Transactions</TabsTrigger>
-              <TabsTrigger value="responsable">Responsable</TabsTrigger>
-              <TabsTrigger value="parametres">Paramètres</TabsTrigger>
-            </TabsList>
-            
-            {/* Contenu de l'onglet Demandes */}
-            <TabsContent value="demandes" className="space-y-4">
-              <ServiceDemandes 
-                demandes={demandes} 
-                onViewDetails={handleViewDemandeDetails} 
-              />
-            </TabsContent>
-            
-            {/* Contenu de l'onglet Transactions */}
-            <TabsContent value="transactions" className="space-y-4">
-              <ServiceTransactions 
-                transactions={transactions} 
-                onViewDetails={handleViewTransactionDetails} 
-              />
-            </TabsContent>
-            
-            {/* Contenu de l'onglet Responsable */}
-            <TabsContent value="responsable" className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Description
+                </label>
+                <p className="text-gray-700 mt-1">
+                  {service.description || 'Aucune description disponible'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
               <Card>
                 <CardHeader>
-                  <CardTitle>Responsable du service</CardTitle>
-                  <CardDescription>
-                    Informations de contact du responsable
-                  </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Statistiques financières
+              </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="h-16 w-16">
-                      <AvatarFallback>
-                        {service.responsable.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="text-lg font-medium">{service.responsable}</h3>
-                      <p className="text-sm text-muted-foreground">{service.emailResponsable}</p>
-                      <p className="text-sm text-muted-foreground">{service.telephoneResponsable}</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {service.nombreDemandes || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Demandes</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {service.nombreTransactions || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Transactions</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">
+                    {service.montantTotal?.toLocaleString('fr-FR') || 0} GNF
+                  </p>
+                  <p className="text-sm text-muted-foreground">Montant total</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+        </div>
             
-            {/* Contenu de l'onglet Paramètres */}
-            <TabsContent value="parametres" className="space-y-4">
+        {/* Sidebar */}
+        <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Paramètres du service</CardTitle>
-                  <CardDescription>
-                    Gérez les paramètres et les préférences de ce service
-                  </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Informations générales
+              </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+            <CardContent className="space-y-4">
                     <div>
-                      <h4 className="font-medium mb-2">Statut du service</h4>
-                      <div className="flex items-center space-x-4">
-                        <Badge variant={service.actif ? 'default' : 'secondary'}>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Statut
+                </label>
+                <Badge 
+                  variant={service.actif ? "default" : "destructive"}
+                  className="mt-1"
+                >
                           {service.actif ? 'Actif' : 'Inactif'}
                         </Badge>
-                        <Button variant="outline" size="sm">
-                          {service.actif ? 'Désactiver' : 'Activer'}
-                        </Button>
                       </div>
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Date de création
+                </label>
+                <p className="text-sm mt-1">
+                  {service.dateCreation ? 
+                    formatDate(new Date(service.dateCreation), 'dd/MM/yyyy', { locale: fr }) : 
+                    'Non spécifiée'
+                  }
+                </p>
                     </div>
                     
-                    <Separator />
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Responsable
+                </label>
+                <p className="text-sm mt-1">{service.responsable || 'Non assigné'}</p>
+              </div>
                     
                     <div>
-                      <h4 className="font-medium mb-2">Actions</h4>
-                      <div className="space-y-2">
-                        <Button variant="outline" className="w-full justify-start">
-                          <Edit className="mr-2 h-4 w-4" />
-                          Modifier les informations
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700">
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Supprimer le service
-                        </Button>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Email responsable
+                </label>
+                <p className="text-sm mt-1">{service.emailResponsable || 'Non spécifié'}</p>
                       </div>
-                    </div>
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Téléphone responsable
+                </label>
+                <p className="text-sm mt-1">{service.telephoneResponsable || 'Non spécifié'}</p>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button className="w-full" variant="outline">
+                <Edit className="h-4 w-4 mr-2" />
+                Modifier le service
+              </Button>
+              <Button className="w-full" variant="outline">
+                <FileText className="h-4 w-4 mr-2" />
+                Voir les demandes
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default ServiceDetailPage;

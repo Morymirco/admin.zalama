@@ -22,6 +22,7 @@ export default function DashboardHeader() {
     if (pathname.includes("/finances")) return "Finances";
     if (pathname.includes("/services")) return "Services";
     if (pathname.includes("/partenaires")) return "Partenaires";
+    if (pathname.includes("/avis")) return "Gestion des Avis";
     if (pathname.includes("/alertes")) return "Alertes";
     if (pathname.includes("/performance")) return "Performance";
     if (pathname.includes("/visualisations")) return "Visualisations";

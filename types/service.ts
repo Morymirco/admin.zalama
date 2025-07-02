@@ -1,17 +1,15 @@
-import { Timestamp } from 'firebase/firestore';
-
 export interface Service {
   id: string;
   nom: string;
-  description: string;
+  description?: string;
   categorie: string;
-  pourcentage_max: number;
-  duree: string;
+  prix: number;
+  duree?: string;
   disponible: boolean;
-  frais_attribues?: number;
   image_url?: string;
-  date_creation?: Date;
-  createdAt?: Timestamp;
+  date_creation: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Type UIService avec createdAt optionnel pour la compatibilité

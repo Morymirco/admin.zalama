@@ -1,11 +1,9 @@
-import { Timestamp } from 'firebase/firestore';
-
 export interface Notification {
   id: string;
   titre: string;
   message: string;
   type: string;
-  dateCreation: Timestamp;
+  dateCreation: string;
   lue: boolean;
   lienId?: string;
   destinataireId?: string;

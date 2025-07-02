@@ -18,6 +18,7 @@ export default function LoginPage() {
   // Redirection automatique si déjà connecté
   useEffect(() => {
     if (!loading && isAuthenticated) {
+      console.log('Utilisateur déjà authentifié, redirection vers dashboard...');
       router.push('/dashboard');
     }
   }, [isAuthenticated, loading, router]);
@@ -33,12 +34,15 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
+      console.log('Tentative de connexion pour:', email);
       await signIn(email, password);
       toast.success('Connexion réussie');
-      // La redirection sera gérée par le useEffect ci-dessus
+      console.log('Connexion réussie, redirection en cours...');
+      // La redirection sera gérée par le useEffect ci-dessus ou par le SupabaseAuthProvider
     } catch (error) {
       console.error('Erreur de connexion:', error);
-      toast.error('Email ou mot de passe incorrect');
+      const errorMessage = error instanceof Error ? error.message : 'Email ou mot de passe incorrect';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +58,24 @@ export default function LoginPage() {
           </div>
           <h2 className="text-3xl font-bold text-white mb-2">ZaLaMa</h2>
           <p className="text-white/80">Vérification de l'authentification...</p>
+          <div className="mt-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Si déjà authentifié, ne pas afficher le formulaire
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[var(--zalama-blue)] to-[var(--zalama-blue-accent)]">
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 bg-white rounded-full flex items-center justify-center mb-4">
+            <span className="text-2xl font-bold text-[var(--zalama-blue)]">Z</span>
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-2">ZaLaMa</h2>
+          <p className="text-white/80">Redirection vers le dashboard...</p>
           <div className="mt-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
           </div>

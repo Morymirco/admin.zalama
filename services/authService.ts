@@ -114,27 +114,49 @@ class AuthService {
     }
   }
 
-  // Récupérer la session actuelle
+  // Récupérer la session actuelle (optimisée)
   async getSession(): Promise<Session | null> {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      // Utiliser une promesse avec timeout pour éviter les blocages
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout session')), 5000)
+      );
+      
+      const { data: { session }, error } = await Promise.race([
+        sessionPromise,
+        timeoutPromise
+      ]) as any;
+      
       if (error) throw error;
       return session;
     } catch (error) {
       console.error('Erreur lors de la récupération de la session:', error);
-      throw error;
+      // Retourner null au lieu de throw pour éviter les blocages
+      return null;
     }
   }
 
-  // Récupérer l'utilisateur actuel
+  // Récupérer l'utilisateur actuel (optimisée)
   async getCurrentUser(): Promise<User | null> {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      // Utiliser une promesse avec timeout pour éviter les blocages
+      const userPromise = supabase.auth.getUser();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout user')), 5000)
+      );
+      
+      const { data: { user }, error } = await Promise.race([
+        userPromise,
+        timeoutPromise
+      ]) as any;
+      
       if (error) throw error;
       return user;
     } catch (error) {
       console.error('Erreur lors de la récupération de l\'utilisateur:', error);
-      throw error;
+      // Retourner null au lieu de throw pour éviter les blocages
+      return null;
     }
   }
 

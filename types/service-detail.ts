@@ -1,5 +1,3 @@
-import { Timestamp } from 'firebase/firestore';
-
 export interface ServiceDetail {
   id: string;
   nom: string;
@@ -7,20 +5,23 @@ export interface ServiceDetail {
   responsable: string;
   emailResponsable: string;
   telephoneResponsable: string;
-  dateCreation: string | Timestamp;
+  dateCreation: string;
   actif: boolean;
   nombreDemandes: number;
   nombreTransactions: number;
   montantTotal: number;
   logo?: string;
-  categorie?: string;
+  categorie: string;
   statut: 'actif' | 'inactif' | 'en_maintenance';
-  derniereMiseAJour?: string | Timestamp;
+  derniereMiseAJour?: string;
   // Propriétés de base du service
   pourcentageMax?: number;
-  duree?: string;
-  disponible?: boolean;
-  createdAt?: Timestamp;
+  duree: string;
+  disponible: boolean;
+  createdAt?: string;
+  prix: number;
+  dateModification?: string;
+  imageUrl?: string;
 }
 
 export interface DemandeService {
@@ -31,8 +32,8 @@ export interface DemandeService {
   demandeurId: string;
   demandeurNom: string;
   demandeurEmail: string;
-  dateDemande: string | Timestamp;
-  dateTraitement?: string | Timestamp;
+  dateDemande: string;
+  dateTraitement?: string;
   statut: 'EN_ATTENTE' | 'EN_COURS' | 'TRAITEE' | 'REJETEE' | 'ANNULEE';
   priorite: 'BASSE' | 'MOYENNE' | 'HAUTE' | 'URGENTE';
   description: string;
@@ -54,7 +55,7 @@ export interface TransactionService {
   demandeurNom: string;
   demandeurEmail: string;
   montant: number;
-  dateTransaction: string | Timestamp;
+  dateTransaction: string;
   statut: 'EN_ATTENTE' | 'VALIDEE' | 'REJETEE' | 'ANNULEE' | 'REMBOURSEE';
   typePaiement: string;
   referencePaiement?: string;

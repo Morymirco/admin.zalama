@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Finances', icon: BarChart2, href: '/dashboard/finances' },
   { label: 'Services', icon: PieChart, href: '/dashboard/services' },
   { label: 'Partenaires', icon: Users, href: '/dashboard/partenaires' },
+  { label: 'Avis', icon: MessageSquare, href: '/dashboard/avis' },
   { label: 'Demandes', icon: FileText, href: '/dashboard/demandes' },
   { label: 'Alertes & Risques', icon: AlertCircle, href: '/dashboard/alertes' },
   { label: 'Objectifs & Performances', icon: Target, href: '/dashboard/performance' },

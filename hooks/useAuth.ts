@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import authService, { AuthUser } from '@/services/authService';
 
@@ -9,45 +9,68 @@ export const useAuth = () => {
   const [userProfile, setUserProfile] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastProfileFetch, setLastProfileFetch] = useState(0);
+  const profileCache = useRef<Map<string, { profile: AuthUser; timestamp: number }>>(new Map());
+
+  // Optimisation : Cache des profils utilisateur avec TTL
+  const getCachedProfile = useCallback(async (userId: string): Promise<AuthUser | null> => {
+    const now = Date.now();
+    const cacheKey = userId;
+    const cached = profileCache.current.get(cacheKey);
+    
+    // Cache valide pendant 5 minutes
+    if (cached && (now - cached.timestamp) < 5 * 60 * 1000) {
+      return cached.profile;
+    }
+    
+    try {
+      const profile = await authService.getUserProfile(userId);
+      if (profile) {
+        profileCache.current.set(cacheKey, { profile, timestamp: now });
+      }
+      return profile;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du profil:', error);
+      return null;
+    }
+  }, []);
+
+  // Optimisation : Récupération de session optimisée
+  const getSessionOptimized = useCallback(async () => {
+    try {
+      const session = await authService.getSession();
+      const currentUser = await authService.getCurrentUser();
+      
+      setUser(currentUser);
+      
+      // Récupérer le profil utilisateur si connecté (avec cache)
+      if (currentUser) {
+        const profile = await getCachedProfile(currentUser.id);
+        setUserProfile(profile);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la récupération de la session');
+    } finally {
+      setLoading(false);
+    }
+  }, [getCachedProfile]);
 
   useEffect(() => {
-    // Récupérer la session utilisateur actuelle
-    const getSession = async () => {
-      try {
-        const session = await authService.getSession();
-        const currentUser = await authService.getCurrentUser();
-        
-        setUser(currentUser);
-        
-        // Récupérer le profil utilisateur si connecté
-        if (currentUser) {
-          const profile = await authService.getUserProfile(currentUser.id);
-          setUserProfile(profile);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur lors de la récupération de la session');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getSession();
+    getSessionOptimized();
 
     // Écouter les changements d'authentification
     const { data: { subscription } } = authService.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null);
         
-        // Récupérer le profil utilisateur si connecté
+        // Récupérer le profil utilisateur si connecté (avec cache)
         if (session?.user) {
-          try {
-            const profile = await authService.getUserProfile(session.user.id);
-            setUserProfile(profile);
-          } catch (err) {
-            console.error('Erreur lors de la récupération du profil:', err);
-          }
+          const profile = await getCachedProfile(session.user.id);
+          setUserProfile(profile);
         } else {
           setUserProfile(null);
+          // Nettoyer le cache quand l'utilisateur se déconnecte
+          profileCache.current.clear();
         }
         
         setLoading(false);
@@ -55,7 +78,7 @@ export const useAuth = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [getSessionOptimized, getCachedProfile]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -66,9 +89,9 @@ export const useAuth = () => {
       
       setUser(authUser);
       
-      // Récupérer le profil utilisateur
+      // Récupérer le profil utilisateur (avec cache)
       if (authUser) {
-        const profile = await authService.getUserProfile(authUser.id);
+        const profile = await getCachedProfile(authUser.id);
         setUserProfile(profile);
       }
       
@@ -98,8 +121,8 @@ export const useAuth = () => {
       if (authUser) {
         setUser(authUser);
         
-        // Récupérer le profil utilisateur
-        const profile = await authService.getUserProfile(authUser.id);
+        // Récupérer le profil utilisateur (avec cache)
+        const profile = await getCachedProfile(authUser.id);
         setUserProfile(profile);
       }
       
@@ -119,6 +142,8 @@ export const useAuth = () => {
       await authService.signOut();
       setUser(null);
       setUserProfile(null);
+      // Nettoyer le cache lors de la déconnexion
+      profileCache.current.clear();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de déconnexion');
       throw err;

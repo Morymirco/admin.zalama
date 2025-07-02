@@ -25,7 +25,14 @@
     "create-admin": "node scripts/create-admin-user.js",
     "migrate-users": "node scripts/migrate-users-to-admin-table.js",
     "check-users-table": "node scripts/check-users-table.js",
-    "migrate:test": "npm run dev & echo 'Test de migration disponible sur http://localhost:3000/dashboard/migration-test'"
+    "migrate:test": "npm run dev & echo 'Test de migration disponible sur http://localhost:3000/dashboard/migration-test'",
+    "dev:fast": "NEXT_TELEMETRY_DISABLED=1 NEXT_OPTIMIZE_FONTS=true next dev",
+    "dev:debug": "NEXT_DEBUG=true next dev",
+    "build:analyze": "ANALYZE=true next build",
+    "start:fast": "NEXT_TELEMETRY_DISABLED=1 next start",
+    "clean": "rm -rf .next && rm -rf node_modules/.cache",
+    "cache:clear": "rm -rf .next/cache",
+    "perf:test": "node scripts/test-dashboard-simple.js"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",

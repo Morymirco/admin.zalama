@@ -1,105 +1,89 @@
-import { Notification } from './types';
-import { getUnreadNotifications, getNotificationsByType, getRecentNotifications } from '@/services/notificationService';
-import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { createClient } from '@supabase/supabase-js';
 
+// Configuration Supabase
+const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
 
-// Fonction pour récupérer les notifications non lues
-export const fetchUnreadNotifications = async (): Promise<Notification[]> => {
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  titre: string;
+  message?: string;
+  type: 'Information' | 'Alerte' | 'Succès' | 'Erreur';
+  lu: boolean;
+  date_creation: string;
+  date_lecture?: string;
+}
+
+// Récupérer toutes les notifications d'un utilisateur
+export async function getNotifications(userId: string): Promise<Notification[]> {
   try {
-    console.log('Début de fetchUnreadNotifications');
-    // Récupérer toutes les notifications récentes (lues et non lues)
-    const allNotifications = await getRecentNotifications(50);
-    console.log('Notifications récupérées:', allNotifications.length, allNotifications);
-    return allNotifications;
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date_creation', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
     console.error('Erreur lors de la récupération des notifications:', error);
     return [];
   }
-};
+}
 
-// Fonction pour récupérer uniquement le nombre de notifications non lues
-export const getUnreadNotificationsCount = async (): Promise<number> => {
+// Marquer une notification comme lue
+export async function markNotificationAsRead(notificationId: string): Promise<void> {
   try {
-    // Solution directe avec Firestore
-    const notificationsRef = collection(db, 'notifications');
-    const q = query(notificationsRef, where('lue', '==', false));
-    const snapshot = await getDocs(q);
-    const count = snapshot.size;
-    console.log('Nombre de notifications non lues:', count);
-    return count;
+    const { error } = await supabase
+      .from('notifications')
+      .update({ 
+        lu: true, 
+        date_lecture: new Date().toISOString() 
+      })
+      .eq('id', notificationId);
+
+    if (error) throw error;
   } catch (error) {
-    console.error('Erreur lors du comptage des notifications non lues:', error);
-    
-    // Solution de secours si l'index n'est pas créé
-    try {
-      const allNotifications = await getRecentNotifications(50);
-      const unreadCount = allNotifications.filter(notification => !notification.lue).length;
-      console.log('Nombre de notifications non lues (méthode alternative):', unreadCount);
-      return unreadCount;
-    } catch (secondError) {
-      console.error('Erreur lors du comptage alternatif des notifications:', secondError);
-      return 0;
-    }
+    console.error('Erreur lors du marquage de la notification:', error);
   }
-};
+}
 
-// Fonction pour récupérer les notifications par type
-export const fetchNotificationsByType = async (type: string): Promise<Notification[]> => {
+// Récupérer les notifications non lues
+export async function getUnreadNotifications(userId: string): Promise<Notification[]> {
   try {
-    console.log(`Début de fetchNotificationsByType pour le type: ${type}`);
-    // Solution temporaire : récupérer toutes les notifications récentes et filtrer côté client
-    // En attendant que l'index soit créé
-    const allNotifications = await getRecentNotifications(100); // Augmenter la limite pour voir plus de notifications
-    console.log('Notifications récupérées:', allNotifications.length, allNotifications);
-    
-    const typedNotifications = allNotifications.filter(notification => notification.type === type);
-    console.log(`Notifications de type ${type}:`, typedNotifications.length);
-    
-    return typedNotifications;
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('lu', false)
+      .order('date_creation', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
-    console.error(`Erreur lors de la récupération des notifications de type ${type}:`, error);
+    console.error('Erreur lors de la récupération des notifications non lues:', error);
     return [];
   }
-};
+}
 
-// Fonction pour récupérer les notifications récentes
-export const fetchRecentNotifications = async (count: number = 5): Promise<Notification[]> => {
+// Récupérer les notifications par type
+export async function getNotificationsByType(userId: string, type: string): Promise<Notification[]> {
   try {
-    return await getRecentNotifications(count);
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('type', type)
+      .order('date_creation', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
-    console.error('Erreur lors de la récupération des notifications récentes:', error);
+    console.error('Erreur lors de la récupération des notifications par type:', error);
     return [];
   }
-};
-
-// Fonction pour marquer une notification comme lue
-export const markNotificationAsRead = async (notificationId: string): Promise<boolean> => {
-  try {
-    const notificationRef = doc(db, 'notifications', notificationId);
-    await updateDoc(notificationRef, {
-      lue: true
-    });
-    return true;
-  } catch (error) {
-    console.error(`Erreur lors du marquage de la notification ${notificationId} comme lue:`, error);
-    return false;
-  }
-};
-
-// Fonction pour marquer toutes les notifications comme lues
-export const markAllNotificationsAsRead = async (notificationIds: string[]): Promise<boolean> => {
-  try {
-    const updatePromises = notificationIds.map(id => {
-      const notificationRef = doc(db, 'notifications', id);
-      return updateDoc(notificationRef, { lue: true });
-    });
-    
-    await Promise.all(updatePromises);
-    return true;
-  } catch (error) {
-    console.error('Erreur lors du marquage de toutes les notifications comme lues:', error);
-    return false;
-  }
-};
+}
 

@@ -4,7 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { Toaster } from "react-hot-toast";
-import FirebaseAuthProvider from "@/components/auth/FirebaseAuthProvider";
+import SupabaseAuthProvider from "@/components/auth/SupabaseAuthProvider";
 
 // Nous utiliserons des polices système au lieu des polices Google pour éviter les problèmes avec Turbopack
 
@@ -24,7 +24,7 @@ export default function RootLayout({
         className="font-sans antialiased"
       >
         <ThemeProvider>
-          <FirebaseAuthProvider>
+          <SupabaseAuthProvider>
             <NotificationProvider>
               {children}
               <Toaster
@@ -57,7 +57,7 @@ export default function RootLayout({
               }}
             />
             </NotificationProvider>
-          </FirebaseAuthProvider>
+          </SupabaseAuthProvider>
         </ThemeProvider>
       </body>
     </html>

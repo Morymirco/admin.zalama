@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, Wand2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-// import { useFileUpload } from '@/hooks/useFileUpload'; // DÉSACTIVÉ TEMPORAIREMENT
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 interface ModaleAjoutPartenaireProps {
   isOpen: boolean;
@@ -16,21 +16,18 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
   onSubmit,
   types
 }) => {
-  // États pour le logo - DÉSACTIVÉS TEMPORAIREMENT
-  /*
+  // États pour le logo
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  */
   
   // Références aux champs du formulaire
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Hook pour l'upload de fichiers - DÉSACTIVÉ TEMPORAIREMENT
-  // const { uploading, uploadProgress, uploadPartnerLogo, validateFile } = useFileUpload();
+  // Hook pour l'upload de fichiers
+  const { uploading, uploadProgress, uploadPartnerLogo, validateFile } = useFileUpload();
 
-  // Gestion du téléchargement du logo - DÉSACTIVÉ TEMPORAIREMENT
-  /*
+  // Gestion du téléchargement du logo
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -59,7 +56,6 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
   const handleLogoClick = () => {
     fileInputRef.current?.click();
   };
-  */
 
   // Fonction de préremplissage automatique
   const handlePreFill = () => {
@@ -96,14 +92,14 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
     try {
       const form = e.currentTarget;
       
-      // Upload du logo désactivé temporairement
-      /*
-      // Générer un ID temporaire pour le partenaire
-      const tempPartnerId = `temp_${Date.now()}`;
+      // Upload du logo
       let logoUrl = '';
 
       // Upload du logo si un fichier est sélectionné
       if (logoFile) {
+        // Générer un ID temporaire pour le partenaire
+        const tempPartnerId = `temp_${Date.now()}`;
+        
         const uploadResult = await uploadPartnerLogo(logoFile, tempPartnerId);
         if (uploadResult.error) {
           toast.error('Erreur lors de l\'upload du logo');
@@ -111,7 +107,6 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         }
         logoUrl = uploadResult.url;
       }
-      */
       
       // Structurer les données selon le format attendu par Supabase
       const formData = {
@@ -142,7 +137,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         site_web: (form.querySelector('#siteWeb') as HTMLInputElement)?.value || '',
         
         // Autres informations
-        logo_url: '', // Logo désactivé temporairement
+        logo_url: logoUrl,
         actif: (form.querySelector('#actif') as HTMLInputElement)?.checked || false,
         nombre_employes: 0,
         salaire_net_total: 0
@@ -189,8 +184,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         
         <form ref={formRef} onSubmit={handleFormSubmit} className="p-5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Section Logo - DÉSACTIVÉE TEMPORAIREMENT */}
-            {/* 
+            {/* Section Logo */}
             <div className="lg:col-span-1">
               <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3">Logo de l'entreprise</h4>
               
@@ -244,7 +238,6 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
                 )}
               </div>
             </div>
-            */}
             
             {/* Section Informations */}
             <div className="lg:col-span-2">

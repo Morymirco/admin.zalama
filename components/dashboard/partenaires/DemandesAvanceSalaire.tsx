@@ -17,6 +17,8 @@ import {
   Eye,
   MoreHorizontal
 } from 'lucide-react';
+import { useSupabaseSalaryAdvance } from '@/hooks/useSupabaseSalaryAdvance';
+import Image from 'next/image';
 
 interface DemandesAvanceSalaireProps {
   partnerId: string;
@@ -194,9 +196,21 @@ const DemandesAvanceSalaire: React.FC<DemandesAvanceSalaireProps> = ({ partnerId
                 <div key={demande.id} className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)] hover:shadow-lg transition-all duration-200">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[var(--zalama-blue)] rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-white" />
-                      </div>
+                      {demande.employe?.photo_url ? (
+                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[var(--zalama-border)]">
+                          <Image
+                            src={demande.employe.photo_url}
+                            alt={`Photo de ${demande.employe.prenom} ${demande.employe.nom}`}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 bg-[var(--zalama-blue)] rounded-full flex items-center justify-center">
+                          <User className="h-5 w-5 text-white" />
+                        </div>
+                      )}
                       <div>
                         <h4 className="font-semibold text-[var(--zalama-text)]">
                           {demande.employe ? `${demande.employe.prenom} ${demande.employe.nom}` : 'Employé inconnu'}
@@ -280,9 +294,21 @@ const DemandesAvanceSalaire: React.FC<DemandesAvanceSalaireProps> = ({ partnerId
                 <div key={transaction.id} className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)] hover:shadow-lg transition-all duration-200">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[var(--zalama-success)] rounded-full flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-white" />
-                      </div>
+                      {transaction.employe?.photo_url ? (
+                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[var(--zalama-border)]">
+                          <Image
+                            src={transaction.employe.photo_url}
+                            alt={`Photo de ${transaction.employe.prenom} ${transaction.employe.nom}`}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 bg-[var(--zalama-success)] rounded-full flex items-center justify-center">
+                          <CreditCard className="h-5 w-5 text-white" />
+                        </div>
+                      )}
                       <div>
                         <h4 className="font-semibold text-[var(--zalama-text)]">
                           {transaction.employe ? `${transaction.employe.prenom} ${transaction.employe.nom}` : 'Employé inconnu'}

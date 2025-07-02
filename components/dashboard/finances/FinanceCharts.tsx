@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChartData } from '@/services/financeService';
-import { PieChart, BarChart, LineChart, TrendingUp } from 'lucide-react';
+import { PieChart, BarChart, TrendingUp } from 'lucide-react';
 
 interface FinanceChartsProps {
   chartData: ChartData;
@@ -11,6 +11,13 @@ const FinanceCharts: React.FC<FinanceChartsProps> = ({ chartData, loading = fals
   const formatMontant = (montant: number) => {
     return new Intl.NumberFormat('fr-FR').format(montant) + ' GNF';
   };
+
+  // Calculate pie chart percentages
+  const totalRevenue = chartData.evolutionMensuelle.reduce((sum, m) => sum + m.revenus, 0);
+  const totalExpenses = chartData.evolutionMensuelle.reduce((sum, m) => sum + m.depenses, 0);
+  const total = totalRevenue + totalExpenses;
+  const revenuePercentage = total > 0 ? (totalRevenue / total) * 100 : 0;
+  const expensePercentage = total > 0 ? (totalExpenses / total) * 100 : 0;
 
   if (loading) {
     return (
@@ -36,40 +43,28 @@ const FinanceCharts: React.FC<FinanceChartsProps> = ({ chartData, loading = fals
             <div className="absolute inset-0 rounded-full overflow-hidden">
               <div 
                 className="absolute top-0 left-0 bg-[var(--zalama-blue)] h-full transition-all duration-500" 
-                style={{ 
-                  width: `${(chartData.evolutionMensuelle.reduce((sum, m) => sum + m.revenus, 0) / 
-                    (chartData.evolutionMensuelle.reduce((sum, m) => sum + m.revenus, 0) + 
-                     chartData.evolutionMensuelle.reduce((sum, m) => sum + m.depenses, 0)) || 1)) * 100}%` 
-                }}
-              ></div>
+                style={{ width: revenuePercentage + '%' }}
+              />
               <div 
                 className="absolute top-0 right-0 bg-[var(--zalama-danger)] h-full transition-all duration-500" 
-                style={{ 
-                  width: `${(chartData.evolutionMensuelle.reduce((sum, m) => sum + m.depenses, 0) / 
-                    (chartData.evolutionMensuelle.reduce((sum, m) => sum + m.revenus, 0) + 
-                     chartData.evolutionMensuelle.reduce((sum, m) => sum + m.depenses, 0)) || 1)) * 100}%` 
-                }}
-              ></div>
+                style={{ width: expensePercentage + '%' }}
+              />
             </div>
             <div className="absolute inset-0 flex items-center justify-center flex-col">
               <PieChart className="h-10 w-10 text-[var(--zalama-text-secondary)] mb-2" />
               <span className="text-sm font-medium text-[var(--zalama-text)]">
-                {Math.round((chartData.evolutionMensuelle.reduce((sum, m) => sum + m.revenus, 0) / 
-                  (chartData.evolutionMensuelle.reduce((sum, m) => sum + m.revenus, 0) + 
-                   chartData.evolutionMensuelle.reduce((sum, m) => sum + m.depenses, 0)) || 1)) * 100)}% / {Math.round((chartData.evolutionMensuelle.reduce((sum, m) => sum + m.depenses, 0) / 
-                  (chartData.evolutionMensuelle.reduce((sum, m) => sum + m.revenus, 0) + 
-                   chartData.evolutionMensuelle.reduce((sum, m) => sum + m.depenses, 0)) || 1)) * 100)}%
+                {Math.round(revenuePercentage)}% / {Math.round(expensePercentage)}%
               </span>
             </div>
           </div>
         </div>
         <div className="flex justify-center gap-6 mt-4">
           <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-[var(--zalama-blue)] mr-2"></div>
+            <div className="w-3 h-3 rounded-full bg-[var(--zalama-blue)] mr-2" />
             <span className="text-sm text-[var(--zalama-text)]">Revenus</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-[var(--zalama-danger)] mr-2"></div>
+            <div className="w-3 h-3 rounded-full bg-[var(--zalama-danger)] mr-2" />
             <span className="text-sm text-[var(--zalama-text)]">Dépenses</span>
           </div>
         </div>
@@ -93,11 +88,11 @@ const FinanceCharts: React.FC<FinanceChartsProps> = ({ chartData, loading = fals
                   <div 
                     className="w-5 bg-[var(--zalama-blue)] rounded-t transition-all duration-500" 
                     style={{ height: `${revenueHeight}%` }}
-                  ></div>
+                  />
                   <div 
                     className="w-5 bg-[var(--zalama-danger)] rounded-t transition-all duration-500" 
                     style={{ height: `${expenseHeight}%` }}
-                  ></div>
+                  />
                 </div>
                 <span className="text-xs text-[var(--zalama-text-secondary)] mt-2">{month.mois}</span>
               </div>
@@ -106,11 +101,11 @@ const FinanceCharts: React.FC<FinanceChartsProps> = ({ chartData, loading = fals
         </div>
         <div className="flex justify-center gap-6 mt-4">
           <div className="flex items-center">
-            <div className="w-3 h-3 rounded-sm bg-[var(--zalama-blue)] mr-2"></div>
+            <div className="w-3 h-3 rounded-sm bg-[var(--zalama-blue)] mr-2" />
             <span className="text-sm text-[var(--zalama-text)]">Revenus</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 rounded-sm bg-[var(--zalama-danger)] mr-2"></div>
+            <div className="w-3 h-3 rounded-sm bg-[var(--zalama-danger)] mr-2" />
             <span className="text-sm text-[var(--zalama-text)]">Dépenses</span>
           </div>
         </div>
@@ -133,7 +128,7 @@ const FinanceCharts: React.FC<FinanceChartsProps> = ({ chartData, loading = fals
                     category.type === 'revenu' ? 'bg-[var(--zalama-blue)]' : 'bg-[var(--zalama-danger)]'
                   }`} 
                   style={{ width: `${category.pourcentage}%` }}
-                ></div>
+                />
               </div>
             </div>
           ))}
@@ -162,7 +157,7 @@ const FinanceCharts: React.FC<FinanceChartsProps> = ({ chartData, loading = fals
                       key={i} 
                       className="absolute w-2 h-2 rounded-full bg-[var(--zalama-blue)] transform -translate-x-1 -translate-y-1 transition-all duration-500" 
                       style={{ left: `${position}%`, top: `${100 - value}%` }}
-                    ></div>
+                    />
                   );
                 })}
                 

@@ -66,6 +66,7 @@ export interface Employe {
   salaire_net?: number;
   date_embauche?: string;
   actif: boolean;
+  photo_url?: string;  // URL de la photo de l'employé
   user_id?: string;
   created_at: string;
   updated_at: string;

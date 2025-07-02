@@ -4,7 +4,7 @@ import smsService from './smsService';
 import employeeAccountService from './employeeAccountService';
 import { employeeSyncService } from './employeeSyncService';
 import { generatePassword, validateEmail, sendSMS } from '@/lib/utils';
-import employeeService from './employeeService';
+import { employeeService } from './employeeService';
 
 // Configuration Supabase - Variables définies directement
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -245,11 +245,14 @@ export const partenaireService = {
         // Envoyer un SMS à l'administrateur
         try {
           const adminMessage = `Nouveau partenaire créé: ${partenaireData.nom}. Comptes RH et responsable configurés.`;
-          const adminSMSResult = await smsService.sendSMS('+224000000000', adminMessage);
+          const adminSMSResult = await smsService.sendSMS({
+            to: ['+224625212115'],
+            message: adminMessage
+          });
           smsResults.admin = {
             success: adminSMSResult.success,
             message: adminSMSResult.success ? 'SMS admin envoyé' : '',
-            error: adminSMSResult.error || ''
+            error: adminSMSResult.error || adminSMSResult.message || ''
           };
         } catch (smsError) {
           smsResults.admin = {
@@ -585,21 +588,17 @@ export const employeService = {
       console.log('🔄 Création d\'employé avec le nouveau service...');
 
       // Utiliser le nouveau service employeeService
-      const result = await employeeService.createEmployee(employeData);
+      const employe = await employeeService.create(employeData);
 
-      if (!result.success) {
-        throw new Error(result.error || 'Erreur lors de la création de l\'employé');
-      }
-
-      console.log('✅ Employé créé avec succès:', result.employee);
+      console.log('✅ Employé créé avec succès:', employe);
 
       // Mettre à jour les statistiques du partenaire
       await partenaireService.updatePartnerStats(employeData.partner_id || '');
 
       return {
-        employe: result.employee!,
-        account: result.account,
-        sms: result.sms
+        employe: employe,
+        account: undefined, // Le service employeeService ne gère pas les comptes
+        sms: undefined // Le service employeeService ne gère pas les SMS
       };
     } catch (error) {
       console.error('Erreur employeService.create:', error);

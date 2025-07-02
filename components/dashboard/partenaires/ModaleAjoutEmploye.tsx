@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Calendar, DollarSign, MapPin, Phone, Mail, User, CheckCircle, AlertCircle, Key, MessageSquare } from 'lucide-react';
+import { X, UserPlus, Calendar, DollarSign, MapPin, Phone, Mail, User, CheckCircle, AlertCircle, Key, MessageSquare, Camera } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Employe } from '@/types/partenaire';
+import EmployeePhotoUpload from './EmployeePhotoUpload';
 
 interface ModaleAjoutEmployeProps {
   isOpen: boolean;
@@ -41,7 +42,8 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
     type_contrat: 'CDI' as 'CDI' | 'CDD' | 'Consultant' | 'Stage' | 'Autre',
     salaire_net: 0,
     date_embauche: new Date().toISOString().split('T')[0],
-    actif: true
+    actif: true,
+    photo_url: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,10 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
       ...prev,
       [field]: value
     }));
+  };
+
+  const handlePhotoUpload = (photoUrl: string) => {
+    handleInputChange('photo_url', photoUrl);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,7 +102,8 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
         type_contrat: formData.type_contrat,
         salaire_net: formData.salaire_net || undefined,
         date_embauche: formData.date_embauche || undefined,
-        actif: formData.actif
+        actif: formData.actif,
+        photo_url: formData.photo_url || undefined
       };
 
       const result = await onSubmit(employeData);
@@ -118,7 +125,8 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
         type_contrat: 'CDI',
         salaire_net: 0,
         date_embauche: new Date().toISOString().split('T')[0],
-        actif: true
+        actif: true,
+        photo_url: ''
       });
       
       toast.success('Employé ajouté avec succès');
@@ -281,6 +289,18 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                 <User className="h-4 w-4" />
                 Informations personnelles
               </h4>
+              
+              {/* Photo de l'employé */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--zalama-text)] mb-2 flex items-center gap-2">
+                  <Camera className="h-4 w-4" />
+                  Photo de l'employé
+                </label>
+                <EmployeePhotoUpload
+                  onPhotoChange={handlePhotoUpload}
+                  currentPhotoUrl={formData.photo_url}
+                />
+              </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>

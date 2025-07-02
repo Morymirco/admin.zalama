@@ -22,6 +22,8 @@
     "test-sms-send": "node scripts/test-sms-integration.js --send",
     "test-sms-welcome": "node scripts/test-sms-integration.js --welcome",
     "test-sms-api": "node scripts/test-sms-api-route.js",
+    "test-sms-email": "node scripts/test-sms-email.js",
+    "test-all-services": "node scripts/test-all-services.js",
     "create-admin": "node scripts/create-admin-user.js",
     "migrate-users": "node scripts/migrate-users-to-admin-table.js",
     "check-users-table": "node scripts/check-users-table.js",

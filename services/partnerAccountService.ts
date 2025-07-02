@@ -300,14 +300,14 @@ class PartnerAccountService {
   }> {
     const results = {
       rh: { 
-        account: { success: false, error: 'Non tenté' }, 
-        sms: { success: false, error: 'Non tenté' },
-        email: { success: false, error: 'Non tenté' }
+        account: { success: false, error: 'Non tenté' } as AccountResult, 
+        sms: { success: false, error: 'Non tenté' } as SMSResult,
+        email: { success: false, error: 'Non tenté' } as EmailResult
       },
       responsable: { 
-        account: { success: false, error: 'Non tenté' }, 
-        sms: { success: false, error: 'Non tenté' },
-        email: { success: false, error: 'Non tenté' }
+        account: { success: false, error: 'Non tenté' } as AccountResult, 
+        sms: { success: false, error: 'Non tenté' } as SMSResult,
+        email: { success: false, error: 'Non tenté' } as EmailResult
       }
     };
 

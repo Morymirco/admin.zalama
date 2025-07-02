@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Employe } from '@/types/partenaire';
 import ModaleAjoutEmploye from './ModaleAjoutEmploye';
+import Image from 'next/image';
 
 interface ListeEmployesProps {
   employes: Employe[];
@@ -219,9 +220,21 @@ const ListeEmployes: React.FC<ListeEmployesProps> = ({
               {/* En-tête de la carte */}
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-blue)] to-[var(--zalama-blue-accent)] rounded-full flex items-center justify-center text-white font-semibold">
-                    {employe.prenom.charAt(0)}{employe.nom.charAt(0)}
-                  </div>
+                  {employe.photo_url ? (
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[var(--zalama-border)]">
+                      <Image
+                        src={employe.photo_url}
+                        alt={`Photo de ${employe.prenom} ${employe.nom}`}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-blue)] to-[var(--zalama-blue-accent)] rounded-full flex items-center justify-center text-white font-semibold">
+                      {employe.prenom.charAt(0)}{employe.nom.charAt(0)}
+                    </div>
+                  )}
                   <div>
                     <h3 className="font-semibold text-[var(--zalama-text)]">
                       {employe.prenom} {employe.nom}

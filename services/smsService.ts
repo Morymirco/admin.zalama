@@ -2,13 +2,16 @@
 
 import { Client } from 'nimbasms';
 
-// Configuration Nimba SMS
+// Configuration Nimba SMS - Utiliser les variables d'environnement
 const config = {
-  SERVICE_ID: '9d83d5b67444c654c702f109dd837167',
-  SECRET_TOKEN: 'qf_bpb4CVfEalTU5eVEFC05wpoqlo17M-mozkZVbIHT_3xfOIjB7Oac-lkXZ6Pg2VqO2LXVy6BUlYTZe73y411agSC0jVh3OcOU92s8Rplc',
+  SERVICE_ID: process.env.NIMBA_SMS_SERVICE_ID || '9d83d5b67444c654c702f109dd837167',
+  SECRET_TOKEN: process.env.NIMBA_SMS_SECRET_TOKEN || 'qf_bpb4CVfEalTU5eVEFC05wpoqlo17M-mozkZVbIHT_3xfOIjB7Oac-lkXZ6Pg2VqO2LXVy6BUlYTZe73y411agSC0jVh3OcOU92s8Rplc',
 };
 
-const client = new Client(config);
+// Vérifier si la configuration est valide
+const isSMSConfigured = config.SERVICE_ID && config.SECRET_TOKEN;
+
+const client = isSMSConfigured ? new Client(config) : null;
 
 export interface SMSMessage {
   to: string[];
@@ -34,6 +37,16 @@ class SMSService {
    */
   async sendSMS(message: SMSMessage): Promise<any> {
     try {
+      // Vérifier si le client SMS est configuré
+      if (!client || !isSMSConfigured) {
+        console.warn('⚠️ Service SMS non configuré - SMS non envoyé');
+        return {
+          success: false,
+          error: 'Service SMS non configuré',
+          message: 'SMS non envoyé - service non configuré'
+        };
+      }
+
       // Utiliser directement le client Nimba SMS au lieu de l'API HTTP
       const smsData = {
         to: message.to,
@@ -41,40 +54,63 @@ class SMSService {
         sender_name: message.sender_name || this.senderName,
       };
 
-      console.log('Envoi SMS via client Nimba:', smsData);
+      console.log('📱 Envoi SMS via client Nimba:', smsData);
       
       const response = await client.messages.create(smsData);
       
-      console.log('SMS envoyé avec succès via client Nimba:', response);
-      return response;
+      console.log('✅ SMS envoyé avec succès via client Nimba:', response);
+      return {
+        success: true,
+        response: response,
+        message: 'SMS envoyé avec succès'
+      };
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du SMS:', error);
+      console.error('❌ Erreur lors de l\'envoi du SMS:', error);
       
       // Formater l'erreur de manière cohérente
       let errorMessage = 'Erreur inconnue';
+      let isNetworkError = false;
       
       if (error instanceof Error) {
         errorMessage = error.message;
+        isNetworkError = error.message.includes('Network') || error.message.includes('fetch');
       } else if (typeof error === 'string') {
         errorMessage = error;
+        isNetworkError = error.includes('Network') || error.includes('fetch');
       } else if (error && typeof error === 'object') {
         // Essayer d'extraire le message d'erreur de l'objet
         if ('message' in error) {
           errorMessage = String(error.message);
+          isNetworkError = errorMessage.includes('Network') || errorMessage.includes('fetch');
         } else if ('error' in error) {
           errorMessage = String(error.error);
+          isNetworkError = errorMessage.includes('Network') || errorMessage.includes('fetch');
         } else if ('detail' in error) {
           errorMessage = String(error.detail);
+          isNetworkError = errorMessage.includes('Network') || errorMessage.includes('fetch');
         } else {
           errorMessage = JSON.stringify(error);
         }
       }
       
-      // Créer une nouvelle erreur avec le message formaté
-      const formattedError = new Error(errorMessage);
-      formattedError.name = 'SMSError';
+      // Pour les erreurs réseau, retourner un objet d'erreur au lieu de throw
+      if (isNetworkError) {
+        console.warn('⚠️ Erreur réseau SMS - application continue sans SMS');
+        return {
+          success: false,
+          error: 'Erreur réseau',
+          message: 'SMS non envoyé - problème de connexion réseau',
+          isNetworkError: true
+        };
+      }
       
-      throw formattedError;
+      // Pour les autres erreurs, retourner un objet d'erreur
+      return {
+        success: false,
+        error: errorMessage,
+        message: 'SMS non envoyé',
+        isNetworkError: false
+      };
     }
   }
 
@@ -250,6 +286,12 @@ Les SMS de bienvenue ont été envoyés aux contacts.`;
    */
   async checkBalance(): Promise<any> {
     try {
+      // Vérifier si le client SMS est configuré
+      if (!client || !isSMSConfigured) {
+        console.warn('⚠️ Service SMS non configuré - Impossible de vérifier le solde');
+        return { balance: 0, message: 'Service SMS non configuré' };
+      }
+
       // Utiliser directement le client Nimba SMS au lieu de l'API HTTP
       const account = await client.accounts.get();
       

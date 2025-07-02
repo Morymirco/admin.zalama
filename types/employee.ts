@@ -13,6 +13,7 @@ export interface Employee {
   salaire_net?: number;
   date_embauche?: string;
   actif: boolean;
+  photo_url?: string;
   created_at?: string;
   updated_at?: string;
   user_id?: string;

@@ -197,8 +197,8 @@ class PartnerAccountService {
       });
       
       return {
-        success: !!smsResponse,
-        error: smsResponse ? undefined : 'Échec de l\'envoi du SMS'
+        success: smsResponse.success,
+        error: smsResponse.success ? undefined : (smsResponse.error || 'Échec de l\'envoi du SMS')
       };
     } catch (error) {
       console.error('Erreur lors de l\'envoi du SMS RH:', error);
@@ -253,8 +253,8 @@ class PartnerAccountService {
       });
       
       return {
-        success: !!smsResponse,
-        error: smsResponse ? undefined : 'Échec de l\'envoi du SMS'
+        success: smsResponse.success,
+        error: smsResponse.success ? undefined : (smsResponse.error || 'Échec de l\'envoi du SMS')
       };
     } catch (error) {
       console.error('Erreur lors de l\'envoi du SMS responsable:', error);

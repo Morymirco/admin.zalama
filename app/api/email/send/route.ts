@@ -12,44 +12,25 @@ const EMAIL_CONFIG = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { to, subject, message } = await request.json();
+    const { to, subject, html, text } = await request.json();
 
-    if (!to || !subject || !message) {
+    if (!to || !subject || !html) {
       return NextResponse.json(
-        { success: false, error: 'Destinataire, sujet et message requis' },
+        { success: false, error: 'Destinataire, sujet et contenu HTML requis' },
         { status: 400 }
       );
     }
 
-    console.log('📧 Test Email - Envoi vers:', to);
-    console.log('📧 Test Email - Sujet:', subject);
+    console.log('📧 Email - Envoi vers:', to);
+    console.log('📧 Email - Sujet:', subject);
 
     // Envoyer l'email via Resend
     const result = await resend.emails.send({
       from: 'ZaLaMa <noreply@zalamagn.com>',
       to: [to],
       subject: subject,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; font-size: 28px;">ZaLaMa</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Test Email</p>
-          </div>
-          
-          <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <h2 style="color: #333; margin-bottom: 20px;">${subject}</h2>
-            
-            <div style="color: #666; line-height: 1.6; margin-bottom: 30px;">
-              ${message.replace(/\n/g, '<br>')}
-            </div>
-            
-            <div style="border-top: 1px solid #eee; padding-top: 20px; text-align: center; color: #999; font-size: 14px;">
-              <p>Cet email a été envoyé depuis l'application ZaLaMa</p>
-              <p>Date d'envoi: ${new Date().toLocaleString('fr-FR')}</p>
-            </div>
-          </div>
-        </div>
-      `,
+      html: html,
+      text: text || html.replace(/<[^>]*>/g, ''), // Fallback au texte si pas fourni
     });
 
     console.log('📧 Test Email - Résultat:', result);

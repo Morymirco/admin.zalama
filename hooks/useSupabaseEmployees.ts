@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Employee, Partner } from '@/types/employee';
 import { partenaireService, employeService } from '@/services/partenaireService';
 
@@ -34,7 +34,6 @@ interface UseSupabaseEmployeesReturn {
 
 export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmployeesReturn => {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,22 +49,54 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   const [partnerFilter, setPartnerFilter] = useState('tous');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Calculer le nombre total de pages
-  const totalPages = Math.ceil((filteredEmployees?.length || 0) / itemsPerPage);
+  // Filtrer les employés avec optimisation (déplacer avant totalPages)
+  const filteredEmployees = useMemo(() => {
+    let filtered = [...employees];
+    
+    // Filtrage par terme de recherche
+    if (searchTerm.trim() !== '') {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(employee => 
+        (employee.nom?.toLowerCase().includes(searchLower)) ||
+        (employee.prenom?.toLowerCase().includes(searchLower)) ||
+        (employee.email?.toLowerCase().includes(searchLower)) ||
+        (employee.telephone?.toLowerCase().includes(searchLower)) ||
+        (employee.poste?.toLowerCase().includes(searchLower)) ||
+        (employee.role?.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    // Filtrage par partenaire
+    if (partnerFilter !== 'tous') {
+      filtered = filtered.filter(employee => employee.partner_id === partnerFilter);
+    }
+    
+    return filtered;
+  }, [searchTerm, partnerFilter, employees]);
 
-  // Charger tous les employés
+  // Calculer le nombre total de pages avec optimisation
+  const totalPages = useMemo(() => 
+    Math.ceil((filteredEmployees?.length || 0) / itemsPerPage), 
+    [filteredEmployees, itemsPerPage]
+  );
+
+  // Charger tous les employés avec priorisation
   const loadEmployees = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Charger tous les partenaires d'abord
+      // Charger tous les partenaires d'abord (priorité haute)
       const partnersData = await partenaireService.getAll();
       setPartners(partnersData || []);
       
-      // Charger tous les employés de tous les partenaires
+      // Charger les employés par lots pour améliorer les performances
       const allEmployees: Employee[] = [];
-      for (const partner of partnersData || []) {
+      const partners = partnersData || [];
+      
+      // Charger les 3 premiers partenaires en priorité
+      const priorityPartners = partners.slice(0, 3);
+      for (const partner of priorityPartners) {
         try {
           const partnerEmployees = await employeService.getByPartnerId(partner.id);
           allEmployees.push(...partnerEmployees);
@@ -74,13 +105,25 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
         }
       }
       
+      // Mettre à jour les employés prioritaires
       setEmployees(allEmployees);
-      setFilteredEmployees(allEmployees);
+      
+      // Charger les partenaires restants en arrière-plan
+      if (partners.length > 3) {
+        const remainingPartners = partners.slice(3);
+        for (const partner of remainingPartners) {
+          try {
+            const partnerEmployees = await employeService.getByPartnerId(partner.id);
+            setEmployees(prev => [...prev, ...partnerEmployees]);
+          } catch (err) {
+            console.error(`Erreur lors du chargement des employés du partenaire ${partner.id}:`, err);
+          }
+        }
+      }
     } catch (err) {
       console.error('Erreur lors du chargement des employés:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des employés');
       setEmployees([]);
-      setFilteredEmployees([]);
     } finally {
       setIsLoading(false);
     }
@@ -135,30 +178,10 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
     }
   }, [employees, loadStats]);
 
-  // Filtrer les employés
+  // Réinitialiser la page quand les filtres changent
   useEffect(() => {
-    let filtered = [...employees];
-    
-    // Filtrage par terme de recherche
-    if (searchTerm.trim() !== '') {
-      filtered = filtered.filter(employee => 
-        (employee.nom?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (employee.prenom?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (employee.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (employee.telephone?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (employee.poste?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (employee.role?.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-    
-    // Filtrage par partenaire
-    if (partnerFilter !== 'tous') {
-      filtered = filtered.filter(employee => employee.partner_id === partnerFilter);
-    }
-    
-    setFilteredEmployees(filtered);
-    setCurrentPage(1); // Réinitialiser à la première page après filtrage
-  }, [searchTerm, partnerFilter, employees]);
+    setCurrentPage(1);
+  }, [searchTerm, partnerFilter]);
 
   // Créer un employé
   const createEmployee = useCallback(async (employeeData: Partial<Employee>): Promise<Employee> => {

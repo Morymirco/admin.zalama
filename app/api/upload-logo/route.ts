@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  'https://mspmrzlqhwpdkkburjiw.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc4NzI1OCwiZXhwIjoyMDY2MzYzMjU4fQ.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw'
 );
 
 export async function POST(request: NextRequest) {
@@ -42,6 +42,12 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split('.').pop();
     const fileName = `${type}/${partnerId}/logo.${fileExtension}`;
 
+    console.log('📤 Tentative d\'upload vers Supabase...');
+    console.log('📁 Bucket: logos');
+    console.log('📄 Nom du fichier:', fileName);
+    console.log('📏 Taille du fichier:', file.size);
+    console.log('🎨 Type du fichier:', file.type);
+
     // Upload du fichier vers Supabase Storage
     const { data, error } = await supabase.storage
       .from('logos')
@@ -51,12 +57,20 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error('Erreur upload Supabase:', error);
+      console.error('❌ Erreur upload Supabase:', error);
+      console.error('❌ Détails de l\'erreur:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.error
+      });
       return NextResponse.json(
-        { error: 'Erreur lors de l\'upload du fichier' },
+        { error: `Erreur lors de l'upload du fichier: ${error.message}` },
         { status: 500 }
       );
     }
+
+    console.log('✅ Upload réussi !');
+    console.log('📊 Données retournées:', data);
 
     // Obtenir l'URL publique
     const { data: urlData } = supabase.storage

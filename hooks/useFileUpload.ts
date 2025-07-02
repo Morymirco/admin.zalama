@@ -108,8 +108,8 @@ export const useFileUpload = (): UseFileUploadReturn => {
         });
       }, 100);
 
-      // Upload direct depuis le client (utilise la clé anonyme)
-      const result = await storageService.uploadPartnerLogo(resizedFile, partnerId);
+      // Upload via l'API route (utilise la clé de service)
+      const result = await storageService.uploadPartnerLogoViaAPI(resizedFile, partnerId);
 
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -162,8 +162,8 @@ export const useFileUpload = (): UseFileUploadReturn => {
         });
       }, 100);
 
-      // Upload avec le service spécialisé
-      const result = await storageService.uploadServiceLogo(resizedFile, serviceId);
+      // Upload via l'API route (utilise la clé de service)
+      const result = await storageService.uploadServiceLogoViaAPI(resizedFile, serviceId);
 
       clearInterval(progressInterval);
       setUploadProgress(100);

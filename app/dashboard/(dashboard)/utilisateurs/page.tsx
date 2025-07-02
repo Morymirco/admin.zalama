@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Filter, Users, Building, Briefcase, UserCheck, UserX } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -20,6 +20,8 @@ import { Employee } from '@/types/employee';
 import { Partner } from '@/types/employee';
 
 export default function EmployesPage() {
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // Utilisation du hook Supabase pour les employés
   const {
     filteredEmployees: filteredEmployes,
@@ -38,6 +40,15 @@ export default function EmployesPage() {
     updateEmployee,
     deleteEmployee
   } = useSupabaseEmployees(10);
+
+  // Initialisation progressive pour éviter le flash
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // États pour les modales
   const [showAddModal, setShowAddModal] = useState(false);
@@ -184,19 +195,85 @@ export default function EmployesPage() {
     }
   };
 
-  // Calculer les éléments de la page courante
-  const startIndex = (currentPage - 1) * 10;
-  const endIndex = startIndex + 10;
-  const currentItems = (filteredEmployes || []).slice(startIndex, endIndex);
+  // Calculer les éléments de la page courante avec optimisation
+  const currentItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * 10;
+    const endIndex = startIndex + 10;
+    return (filteredEmployes || []).slice(startIndex, endIndex);
+  }, [filteredEmployes, currentPage]);
 
-  // Préparer les options de filtre par partenaire
-  const partnerOptions = [
+  // Préparer les options de filtre par partenaire avec optimisation
+  const partnerOptions = useMemo(() => [
     { value: 'tous', label: 'Tous les partenaires' },
     ...(partners || []).map(partner => ({
       value: partner.id,
       label: partner.nom
     }))
-  ];
+  ], [partners]);
+
+  // Afficher un skeleton pendant le chargement initial
+  if (!isInitialized || isLoading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          {/* Skeleton pour l'en-tête */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-8 w-32 bg-[var(--zalama-bg)] rounded"></div>
+              <div className="h-8 w-48 bg-[var(--zalama-bg)] rounded"></div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-32 bg-[var(--zalama-bg)] rounded"></div>
+              <div className="h-8 w-40 bg-[var(--zalama-blue)] rounded"></div>
+            </div>
+          </div>
+          
+          {/* Skeleton pour les statistiques */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="h-4 w-20 bg-[var(--zalama-bg)] rounded mb-2"></div>
+                    <div className="h-8 w-16 bg-[var(--zalama-bg)] rounded"></div>
+                  </div>
+                  <div className="h-12 w-12 bg-[var(--zalama-bg)] rounded-full"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Skeleton pour la table */}
+          <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm border border-[var(--zalama-border)] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[var(--zalama-border)]">
+                    {Array.from({ length: 8 }).map((_, index) => (
+                      <th key={index} className="px-6 py-3 text-left">
+                        <div className="h-4 w-20 bg-[var(--zalama-bg)] rounded"></div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--zalama-border)]">
+                  {Array.from({ length: 5 }).map((_, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {Array.from({ length: 8 }).map((_, colIndex) => (
+                        <td key={colIndex} className="px-6 py-4">
+                          <div className="h-4 w-24 bg-[var(--zalama-bg)] rounded"></div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

@@ -1,5 +1,6 @@
 import React from 'react';
-import { RefreshCw, Users, Briefcase, Building, UserCheck, UserX } from 'lucide-react';
+import { Users, Briefcase, Building, UserCheck, UserX } from 'lucide-react';
+import { CardSkeleton } from '@/components/ui/skeleton';
 
 interface StatistiqueUtilisateur {
   type: string;
@@ -59,8 +60,10 @@ const StatistiquesUtilisateurs: React.FC<StatistiquesUtilisateursProps> = ({
       <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-text)]">Statistiques des employés</h2>
       
       {isLoading ? (
-        <div className="flex justify-center items-center h-40">
-          <RefreshCw className="h-8 w-8 animate-spin text-[var(--zalama-blue)]" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <CardSkeleton key={index} />
+          ))}
         </div>
       ) : (
         <div>

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Users, Search, Plus, Edit, Trash2, RefreshCw, ChevronLeft, ChevronRight, Briefcase, Building, UserCheck, UserX } from 'lucide-react';
+import { Users, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight, Briefcase, Building, UserCheck, UserX } from 'lucide-react';
 import Image from 'next/image';
 import { Employee, Partner } from '@/types/employee';
+import { TableSkeleton } from '@/components/ui/skeleton';
 
 interface ListeUtilisateursProps {
   utilisateurs: Employee[];
@@ -133,18 +134,15 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
       </div>
       
       {/* Liste des employés */}
-      <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm border border-[var(--zalama-border)] overflow-hidden">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <RefreshCw className="h-8 w-8 animate-spin text-[var(--zalama-blue)]" />
-            <span className="ml-2 text-[var(--zalama-text)]">Chargement...</span>
-          </div>
-        ) : safeFilteredUtilisateurs.length === 0 ? (
+      {isLoading ? (
+        <TableSkeleton rows={8} />
+      ) : safeFilteredUtilisateurs.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-[var(--zalama-text-secondary)]">Aucun employé trouvé</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm border border-[var(--zalama-border)] overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--zalama-border)]">
@@ -236,9 +234,9 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
-      </div>
       
       {/* Pagination */}
       {totalPages > 1 && (

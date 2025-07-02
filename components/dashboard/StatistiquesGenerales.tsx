@@ -5,8 +5,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
 import { employeeService } from '@/services/employeeService';
 import { partnerService } from '@/services/partnerService';
-import { serviceService } from '@/services/serviceService';
+import serviceService from '@/services/serviceService';
 import { transactionService } from '@/services/transactionService';
+import { Employee, Partner, Service, FinancialTransaction } from '@/types/employee';
 
 interface EmployeeStats {
   totalEmployees: number;
@@ -38,10 +39,10 @@ export default function StatistiquesGenerales() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Utiliser nos hooks pour récupérer les données avec priorisation
-  const { data: employees, loading: loadingEmployees } = useSupabaseCollection(employeeService);
-  const { data: partners, loading: loadingPartners } = useSupabaseCollection(partnerService);
-  const { data: services, loading: loadingServices } = useSupabaseCollection(serviceService);
-  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection(transactionService);
+  const { data: employees, loading: loadingEmployees } = useSupabaseCollection<Employee>(employeeService);
+  const { data: partners, loading: loadingPartners } = useSupabaseCollection<Partner>(partnerService);
+  const { data: services, loading: loadingServices } = useSupabaseCollection<Service>(serviceService);
+  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection<FinancialTransaction>(transactionService);
 
   // Initialisation progressive
   useEffect(() => {
@@ -91,16 +92,16 @@ export default function StatistiquesGenerales() {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
     // Statistiques des employés (optimisé)
-    const activeEmployees = employees.filter(emp => emp.actif).length;
+    const activeEmployees = employees.filter((emp: Employee) => emp.actif).length;
     
-    const newEmployeesThisMonth = employees.filter(emp => {
+    const newEmployeesThisMonth = employees.filter((emp: Employee) => {
       if (!emp.created_at) return false;
       const createdAt = new Date(emp.created_at);
       return createdAt >= firstDayOfMonth;
     }).length;
     
     // Compter les employés par type de contrat (optimisé)
-    const contractCounts = employees.reduce((acc, emp) => {
+    const contractCounts = employees.reduce((acc: Record<string, number>, emp: Employee) => {
       if (emp.type_contrat) {
         acc[emp.type_contrat] = (acc[emp.type_contrat] || 0) + 1;
       }
@@ -146,22 +147,22 @@ export default function StatistiquesGenerales() {
     });
 
     // Statistiques des partenaires (optimisé)
-    const activePartners = partners.filter(partner => partner.actif).length;
-    const totalEmployesFromPartners = partners.reduce((sum, partner) => sum + (partner.nombre_employes || 0), 0);
+    const activePartners = partners.filter((partner: Partner) => partner.actif).length;
+    const totalEmployesFromPartners = partners.reduce((sum: number, partner: Partner) => sum + (partner.nombre_employes || 0), 0);
 
     // Statistiques des services (optimisé)
-    const availableServices = services.filter(service => service.disponible).length;
+    const availableServices = services.filter((service: Service) => service.disponible).length;
 
     // Statistiques des transactions (optimisé)
-    const montantTotal = transactions.reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
+    const montantTotal = transactions.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0);
     
-    const transactionsCeMois = transactions.filter(transaction => {
+    const transactionsCeMois = transactions.filter((transaction: FinancialTransaction) => {
       if (!transaction.date_transaction) return false;
       const transactionDate = new Date(transaction.date_transaction);
       return transactionDate >= firstDayOfMonth;
     });
     
-    const montantCeMois = transactionsCeMois.reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
+    const montantCeMois = transactionsCeMois.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0);
     
     return {
       employees: {

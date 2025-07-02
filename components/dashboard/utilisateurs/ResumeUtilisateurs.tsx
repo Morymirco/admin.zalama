@@ -1,17 +1,24 @@
 import React from 'react';
 import { Users, UserCheck, UserPlus } from 'lucide-react';
+import { ResumeSkeleton } from '@/components/ui/skeleton';
 
 interface ResumeUtilisateursProps {
   totalUtilisateurs: number;
   utilisateursActifs: number;
   utilisateursInactifs: number;
+  isLoading?: boolean;
 }
 
 const ResumeUtilisateurs: React.FC<ResumeUtilisateursProps> = ({ 
   totalUtilisateurs, 
   utilisateursActifs, 
-  utilisateursInactifs 
+  utilisateursInactifs,
+  isLoading = false
 }) => {
+  if (isLoading) {
+    return <ResumeSkeleton />;
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">

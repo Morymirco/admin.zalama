@@ -23,9 +23,12 @@ export async function POST(request: NextRequest) {
 
     console.log('📱 Envoi SMS via API route:', { to, message, sender_name });
 
+    // S'assurer que 'to' est un tableau
+    const toArray = Array.isArray(to) ? to : [to];
+    
     // Envoyer le SMS via le client Nimba SMS
     const response = await client.messages.create({
-      to: to,
+      to: toArray,
       message: message,
       sender_name: sender_name,
     });

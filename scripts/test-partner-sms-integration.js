@@ -1,263 +1,383 @@
 const { createClient } = require('@supabase/supabase-js');
-const { Client } = require('nimbasms');
+const { v4: uuidv4 } = require('uuid');
+require('dotenv').config();
 
 // Configuration Supabase
-const supabaseUrl = 'https://your-project.supabase.co';
-const supabaseKey = 'your-anon-key';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Configuration Nimba SMS
-const smsConfig = {
-  SERVICE_ID: '9d83d5b67444c654c702f109dd837167',
-  SECRET_TOKEN: 'qf_bpb4CVfEalTU5eVEFC05wpoqlo17M-mozkZVbIHT_3xfOIjB7Oac-lkXZ6Pg2VqO2LXVy6BUlYTZe73y411agSC0jVh3OcOU92s8Rplc',
-};
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Variables d\'environnement Supabase manquantes');
+  process.exit(1);
+}
 
-const smsClient = new Client(smsConfig);
-
-// Service SMS simplifié pour le test
-class TestSMSService {
-  constructor() {
-    this.senderName = 'ZaLaMa';
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
   }
+});
 
-  formatPhoneNumber(phone) {
-    let cleaned = phone.replace(/[^\d+]/g, '');
-    if (cleaned.startsWith('+')) {
-      cleaned = cleaned.substring(1);
-    }
-    if (!cleaned.startsWith('224')) {
-      cleaned = '224' + cleaned;
-    }
-    if (cleaned.length > 12) {
-      cleaned = cleaned.substring(0, 12);
-    }
-    return cleaned;
+// Import des services (simulation côté serveur)
+const { smsService } = require('../services/smsService');
+const { emailService } = require('../services/emailService');
+
+// Fonction pour générer un mot de passe
+function generatePassword() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return password;
+}
 
-  async sendSMS(message) {
+// Service de création de comptes partenaire
+class PartnerAccountService {
+  async createRHAccount(rhData) {
     try {
-      const body = {
-        to: message.to,
-        message: message.message,
-        sender_name: message.sender_name || this.senderName,
-      };
+      // Vérifier si l'email existe déjà
+      const { data: existingUser, error: checkError } = await supabase
+        .from('admin_users')
+        .select('id, email')
+        .eq('email', rhData.email_rh)
+        .single();
 
-      console.log('Envoi SMS:', body);
-      const response = await smsClient.messages.create(body);
-      console.log('SMS envoyé:', response);
-      return response;
-    } catch (error) {
-      console.error('Erreur SMS:', error);
-      
-      let errorMessage = 'Erreur inconnue';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      } else if (error && typeof error === 'object') {
-        if ('message' in error) {
-          errorMessage = String(error.message);
-        } else if ('error' in error) {
-          errorMessage = String(error.error);
-        } else {
-          errorMessage = JSON.stringify(error);
-        }
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error(`Erreur vérification email: ${checkError.message}`);
       }
+
+      if (existingUser) {
+        return { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' };
+      }
+
+      // Générer un mot de passe
+      const password = generatePassword();
+
+      // Créer le compte dans Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: rhData.email_rh,
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          display_name: rhData.nom_rh,
+          role: 'rh',
+          partenaire_id: rhData.id
+        }
+      });
+
+      if (authError) {
+        throw new Error(`Erreur création compte auth: ${authError.message}`);
+      }
+
+      // Créer l'enregistrement dans admin_users
+      const accountData = {
+        id: authData.user.id,
+        email: rhData.email_rh,
+        display_name: rhData.nom_rh,
+        role: 'rh',
+        partenaire_id: rhData.id,
+        active: true
+      };
+
+      const { data: accountRecord, error: accountError } = await supabase
+        .from('admin_users')
+        .insert([accountData])
+        .select()
+        .single();
+
+      if (accountError) {
+        // Supprimer le compte auth créé en cas d'erreur
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error(`Erreur création compte admin: ${accountError.message}`);
+      }
+
+      return { 
+        success: true, 
+        account: {
+          ...accountRecord,
+          password: password
+        }
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de la création du compte RH:', error);
+      return { success: false, error: `Erreur création compte RH: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  }
+
+  async createResponsableAccount(responsableData) {
+    try {
+      // Vérifier si l'email existe déjà
+      const { data: existingUser, error: checkError } = await supabase
+        .from('admin_users')
+        .select('id, email')
+        .eq('email', responsableData.email_representant)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error(`Erreur vérification email: ${checkError.message}`);
+      }
+
+      if (existingUser) {
+        return { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' };
+      }
+
+      // Générer un mot de passe
+      const password = generatePassword();
+
+      // Créer le compte dans Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: responsableData.email_representant,
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          display_name: responsableData.nom_representant,
+          role: 'responsable',
+          partenaire_id: responsableData.id
+        }
+      });
+
+      if (authError) {
+        throw new Error(`Erreur création compte auth: ${authError.message}`);
+      }
+
+      // Créer l'enregistrement dans admin_users
+      const accountData = {
+        id: authData.user.id,
+        email: responsableData.email_representant,
+        display_name: responsableData.nom_representant,
+        role: 'responsable',
+        partenaire_id: responsableData.id,
+        active: true
+      };
+
+      const { data: accountRecord, error: accountError } = await supabase
+        .from('admin_users')
+        .insert([accountData])
+        .select()
+        .single();
+
+      if (accountError) {
+        // Supprimer le compte auth créé en cas d'erreur
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error(`Erreur création compte admin: ${accountError.message}`);
+      }
+
+      return { 
+        success: true, 
+        account: {
+          ...accountRecord,
+          password: password
+        }
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de la création du compte responsable:', error);
+      return { success: false, error: `Erreur création compte responsable: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  }
+
+  async createPartnerAccounts(partenaireData) {
+    try {
+      // Créer le compte RH
+      const rhResult = await this.createRHAccount(partenaireData);
       
-      const formattedError = new Error(errorMessage);
-      formattedError.name = 'SMSError';
-      throw formattedError;
+      // Créer le compte responsable
+      const responsableResult = await this.createResponsableAccount(partenaireData);
+
+      return {
+        rh: rhResult,
+        responsable: responsableResult
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de la création des comptes partenaire:', error);
+      return {
+        rh: { success: false, error: `Erreur générale: ${error instanceof Error ? error.message : String(error)}` },
+        responsable: { success: false, error: `Erreur générale: ${error instanceof Error ? error.message : String(error)}` }
+      };
     }
-  }
-
-  async sendWelcomeSMSToRepresentant(nomPartenaire, nomRepresentant, telephoneRepresentant, emailRepresentant) {
-    const formattedPhone = this.formatPhoneNumber(telephoneRepresentant);
-    
-    const message = `Bonjour ${nomRepresentant},
-
-Bienvenue dans la famille ZaLaMa ! 
-
-Votre partenaire "${nomPartenaire}" a été créé avec succès dans notre système.
-
-Vos informations de connexion :
-- Email: ${emailRepresentant}
-- Téléphone: ${telephoneRepresentant}
-
-Vous recevrez bientôt vos identifiants de connexion par email.
-
-Pour toute question, contactez-nous au +224 XXX XXX XXX.
-
-Cordialement,
-L'équipe ZaLaMa`;
-
-    return this.sendSMS({
-      to: [formattedPhone],
-      message: message,
-    });
-  }
-
-  async sendWelcomeSMSToRH(nomPartenaire, nomRH, telephoneRH, emailRH) {
-    const formattedPhone = this.formatPhoneNumber(telephoneRH);
-    
-    const message = `Bonjour ${nomRH},
-
-Bienvenue dans la famille ZaLaMa !
-
-En tant que responsable RH de "${nomPartenaire}", vous avez accès à toutes les fonctionnalités de gestion des employés.
-
-Vos informations de connexion :
-- Email: ${emailRH}
-- Téléphone: ${telephoneRH}
-
-Vous recevrez bientôt vos identifiants de connexion par email.
-
-Pour toute question RH, contactez-nous au +224 XXX XXX XXX.
-
-Cordialement,
-L'équipe ZaLaMa`;
-
-    return this.sendSMS({
-      to: [formattedPhone],
-      message: message,
-    });
-  }
-
-  async sendPartnerCreationNotification(nomPartenaire, typePartenaire, secteur) {
-    const adminPhone = '+224625212115';
-    const formattedPhone = this.formatPhoneNumber(adminPhone);
-    
-    const message = `🔔 Notification ZaLaMa
-
-Nouveau partenaire créé :
-- Nom: ${nomPartenaire}
-- Type: ${typePartenaire}
-- Secteur: ${secteur}
-- Date: ${new Date().toLocaleDateString('fr-FR')}
-
-Les SMS de bienvenue ont été envoyés aux contacts.`;
-
-    return this.sendSMS({
-      to: [formattedPhone],
-      message: message,
-    });
   }
 }
 
-// Test de création de partenaire avec SMS
 async function testPartnerCreationWithSMS() {
-  const smsService = new TestSMSService();
-  
-  // Données de test
-  const partenaireData = {
-    nom: 'Entreprise Test SMS',
-    description: 'Test d\'intégration SMS',
-    type: 'PME',
-    secteur: 'Technologie',
-    adresse: 'Conakry, Guinée',
-    telephone: '+224625212115',
-    email: 'test@zalama.com',
-    nom_representant: 'John Doe',
-    telephone_representant: '+224625212115',
-    email_representant: 'john.doe@test.com',
-    nom_rh: 'Jane Smith',
-    telephone_rh: '+224625212115',
-    email_rh: 'jane.smith@test.com',
-    actif: true
-  };
+  console.log('🧪 Test de création de partenaire avec envoi SMS/Email automatique');
+  console.log('=' .repeat(60));
 
-  console.log('=== Test de création de partenaire avec SMS ===\n');
-  console.log('Données du partenaire:', partenaireData);
-
-  // Résultats des SMS
-  const smsResults = {
-    representant: { success: false, message: '', error: '' },
-    rh: { success: false, message: '', error: '' },
-    admin: { success: false, message: '', error: '' }
-  };
-
-  // Test SMS représentant
-  console.log('\n1. Test SMS représentant...');
-  if (partenaireData.telephone_representant && partenaireData.nom_representant) {
-    try {
-      await smsService.sendWelcomeSMSToRepresentant(
-        partenaireData.nom,
-        partenaireData.nom_representant,
-        partenaireData.telephone_representant,
-        partenaireData.email_representant || ''
-      );
-      smsResults.representant = {
-        success: true,
-        message: `SMS envoyé au représentant ${partenaireData.nom_representant} (${partenaireData.telephone_representant})`
-      };
-      console.log('✅ SMS représentant envoyé');
-    } catch (smsError) {
-      console.error('❌ Erreur SMS représentant:', smsError);
-      smsResults.representant = {
-        success: false,
-        error: `Erreur SMS représentant: ${smsError instanceof Error ? smsError.message : String(smsError)}`
-      };
-    }
-  }
-
-  // Test SMS RH
-  console.log('\n2. Test SMS RH...');
-  if (partenaireData.telephone_rh && partenaireData.nom_rh) {
-    try {
-      await smsService.sendWelcomeSMSToRH(
-        partenaireData.nom,
-        partenaireData.nom_rh,
-        partenaireData.telephone_rh,
-        partenaireData.email_rh || ''
-      );
-      smsResults.rh = {
-        success: true,
-        message: `SMS envoyé au responsable RH ${partenaireData.nom_rh} (${partenaireData.telephone_rh})`
-      };
-      console.log('✅ SMS RH envoyé');
-    } catch (smsError) {
-      console.error('❌ Erreur SMS RH:', smsError);
-      smsResults.rh = {
-        success: false,
-        error: `Erreur SMS RH: ${smsError instanceof Error ? smsError.message : String(smsError)}`
-      };
-    }
-  }
-
-  // Test SMS admin
-  console.log('\n3. Test SMS admin...');
   try {
-    await smsService.sendPartnerCreationNotification(
-      partenaireData.nom,
-      partenaireData.type,
-      partenaireData.secteur
-    );
-    smsResults.admin = {
-      success: true,
-      message: 'Notification admin envoyée'
+    // Données de test pour un nouveau partenaire
+    const testPartnerData = {
+      id: uuidv4(),
+      nom: 'Test Partenaire SMS',
+      secteur: 'Technologie',
+      type: 'PME',
+      adresse: '123 Rue Test, Conakry',
+      telephone: '+224625212115',
+      email: 'test@partenaire.com',
+      actif: true,
+      nom_rh: 'Test RH',
+      email_rh: 'rh@testpartenaire.com',
+      telephone_rh: '+224625212116',
+      nom_representant: 'Test Responsable',
+      email_representant: 'responsable@testpartenaire.com',
+      telephone_representant: '+224625212117',
+      logo_url: null,
+      description: 'Partenaire de test pour vérifier l\'envoi SMS/Email'
     };
-    console.log('✅ SMS admin envoyé');
-  } catch (smsError) {
-    console.error('❌ Erreur SMS admin:', smsError);
-    smsResults.admin = {
-      success: false,
-      error: `Erreur SMS admin: ${smsError instanceof Error ? smsError.message : String(smsError)}`
+
+    console.log('📝 Données du partenaire de test:');
+    console.log('  - ID:', testPartnerData.id);
+    console.log('  - Nom:', testPartnerData.nom);
+    console.log('  - Email RH:', testPartnerData.email_rh);
+    console.log('  - Email Responsable:', testPartnerData.email_representant);
+    console.log('  - Téléphone RH:', testPartnerData.telephone_rh);
+    console.log('  - Téléphone Responsable:', testPartnerData.telephone_representant);
+
+    // Créer les comptes directement
+    console.log('\n🔄 Création des comptes partenaire...');
+    
+    const partnerAccountService = new PartnerAccountService();
+    const results = await partnerAccountService.createPartnerAccounts(testPartnerData);
+
+    console.log('✅ Résultats création comptes:', {
+      rh: results.rh.success ? 'Succès' : results.rh.error,
+      responsable: results.responsable.success ? 'Succès' : results.responsable.error
+    });
+
+    // Envoyer les SMS et emails avec les identifiants
+    const smsResults = {
+      rh: { success: false, message: '', error: '' },
+      responsable: { success: false, message: '', error: '' }
     };
+
+    const emailResults = {
+      rh: { success: false, message: '', error: '' },
+      responsable: { success: false, message: '', error: '' }
+    };
+
+    // Envoyer SMS et email au RH si le compte a été créé
+    if (results.rh.success && results.rh.account) {
+      try {
+        console.log('\n📱 Envoi SMS au RH...');
+        // SMS au RH
+        const rhSMSMessage = `Compte RH créé pour ${testPartnerData.nom}. Email: ${testPartnerData.email_rh}, Mot de passe: ${results.rh.account.password}`;
+        const rhSMSResult = await smsService.sendSMS({
+          to: [testPartnerData.telephone_rh],
+          message: rhSMSMessage
+        });
+        smsResults.rh = {
+          success: rhSMSResult.success,
+          message: rhSMSResult.success ? 'SMS RH envoyé' : '',
+          error: rhSMSResult.error || rhSMSResult.message || ''
+        };
+        console.log('  SMS RH:', smsResults.rh.success ? '✅' : '❌', smsResults.rh.error);
+
+        console.log('📧 Envoi email au RH...');
+        // Email au RH
+        const rhEmailSubject = `Compte RH créé - ${testPartnerData.nom}`;
+        const rhEmailBody = `
+          <h2>Votre compte RH a été créé</h2>
+          <p><strong>Partenaire:</strong> ${testPartnerData.nom}</p>
+          <p><strong>Email:</strong> ${testPartnerData.email_rh}</p>
+          <p><strong>Mot de passe:</strong> ${results.rh.account.password}</p>
+          <p>Vous pouvez maintenant vous connecter à l'interface d'administration.</p>
+        `;
+        const rhEmailResult = await emailService.sendEmail({
+          to: testPartnerData.email_rh,
+          subject: rhEmailSubject,
+          html: rhEmailBody
+        });
+        emailResults.rh = {
+          success: rhEmailResult.success,
+          message: rhEmailResult.success ? 'Email RH envoyé' : '',
+          error: rhEmailResult.error || rhEmailResult.message || ''
+        };
+        console.log('  Email RH:', emailResults.rh.success ? '✅' : '❌', emailResults.rh.error);
+      } catch (error) {
+        console.error('Erreur envoi SMS/email RH:', error);
+        smsResults.rh.error = `Erreur SMS RH: ${error}`;
+        emailResults.rh.error = `Erreur email RH: ${error}`;
+      }
+    }
+
+    // Envoyer SMS et email au responsable si le compte a été créé
+    if (results.responsable.success && results.responsable.account) {
+      try {
+        console.log('\n📱 Envoi SMS au responsable...');
+        // SMS au responsable
+        const responsableSMSMessage = `Compte responsable créé pour ${testPartnerData.nom}. Email: ${testPartnerData.email_representant}, Mot de passe: ${results.responsable.account.password}`;
+        const responsableSMSResult = await smsService.sendSMS({
+          to: [testPartnerData.telephone_representant],
+          message: responsableSMSMessage
+        });
+        smsResults.responsable = {
+          success: responsableSMSResult.success,
+          message: responsableSMSResult.success ? 'SMS responsable envoyé' : '',
+          error: responsableSMSResult.error || responsableSMSResult.message || ''
+        };
+        console.log('  SMS Responsable:', smsResults.responsable.success ? '✅' : '❌', smsResults.responsable.error);
+
+        console.log('📧 Envoi email au responsable...');
+        // Email au responsable
+        const responsableEmailSubject = `Compte responsable créé - ${testPartnerData.nom}`;
+        const responsableEmailBody = `
+          <h2>Votre compte responsable a été créé</h2>
+          <p><strong>Partenaire:</strong> ${testPartnerData.nom}</p>
+          <p><strong>Email:</strong> ${testPartnerData.email_representant}</p>
+          <p><strong>Mot de passe:</strong> ${results.responsable.account.password}</p>
+          <p>Vous pouvez maintenant vous connecter à l'interface d'administration.</p>
+        `;
+        const responsableEmailResult = await emailService.sendEmail({
+          to: testPartnerData.email_representant,
+          subject: responsableEmailSubject,
+          html: responsableEmailBody
+        });
+        emailResults.responsable = {
+          success: responsableEmailResult.success,
+          message: responsableEmailResult.success ? 'Email responsable envoyé' : '',
+          error: responsableEmailResult.error || responsableEmailResult.message || ''
+        };
+        console.log('  Email Responsable:', emailResults.responsable.success ? '✅' : '❌', emailResults.responsable.error);
+      } catch (error) {
+        console.error('Erreur envoi SMS/email responsable:', error);
+        smsResults.responsable.error = `Erreur SMS responsable: ${error}`;
+        emailResults.responsable.error = `Erreur email responsable: ${error}`;
+      }
+    }
+
+    console.log('\n📊 Résultats finaux:');
+    console.log('📱 Résultats envoi SMS:', smsResults);
+    console.log('📧 Résultats envoi emails:', emailResults);
+
+    // Vérifier que les comptes ont été créés dans la base
+    console.log('\n🔍 Vérification des comptes dans la base de données...');
+    
+    // Vérifier les comptes admin_users
+    const { data: adminUsers, error: adminError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('partenaire_id', testPartnerData.id);
+
+    if (adminError) {
+      console.error('❌ Erreur récupération comptes admin:', adminError);
+    } else {
+      console.log('✅ Comptes trouvés dans admin_users:', adminUsers.length);
+      adminUsers.forEach(user => {
+        console.log(`  - ${user.role}: ${user.email} (${user.display_name})`);
+      });
+    }
+
+    console.log('\n✅ Test terminé !');
+    console.log('\n📋 Résumé:');
+    console.log('  - Comptes créés:', results.rh.success && results.responsable.success ? '✅' : '❌');
+    console.log('  - SMS envoyés:', smsResults.rh.success || smsResults.responsable.success ? '✅' : '❌');
+    console.log('  - Emails envoyés:', emailResults.rh.success || emailResults.responsable.success ? '✅' : '❌');
+
+  } catch (error) {
+    console.error('❌ Erreur lors du test:', error);
   }
-
-  console.log('\n=== Résultats des SMS ===');
-  console.log('Représentant:', smsResults.representant);
-  console.log('RH:', smsResults.rh);
-  console.log('Admin:', smsResults.admin);
-
-  return smsResults;
 }
 
-// Exécuter le test
-testPartnerCreationWithSMS()
-  .then(results => {
-    console.log('\n=== Test terminé ===');
-    console.log('Résultats finaux:', results);
-  })
-  .catch(error => {
-    console.error('Erreur lors du test:', error);
-  }); 
+// Lancer le test
+testPartnerCreationWithSMS(); 

@@ -1,3 +1,4 @@
+require('dotenv').config({ path: '.env' });
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const { createClient } = require('@supabase/supabase-js');

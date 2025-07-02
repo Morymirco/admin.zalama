@@ -13,6 +13,106 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   }
 });
 
+// Configuration Nimba SMS - Utiliser les variables d'environnement
+const smsConfig = {
+  SERVICE_ID: process.env.NIMBA_SMS_SERVICE_ID || '9d83d5b67444c654c702f109dd837167',
+  SECRET_TOKEN: process.env.NIMBA_SMS_SECRET_TOKEN || 'qf_bpb4CVfEalTU5eVEFC05wpoqlo17M-mozkZVbIHT_3xfOIjB7Oac-lkXZ6Pg2VqO2LXVy6BUlYTZe73y411agSC0jVh3OcOU92s8Rplc',
+};
+
+// Configuration Resend Email
+const emailConfig = {
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+};
+
+// Service SMS direct (sans passer par l'API route)
+class DirectSMSService {
+  async sendSMS(to: string[], message: string): Promise<any> {
+    try {
+      // Vérifier si le service SMS est configuré
+      if (!smsConfig.SERVICE_ID || !smsConfig.SECRET_TOKEN) {
+        console.warn('⚠️ Service SMS non configuré - SMS non envoyé');
+        return {
+          success: false,
+          error: 'Service SMS non configuré',
+          message: 'SMS non envoyé - service non configuré'
+        };
+      }
+
+      // Utiliser directement l'API Nimba SMS
+      const { Client } = require('nimbasms');
+      const client = new Client({
+        SERVICE_ID: smsConfig.SERVICE_ID,
+        SECRET_TOKEN: smsConfig.SECRET_TOKEN
+      });
+
+      const result = await client.messages.create({
+        to: to,
+        message: message,
+        sender_name: 'ZaLaMa'
+      });
+
+      console.log('✅ SMS envoyé directement:', result);
+      return {
+        success: true,
+        response: result,
+        message: 'SMS envoyé avec succès'
+      };
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'envoi du SMS:', error);
+      return {
+        success: false,
+        error: `Erreur SMS: ${error instanceof Error ? error.message : String(error)}`,
+        message: 'SMS non envoyé'
+      };
+    }
+  }
+}
+
+// Service Email direct (sans passer par l'API route)
+class DirectEmailService {
+  async sendEmail(to: string, subject: string, html: string): Promise<any> {
+    try {
+      // Vérifier si le service email est configuré
+      if (!emailConfig.RESEND_API_KEY) {
+        console.warn('⚠️ Service email non configuré - Email non envoyé');
+        return {
+          success: false,
+          error: 'Service email non configuré',
+          message: 'Email non envoyé - service non configuré'
+        };
+      }
+
+      // Utiliser directement l'API Resend
+      const { Resend } = require('resend');
+      const resend = new Resend(emailConfig.RESEND_API_KEY);
+
+      const result = await resend.emails.send({
+        from: 'ZaLaMa <noreply@zalama.com>',
+        to: [to],
+        subject: subject,
+        html: html
+      });
+
+      console.log('✅ Email envoyé directement:', result);
+      return {
+        success: true,
+        response: result,
+        message: 'Email envoyé avec succès'
+      };
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
+      return {
+        success: false,
+        error: `Erreur email: ${error instanceof Error ? error.message : String(error)}`,
+        message: 'Email non envoyé'
+      };
+    }
+  }
+}
+
+const directSmsService = new DirectSMSService();
+const directEmailService = new DirectEmailService();
+
 interface AccountResult {
   success: boolean;
   account?: any;
@@ -221,9 +321,93 @@ export async function POST(request: NextRequest) {
       responsable: results.responsable.success ? 'Succès' : results.responsable.error
     });
 
+    // Envoyer les SMS et emails avec les identifiants
+    const smsResults = {
+      rh: { success: false, message: '', error: '' },
+      responsable: { success: false, message: '', error: '' }
+    };
+
+    const emailResults = {
+      rh: { success: false, message: '', error: '' },
+      responsable: { success: false, message: '', error: '' }
+    };
+
+    // Envoyer SMS et email au RH si le compte a été créé
+    if (results.rh.success && results.rh.account) {
+      try {
+        // SMS au RH
+        const rhSMSMessage = `Compte RH créé pour ${partenaireData.nom}. Email: ${partenaireData.email_rh}, Mot de passe: ${results.rh.account.password}`;
+        const rhSMSResult = await directSmsService.sendSMS([partenaireData.telephone_rh], rhSMSMessage);
+        smsResults.rh = {
+          success: rhSMSResult.success,
+          message: rhSMSResult.success ? 'SMS RH envoyé' : '',
+          error: rhSMSResult.error || rhSMSResult.message || ''
+        };
+
+        // Email au RH
+        const rhEmailSubject = `Compte RH créé - ${partenaireData.nom}`;
+        const rhEmailBody = `
+          <h2>Votre compte RH a été créé</h2>
+          <p><strong>Partenaire:</strong> ${partenaireData.nom}</p>
+          <p><strong>Email:</strong> ${partenaireData.email_rh}</p>
+          <p><strong>Mot de passe:</strong> ${results.rh.account.password}</p>
+          <p>Vous pouvez maintenant vous connecter à l'interface d'administration.</p>
+        `;
+        const rhEmailResult = await directEmailService.sendEmail(partenaireData.email_rh, rhEmailSubject, rhEmailBody);
+        emailResults.rh = {
+          success: rhEmailResult.success,
+          message: rhEmailResult.success ? 'Email RH envoyé' : '',
+          error: rhEmailResult.error || rhEmailResult.message || ''
+        };
+      } catch (error) {
+        console.error('Erreur envoi SMS/email RH:', error);
+        smsResults.rh.error = `Erreur SMS RH: ${error}`;
+        emailResults.rh.error = `Erreur email RH: ${error}`;
+      }
+    }
+
+    // Envoyer SMS et email au responsable si le compte a été créé
+    if (results.responsable.success && results.responsable.account) {
+      try {
+        // SMS au responsable
+        const responsableSMSMessage = `Compte responsable créé pour ${partenaireData.nom}. Email: ${partenaireData.email_representant}, Mot de passe: ${results.responsable.account.password}`;
+        const responsableSMSResult = await directSmsService.sendSMS([partenaireData.telephone_representant], responsableSMSMessage);
+        smsResults.responsable = {
+          success: responsableSMSResult.success,
+          message: responsableSMSResult.success ? 'SMS responsable envoyé' : '',
+          error: responsableSMSResult.error || responsableSMSResult.message || ''
+        };
+
+        // Email au responsable
+        const responsableEmailSubject = `Compte responsable créé - ${partenaireData.nom}`;
+        const responsableEmailBody = `
+          <h2>Votre compte responsable a été créé</h2>
+          <p><strong>Partenaire:</strong> ${partenaireData.nom}</p>
+          <p><strong>Email:</strong> ${partenaireData.email_representant}</p>
+          <p><strong>Mot de passe:</strong> ${results.responsable.account.password}</p>
+          <p>Vous pouvez maintenant vous connecter à l'interface d'administration.</p>
+        `;
+        const responsableEmailResult = await directEmailService.sendEmail(partenaireData.email_representant, responsableEmailSubject, responsableEmailBody);
+        emailResults.responsable = {
+          success: responsableEmailResult.success,
+          message: responsableEmailResult.success ? 'Email responsable envoyé' : '',
+          error: responsableEmailResult.error || responsableEmailResult.message || ''
+        };
+      } catch (error) {
+        console.error('Erreur envoi SMS/email responsable:', error);
+        smsResults.responsable.error = `Erreur SMS responsable: ${error}`;
+        emailResults.responsable.error = `Erreur email responsable: ${error}`;
+      }
+    }
+
+    console.log('📱 Résultats envoi SMS:', smsResults);
+    console.log('📧 Résultats envoi emails:', emailResults);
+
     return NextResponse.json({
       success: true,
-      results
+      results,
+      smsResults,
+      emailResults
     });
 
   } catch (error) {

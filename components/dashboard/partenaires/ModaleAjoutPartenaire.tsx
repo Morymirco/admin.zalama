@@ -57,6 +57,25 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
     fileInputRef.current?.click();
   };
 
+  // Fonction pour nettoyer les numéros de téléphone
+  const cleanPhoneNumber = (phone: string): string => {
+    // Enlever tous les espaces, tirets et parenthèses
+    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    
+    // S'assurer que le numéro commence par +224
+    if (!cleaned.startsWith('+224')) {
+      if (cleaned.startsWith('224')) {
+        cleaned = '+' + cleaned;
+      } else if (cleaned.startsWith('0')) {
+        cleaned = '+224' + cleaned.substring(1);
+      } else {
+        cleaned = '+224' + cleaned;
+      }
+    }
+    
+    return cleaned;
+  };
+
   // Fonction de préremplissage automatique
   const handlePreFill = () => {
     const form = formRef.current;
@@ -69,14 +88,14 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
     (form.querySelector('#description') as HTMLTextAreaElement).value = 'Description de l\'entreprise...';
     (form.querySelector('#nomRepresentant') as HTMLInputElement).value = 'John Doe';
     (form.querySelector('#emailRepresentant') as HTMLInputElement).value = 'john.doe@entreprise.com';
-    (form.querySelector('#telephoneRepresentant') as HTMLInputElement).value = '+224 623 456 789';
+    (form.querySelector('#telephoneRepresentant') as HTMLInputElement).value = '+224623456789';
     (form.querySelector('#nomRH') as HTMLInputElement).value = 'Jane Smith';
     (form.querySelector('#emailRH') as HTMLInputElement).value = 'jane.smith@entreprise.com';
-    (form.querySelector('#telephoneRH') as HTMLInputElement).value = '+224 623 456 790';
+    (form.querySelector('#telephoneRH') as HTMLInputElement).value = '+224623456790';
     (form.querySelector('#rccm') as HTMLInputElement).value = 'RC/2024/001';
     (form.querySelector('#nif') as HTMLInputElement).value = 'NIF2024001';
     (form.querySelector('#email') as HTMLInputElement).value = 'contact@entreprise.com';
-    (form.querySelector('#telephone') as HTMLInputElement).value = '+224 623 456 788';
+    (form.querySelector('#telephone') as HTMLInputElement).value = '+224623456788';
     (form.querySelector('#adresse') as HTMLInputElement).value = '123 Rue Principale, Conakry';
     (form.querySelector('#siteWeb') as HTMLInputElement).value = 'https://entreprise.com';
     (form.querySelector('#dateAdhesion') as HTMLInputElement).value = new Date().toISOString().split('T')[0];
@@ -119,12 +138,12 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         // Représentant
         nom_representant: (form.querySelector('#nomRepresentant') as HTMLInputElement)?.value || '',
         email_representant: (form.querySelector('#emailRepresentant') as HTMLInputElement)?.value || '',
-        telephone_representant: (form.querySelector('#telephoneRepresentant') as HTMLInputElement)?.value || '',
+        telephone_representant: cleanPhoneNumber((form.querySelector('#telephoneRepresentant') as HTMLInputElement)?.value || ''),
         
         // Responsable RH
         nom_rh: (form.querySelector('#nomRH') as HTMLInputElement)?.value || '',
         email_rh: (form.querySelector('#emailRH') as HTMLInputElement)?.value || '',
-        telephone_rh: (form.querySelector('#telephoneRH') as HTMLInputElement)?.value || '',
+        telephone_rh: cleanPhoneNumber((form.querySelector('#telephoneRH') as HTMLInputElement)?.value || ''),
         
         // Informations légales
         rccm: (form.querySelector('#rccm') as HTMLInputElement)?.value || '',
@@ -132,7 +151,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         
         // Contact
         email: (form.querySelector('#email') as HTMLInputElement)?.value || '',
-        telephone: (form.querySelector('#telephone') as HTMLInputElement)?.value || '',
+        telephone: cleanPhoneNumber((form.querySelector('#telephone') as HTMLInputElement)?.value || ''),
         adresse: (form.querySelector('#adresse') as HTMLInputElement)?.value || '',
         site_web: (form.querySelector('#siteWeb') as HTMLInputElement)?.value || '',
         

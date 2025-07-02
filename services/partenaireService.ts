@@ -138,7 +138,8 @@ export const partenaireService = {
         const partnerWithId = { ...partenaireData, id: data.id };
         
         // Appeler l'API route pour créer les comptes
-        const response = await fetch('/api/auth/create-partner-accounts', {
+        const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}/api/auth/create-partner-accounts`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -159,6 +160,13 @@ export const partenaireService = {
         }
 
         const accountCreationResults = apiResult.results;
+        const apiSmsResults = apiResult.smsResults || {};
+        const apiEmailResults = apiResult.emailResults || {};
+
+        console.log('📊 Résultats API route:');
+        console.log('  - Comptes:', accountCreationResults);
+        console.log('  - SMS:', apiSmsResults);
+        console.log('  - Emails:', apiEmailResults);
 
         // Traiter les résultats RH
         if (accountCreationResults.rh.success) {
@@ -170,17 +178,17 @@ export const partenaireService = {
           
           console.log('✅ Compte RH créé avec succès');
           
-          // Pour l'instant, pas de SMS/email dans l'API, on met des valeurs par défaut
-          smsResults.rh = {
+          // Utiliser les résultats SMS/email de l'API
+          smsResults.rh = apiSmsResults.rh || {
             success: false,
             message: '',
-            error: 'SMS non implémenté dans l\'API'
+            error: 'Aucun résultat SMS de l\'API'
           };
 
-          emailResults.rh = {
+          emailResults.rh = apiEmailResults.rh || {
             success: false,
             message: '',
-            error: 'Email non implémenté dans l\'API'
+            error: 'Aucun résultat email de l\'API'
           };
         } else {
           accountResults.rh = {
@@ -211,17 +219,17 @@ export const partenaireService = {
           
           console.log('✅ Compte responsable créé avec succès');
           
-          // Pour l'instant, pas de SMS/email dans l'API, on met des valeurs par défaut
-          smsResults.representant = {
+          // Utiliser les résultats SMS/email de l'API
+          smsResults.representant = apiSmsResults.responsable || {
             success: false,
             message: '',
-            error: 'SMS non implémenté dans l\'API'
+            error: 'Aucun résultat SMS de l\'API'
           };
 
-          emailResults.responsable = {
+          emailResults.responsable = apiEmailResults.responsable || {
             success: false,
             message: '',
-            error: 'Email non implémenté dans l\'API'
+            error: 'Aucun résultat email de l\'API'
           };
         } else {
           accountResults.responsable = {

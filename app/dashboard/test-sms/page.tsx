@@ -29,13 +29,13 @@ export default function TestSMSPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/test/sms', {
+      const response = await fetch('/api/sms/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to: phoneNumber,
+          to: [phoneNumber],
           message: smsMessage,
         }),
       });
@@ -88,7 +88,8 @@ export default function TestSMSPage() {
         body: JSON.stringify({
           to: email,
           subject: emailSubject,
-          message: emailMessage,
+          html: `<p>${emailMessage.replace(/\n/g, '<br>')}</p>`,
+          text: emailMessage,
         }),
       });
 

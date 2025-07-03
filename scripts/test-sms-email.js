@@ -90,7 +90,7 @@ async function testEmail() {
     console.log(`📝 Sujet: ${testSubject}`);
     
     const result = await resend.emails.send({
-      from: 'ZaLaMa <noreply@zalama.com>',
+      from: 'ZaLaMa <noreply@zalamagn.com>',
       to: [testEmail],
       subject: testSubject,
       html: testMessage,

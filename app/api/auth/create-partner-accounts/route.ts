@@ -101,7 +101,7 @@ class DirectEmailService {
       const resend = new Resend(emailConfig.RESEND_API_KEY);
 
       const result = await resend.emails.send({
-        from: 'ZaLaMa <noreply@zalama.com>',
+        from: 'ZaLaMa <noreply@zalamagn.com>',
         to: [to],
         subject: subject,
         html: html

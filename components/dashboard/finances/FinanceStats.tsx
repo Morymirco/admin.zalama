@@ -1,9 +1,9 @@
 import React from 'react';
-import { FinanceStats } from '@/services/financeService';
+
 import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, BarChart3 } from 'lucide-react';
 
 interface FinanceStatsProps {
-  stats: FinanceStats;
+  stats: any;
   loading?: boolean;
 }
 

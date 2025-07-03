@@ -6,7 +6,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Configuration email (à remplacer par un vrai service comme SendGrid, Resend, etc.)
 const EMAIL_CONFIG = {
-  from: 'noreply@zalama.com',
+  from: 'noreply@zalamagn.com',
   service: 'simulation' // 'sendgrid', 'resend', 'nodemailer', etc.
 };
 

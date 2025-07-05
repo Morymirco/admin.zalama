@@ -1,4 +1,6 @@
 import { generatePassword, sendSMS } from '@/lib/utils';
+import smsService from './smsService';
+import emailService from './emailService';
 
 interface EmployeeAccountData {
   email: string;
@@ -7,6 +9,22 @@ interface EmployeeAccountData {
   role: 'user' | 'rh' | 'responsable';
   partenaire_id: string;
   employee_id: string;
+}
+
+interface AccountResult {
+  success: boolean;
+  account?: any;
+  error?: string;
+}
+
+interface SMSResult {
+  success: boolean;
+  error?: string;
+}
+
+interface EmailResult {
+  success: boolean;
+  error?: string;
 }
 
 class EmployeeAccountService {
@@ -28,26 +46,193 @@ class EmployeeAccountService {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
-      }
-
       const result = await response.json();
 
-      if (!result.success) {
-        return { success: false, error: result.error };
+      // Gérer les erreurs HTTP
+      if (!response.ok) {
+        const errorMessage = result.error || result.message || `Erreur HTTP: ${response.status}`;
+        console.warn('⚠️ Erreur lors de la création du compte employé:', errorMessage);
+        return { success: false, error: errorMessage };
       }
 
+      // Gérer les erreurs de l'API
+      if (!result.success) {
+        const errorMessage = result.error || result.message || 'Erreur inconnue lors de la création du compte';
+        console.warn('⚠️ Échec de la création du compte employé:', errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      console.log('✅ Compte employé créé avec succès:', result.account?.email);
       return { 
         success: true, 
         account: result.account
       };
 
     } catch (error) {
-      console.error('Erreur lors de la création du compte:', error);
-      return { success: false, error: `Erreur création compte: ${error instanceof Error ? error.message : String(error)}` };
+      console.error('❌ Erreur lors de la création du compte:', error);
+      
+      // Gérer les erreurs spécifiques
+      let errorMessage = 'Erreur inconnue lors de la création du compte';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Gérer les erreurs de réseau
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+          errorMessage = 'Erreur de connexion réseau. Vérifiez votre connexion internet.';
+        }
+        
+        // Gérer les erreurs de timeout
+        if (error.message.includes('timeout')) {
+          errorMessage = 'Délai d\'attente dépassé. Veuillez réessayer.';
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      return { success: false, error: errorMessage };
     }
+  }
+
+  // Formater le numéro de téléphone selon le format Nimba SMS
+  private formatPhoneNumber(phone: string): string {
+    // Supprimer tous les caractères non numériques sauf le +
+    let cleaned = phone.replace(/[^\d+]/g, '');
+    
+    // Si le numéro commence par +, le supprimer
+    if (cleaned.startsWith('+')) {
+      cleaned = cleaned.substring(1);
+    }
+    
+    // S'assurer que le numéro commence par 224 pour la Guinée
+    if (!cleaned.startsWith('224')) {
+      cleaned = '224' + cleaned;
+    }
+    
+    // Limiter à 12 chiffres (224 + 9 chiffres)
+    if (cleaned.length > 12) {
+      cleaned = cleaned.substring(0, 12);
+    }
+    
+    return cleaned;
+  }
+
+  // Envoyer SMS pour compte employé
+  async sendEmployeeAccountSMS(employeeData: any, accountResult: AccountResult): Promise<SMSResult> {
+    if (!accountResult.success || !employeeData.telephone) {
+      return { success: false, error: 'Données manquantes pour l\'envoi SMS' };
+    }
+
+    try {
+      // Formater le numéro de téléphone
+      const formattedPhone = this.formatPhoneNumber(employeeData.telephone);
+      
+      const smsMessage = `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
+      
+      const smsResponse = await smsService.sendSMS({
+        to: [formattedPhone],
+        message: smsMessage,
+        sender_name: 'ZaLaMa'
+      });
+      
+      return {
+        success: smsResponse.success,
+        error: smsResponse.success ? undefined : (smsResponse.error || 'Échec de l\'envoi du SMS')
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du SMS employé:', error);
+      return {
+        success: false,
+        error: `Erreur SMS employé: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
+  // Envoyer email pour compte employé
+  async sendEmployeeAccountEmail(employeeData: any, accountResult: AccountResult): Promise<EmailResult> {
+    if (!accountResult.success || !employeeData.email) {
+      return { success: false, error: 'Données manquantes pour l\'envoi email' };
+    }
+
+    try {
+      const emailResult = await emailService.sendWelcomeEmailToEmployee({
+        nom: `${employeeData.prenom} ${employeeData.nom}`,
+        email: employeeData.email,
+        password: accountResult.account?.password || '',
+        role: 'employe',
+        partenaireNom: employeeData.partenaireNom || 'Votre entreprise'
+      });
+      
+      return {
+        success: emailResult.success,
+        error: emailResult.success ? undefined : (emailResult.error || 'Échec de l\'envoi de l\'email')
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email employé:', error);
+      return {
+        success: false,
+        error: `Erreur email employé: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
+  // Créer un compte employé avec envoi automatique de SMS et email
+  async createEmployeeAccountWithNotifications(employeeData: any): Promise<{
+    account: AccountResult;
+    sms: SMSResult;
+    email: EmailResult;
+  }> {
+    const results = {
+      account: { success: false, error: '' } as AccountResult,
+      sms: { success: false, error: '' } as SMSResult,
+      email: { success: false, error: '' } as EmailResult
+    };
+
+    // Vérifier que l'email est fourni
+    if (!employeeData.email) {
+      results.account = { success: false, error: 'L\'email est requis pour créer un compte employé' };
+      return results;
+    }
+
+    try {
+      console.log('🔄 Création du compte employé:', employeeData.email);
+      results.account = await this.createEmployeeAccount(employeeData);
+      
+      if (results.account.success) {
+        console.log('✅ Compte créé, envoi des notifications...');
+        
+        // Envoyer SMS et email en parallèle
+        const [smsResult, emailResult] = await Promise.allSettled([
+          this.sendEmployeeAccountSMS(employeeData, results.account),
+          this.sendEmployeeAccountEmail(employeeData, results.account)
+        ]);
+        
+        results.sms = smsResult.status === 'fulfilled' ? smsResult.value : { success: false, error: 'Erreur lors de l\'envoi du SMS' };
+        results.email = emailResult.status === 'fulfilled' ? emailResult.value : { success: false, error: 'Erreur lors de l\'envoi de l\'email' };
+        
+        console.log('📊 Résultats des notifications:');
+        console.log('   SMS:', results.sms.success ? '✅' : '❌', results.sms.error || '');
+        console.log('   Email:', results.email.success ? '✅' : '❌', results.email.error || '');
+        
+      } else {
+        console.warn('⚠️ Échec de la création du compte, notifications annulées');
+        
+        // Gérer les erreurs spécifiques
+        if (results.account.error?.includes('existe déjà')) {
+          console.log('ℹ️ L\'employé existe déjà, pas de notifications envoyées');
+        } else {
+          console.error('❌ Erreur lors de la création du compte:', results.account.error);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur inattendue lors de la création du compte employé:', error);
+      results.account = { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erreur inattendue lors de la création du compte'
+      };
+    }
+
+    return results;
   }
 
   // Supprimer un compte employé

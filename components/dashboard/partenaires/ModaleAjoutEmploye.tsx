@@ -132,7 +132,24 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
       toast.success('Employé ajouté avec succès');
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'employé:', error);
-      toast.error('Erreur lors de l\'ajout de l\'employé');
+      
+      // Gérer les erreurs spécifiques
+      let errorMessage = 'Erreur lors de l\'ajout de l\'employé';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Gérer les erreurs spécifiques
+        if (error.message.includes('existe déjà')) {
+          errorMessage = 'Un employé avec cet email existe déjà. Veuillez utiliser un email différent.';
+        } else if (error.message.includes('réseau') || error.message.includes('network')) {
+          errorMessage = 'Erreur de connexion réseau. Vérifiez votre connexion internet.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Délai d\'attente dépassé. Veuillez réessayer.';
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -148,14 +165,24 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
 
   // Affichage du résumé des actions effectuées
   if (showSummary && summaryData) {
+    // Déterminer le statut global
+    const isSuccess = summaryData.account?.success;
+    const hasErrors = summaryData.account?.error || summaryData.sms?.error || summaryData.email?.error;
+    
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-[var(--zalama-card)] rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center p-5 border-b border-[var(--zalama-border)]">
             <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              {isSuccess ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-orange-500" />
+              )}
               <div>
-                <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Employé ajouté avec succès</h3>
+                <h3 className="text-lg font-semibold text-[var(--zalama-text)]">
+                  {isSuccess ? 'Employé ajouté avec succès' : 'Employé ajouté avec des avertissements'}
+                </h3>
                 <p className="text-sm text-[var(--zalama-text-secondary)]">{partnerName}</p>
               </div>
             </div>

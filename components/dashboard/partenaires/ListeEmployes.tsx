@@ -24,7 +24,18 @@ interface ListeEmployesProps {
   partnerId: string;
   partnerName: string;
   loading: boolean;
-  onAddEmploye: (employe: Omit<Employe, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  onAddEmploye: (employe: Omit<Employe, 'id' | 'created_at' | 'updated_at'>) => Promise<{
+    employe: Employe;
+    account?: {
+      success: boolean;
+      password?: string;
+      error?: string;
+    };
+    sms?: {
+      success: boolean;
+      error?: string;
+    };
+  }>;
   onUpdateEmploye: (id: string, employe: Partial<Omit<Employe, 'id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   onDeleteEmploye: (id: string) => Promise<void>;
 }

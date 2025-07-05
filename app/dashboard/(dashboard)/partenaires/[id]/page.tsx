@@ -28,6 +28,7 @@ import { useSupabasePartnerDetail, useSupabaseEmployees } from '@/hooks/useSupab
 import ListeEmployes from '@/components/dashboard/partenaires/ListeEmployes';
 import ModaleAjoutEmploye from '@/components/dashboard/partenaires/ModaleAjoutEmploye';
 import DemandesAvanceSalaire from '@/components/dashboard/partenaires/DemandesAvanceSalaire';
+import employeeAccountService from '@/services/employeeAccountService';
 
 export default function PartenaireDetailPage() {
   const params = useParams();
@@ -63,12 +64,25 @@ export default function PartenaireDetailPage() {
 
   const handleAddEmployee = async (employeeData: any) => {
     try {
-      await createEmploye(employeeData);
-      toast.success('Employé ajouté avec succès');
-      setShowAddEmployeeModal(false);
+      // Utiliser le service avec notifications SMS/email
+      const result = await employeeAccountService.createEmployeeAccountWithNotifications(employeeData);
+      
+      // Ajouter l'employé à la liste locale
+      if (result.account.success) {
+        await createEmploye(employeeData);
+      }
+      
+      // Retourner les résultats pour affichage dans le modal
+      return {
+        employe: result.account.account,
+        account: result.account,
+        sms: result.sms,
+        email: result.email
+      };
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'employé:', error);
       toast.error('Erreur lors de l\'ajout de l\'employé');
+      throw error;
     }
   };
 

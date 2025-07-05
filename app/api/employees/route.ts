@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { employeeService } from '@/services/employeeService';
-import { employeeSyncService } from '@/services/employeeSyncService';
-import smsServiceInstance from '@/services/smsService';
+import employeeService from '@/services/employeeService';
+import { cleanEmployeeData, validateEmployeeData } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const searchTerm = searchParams.get('search');
     const partnerId = searchParams.get('partner_id');
+    const search = searchParams.get('search');
 
     let employees;
 
-    if (searchTerm) {
-      employees = await employeeService.search(searchTerm);
+    if (search) {
+      employees = await employeeService.search(search);
     } else if (partnerId) {
       employees = await employeeService.getByPartner(partnerId);
     } else {
-      return NextResponse.json(
-        { success: false, error: 'Paramètre partner_id requis' },
-        { status: 400 }
-      );
+      employees = await employeeService.getAll();
     }
 
     return NextResponse.json({
@@ -43,58 +39,48 @@ export async function POST(request: NextRequest) {
     
     console.log('📝 Données reçues pour création employé:', body);
 
-    // Créer l'employé avec le service de synchronisation
-    const result = await employeeSyncService.createEmployeeWithAuth(body);
+    // Nettoyer et valider les données
+    const cleanedData = cleanEmployeeData(body);
+    const validation = validateEmployeeData(cleanedData);
 
-    console.log('📊 Résultat création employé:', result);
-
-    if (!result.success) {
+    if (!validation.isValid) {
       return NextResponse.json(
         { 
           success: false, 
-          error: result.error
+          error: 'Données invalides',
+          details: validation.errors,
+          warnings: validation.warnings
         },
         { status: 400 }
       );
     }
 
-    // Envoyer un SMS avec les identifiants si le téléphone est fourni
-    let smsResult = null;
-    if (body.telephone && result.password) {
-      try {
-        const smsMessage = `Bonjour ${body.prenom} ${body.nom}, votre compte ZaLaMa a été créé.\nEmail: ${body.email}\nMot de passe: ${result.password}\nConnectez-vous sur l'application ZaLaMa.`;
-        
-        smsResult = await smsServiceInstance.sendSMS({
-          to: [body.telephone],
-          message: smsMessage
-        });
-      } catch (smsError) {
-        console.error('Erreur lors de l\'envoi du SMS:', smsError);
-        smsResult = {
-          success: false,
-          error: 'Erreur lors de l\'envoi du SMS'
-        };
-      }
-    }
+    // Créer l'employé avec le nouveau service
+    const result = await employeeService.create(cleanedData);
+
+    console.log('📊 Résultat création employé:', result);
 
     return NextResponse.json({
       success: true,
-      employe: {
-        id: result.employeeId,
-        ...body,
-        user_id: result.userId
-      },
-      account: {
-        success: result.success,
-        password: result.password,
-        error: result.error
-      },
-      sms: smsResult,
+      employe: result.employee,
+      smsResults: result.smsResults,
+      emailResults: result.emailResults,
+      accountResults: result.accountResults,
       message: 'Employé créé avec succès'
     }, { status: 201 });
 
   } catch (error) {
     console.error('Erreur lors de la création de l\'employé:', error);
+    
+    // Détecter les erreurs spécifiques
+    if (error instanceof Error) {
+      if (error.message.includes('duplicate') || error.message.includes('already exists')) {
+        return NextResponse.json(
+          { success: false, error: 'Un employé avec ces informations existe déjà' },
+          { status: 409 }
+        );
+      }
+    }
     
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la création de l\'employé' },

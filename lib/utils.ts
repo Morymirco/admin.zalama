@@ -148,3 +148,239 @@ export function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
+
+/**
+ * Nettoie les données d'un employé
+ * @param employeeData Données brutes de l'employé
+ * @returns Données nettoyées
+ */
+export function cleanEmployeeData(employeeData: any): any {
+  const cleaned = { ...employeeData };
+  
+  // Nettoyer les chaînes de caractères
+  if (cleaned.nom) cleaned.nom = cleaned.nom.trim();
+  if (cleaned.prenom) cleaned.prenom = cleaned.prenom.trim();
+  if (cleaned.email) cleaned.email = cleaned.email.trim().toLowerCase();
+  if (cleaned.telephone) cleaned.telephone = cleaned.telephone.trim();
+  if (cleaned.adresse) cleaned.adresse = cleaned.adresse.trim();
+  if (cleaned.poste) cleaned.poste = cleaned.poste.trim();
+  if (cleaned.role) cleaned.role = cleaned.role.trim();
+  
+  // Convertir les valeurs numériques
+  if (cleaned.salaire_net) {
+    cleaned.salaire_net = parseFloat(cleaned.salaire_net.toString());
+  }
+  
+  // Convertir les valeurs booléennes
+  if (cleaned.actif !== undefined) {
+    cleaned.actif = Boolean(cleaned.actif);
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Valide les données d'un employé
+ * @param employeeData Données de l'employé
+ * @returns Résultat de validation
+ */
+export function validateEmployeeData(employeeData: any): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  // Validation des champs obligatoires
+  if (!employeeData.nom || employeeData.nom.trim().length === 0) {
+    errors.push('Le nom est obligatoire');
+  }
+  
+  if (!employeeData.prenom || employeeData.prenom.trim().length === 0) {
+    errors.push('Le prénom est obligatoire');
+  }
+  
+  if (!employeeData.partner_id) {
+    errors.push('Le partenaire est obligatoire');
+  }
+  
+  if (!employeeData.poste || employeeData.poste.trim().length === 0) {
+    errors.push('Le poste est obligatoire');
+  }
+  
+  // Validation de l'email si fourni
+  if (employeeData.email) {
+    if (!validateEmail(employeeData.email)) {
+      errors.push('Format d\'email invalide');
+    }
+  } else {
+    warnings.push('L\'email est recommandé pour créer un compte de connexion');
+  }
+  
+  // Validation du téléphone si fourni
+  if (employeeData.telephone) {
+    if (!validateGuineanPhoneNumber(employeeData.telephone)) {
+      errors.push('Format de téléphone invalide (format guinéen attendu)');
+    }
+  } else {
+    warnings.push('Le téléphone est recommandé pour recevoir les notifications SMS');
+  }
+  
+  // Validation du salaire si fourni
+  if (employeeData.salaire_net !== undefined && employeeData.salaire_net !== null) {
+    if (isNaN(employeeData.salaire_net) || employeeData.salaire_net < 0) {
+      errors.push('Le salaire doit être un nombre positif');
+    }
+  }
+  
+  // Validation de la date d'embauche si fournie
+  if (employeeData.date_embauche) {
+    const dateEmbauche = new Date(employeeData.date_embauche);
+    if (isNaN(dateEmbauche.getTime())) {
+      errors.push('Format de date d\'embauche invalide');
+    } else if (dateEmbauche > new Date()) {
+      warnings.push('La date d\'embauche ne peut pas être dans le futur');
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
+/**
+ * Nettoie les données d'un partenaire
+ * @param partnerData Données brutes du partenaire
+ * @returns Données nettoyées
+ */
+export function cleanPartnerData(partnerData: any): any {
+  const cleaned = { ...partnerData };
+  
+  // Nettoyer les chaînes de caractères
+  if (cleaned.nom) cleaned.nom = cleaned.nom.trim();
+  if (cleaned.type) cleaned.type = cleaned.type.trim();
+  if (cleaned.secteur) cleaned.secteur = cleaned.secteur.trim();
+  if (cleaned.description) cleaned.description = cleaned.description.trim();
+  if (cleaned.nom_representant) cleaned.nom_representant = cleaned.nom_representant.trim();
+  if (cleaned.email_representant) cleaned.email_representant = cleaned.email_representant.trim().toLowerCase();
+  if (cleaned.telephone_representant) cleaned.telephone_representant = cleaned.telephone_representant.trim();
+  if (cleaned.nom_rh) cleaned.nom_rh = cleaned.nom_rh.trim();
+  if (cleaned.email_rh) cleaned.email_rh = cleaned.email_rh.trim().toLowerCase();
+  if (cleaned.telephone_rh) cleaned.telephone_rh = cleaned.telephone_rh.trim();
+  if (cleaned.rccm) cleaned.rccm = cleaned.rccm.trim();
+  if (cleaned.nif) cleaned.nif = cleaned.nif.trim();
+  if (cleaned.email) cleaned.email = cleaned.email.trim().toLowerCase();
+  if (cleaned.telephone) cleaned.telephone = cleaned.telephone.trim();
+  if (cleaned.adresse) cleaned.adresse = cleaned.adresse.trim();
+  if (cleaned.site_web) cleaned.site_web = cleaned.site_web.trim();
+  
+  // Convertir les valeurs numériques
+  if (cleaned.nombre_employes) {
+    cleaned.nombre_employes = parseInt(cleaned.nombre_employes.toString());
+  }
+  if (cleaned.salaire_net_total) {
+    cleaned.salaire_net_total = parseFloat(cleaned.salaire_net_total.toString());
+  }
+  
+  // Convertir les valeurs booléennes
+  if (cleaned.actif !== undefined) {
+    cleaned.actif = Boolean(cleaned.actif);
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Valide les données d'un partenaire
+ * @param partnerData Données du partenaire
+ * @returns Résultat de validation
+ */
+export function validatePartnerData(partnerData: any): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  // Validation des champs obligatoires
+  if (!partnerData.nom || partnerData.nom.trim().length === 0) {
+    errors.push('Le nom du partenaire est obligatoire');
+  }
+  
+  if (!partnerData.type || partnerData.type.trim().length === 0) {
+    errors.push('Le type de partenaire est obligatoire');
+  }
+  
+  if (!partnerData.secteur || partnerData.secteur.trim().length === 0) {
+    errors.push('Le secteur d\'activité est obligatoire');
+  }
+  
+  // Validation des emails si fournis
+  if (partnerData.email) {
+    if (!validateEmail(partnerData.email)) {
+      errors.push('Format d\'email principal invalide');
+    }
+  }
+  
+  if (partnerData.email_rh) {
+    if (!validateEmail(partnerData.email_rh)) {
+      errors.push('Format d\'email RH invalide');
+    }
+  } else {
+    warnings.push('L\'email RH est recommandé pour créer un compte RH');
+  }
+  
+  if (partnerData.email_representant) {
+    if (!validateEmail(partnerData.email_representant)) {
+      errors.push('Format d\'email représentant invalide');
+    }
+  } else {
+    warnings.push('L\'email représentant est recommandé pour créer un compte responsable');
+  }
+  
+  // Validation des téléphones si fournis
+  if (partnerData.telephone) {
+    if (!validateGuineanPhoneNumber(partnerData.telephone)) {
+      errors.push('Format de téléphone principal invalide');
+    }
+  }
+  
+  if (partnerData.telephone_rh) {
+    if (!validateGuineanPhoneNumber(partnerData.telephone_rh)) {
+      errors.push('Format de téléphone RH invalide');
+    }
+  } else {
+    warnings.push('Le téléphone RH est recommandé pour recevoir les notifications SMS');
+  }
+  
+  if (partnerData.telephone_representant) {
+    if (!validateGuineanPhoneNumber(partnerData.telephone_representant)) {
+      errors.push('Format de téléphone représentant invalide');
+    }
+  } else {
+    warnings.push('Le téléphone représentant est recommandé pour recevoir les notifications SMS');
+  }
+  
+  // Validation des valeurs numériques
+  if (partnerData.nombre_employes !== undefined && partnerData.nombre_employes !== null) {
+    if (isNaN(partnerData.nombre_employes) || partnerData.nombre_employes < 0) {
+      errors.push('Le nombre d\'employés doit être un nombre positif');
+    }
+  }
+  
+  if (partnerData.salaire_net_total !== undefined && partnerData.salaire_net_total !== null) {
+    if (isNaN(partnerData.salaire_net_total) || partnerData.salaire_net_total < 0) {
+      errors.push('Le salaire net total doit être un nombre positif');
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}

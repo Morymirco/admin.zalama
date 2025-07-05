@@ -38,25 +38,23 @@ const convertFromDB = (dbEmployee: any): Employee => {
 };
 
 // Fonction utilitaire pour convertir les données vers la DB
-const convertToDB = (employeeData: Partial<Employee>): any => {
-  const dbData: any = {};
-  
-  if (employeeData.partner_id !== undefined) dbData.partner_id = employeeData.partner_id;
-  if (employeeData.nom !== undefined) dbData.nom = employeeData.nom;
-  if (employeeData.prenom !== undefined) dbData.prenom = employeeData.prenom;
-  if (employeeData.genre !== undefined) dbData.genre = employeeData.genre;
-  if (employeeData.email !== undefined) dbData.email = employeeData.email;
-  if (employeeData.telephone !== undefined) dbData.telephone = employeeData.telephone;
-  if (employeeData.adresse !== undefined) dbData.adresse = employeeData.adresse;
-  if (employeeData.poste !== undefined) dbData.poste = employeeData.poste;
-  if (employeeData.role !== undefined) dbData.role = employeeData.role;
-  if (employeeData.type_contrat !== undefined) dbData.type_contrat = employeeData.type_contrat;
-  if (employeeData.salaire_net !== undefined) dbData.salaire_net = employeeData.salaire_net;
-  if (employeeData.date_embauche !== undefined) dbData.date_embauche = employeeData.date_embauche;
-  if (employeeData.actif !== undefined) dbData.actif = employeeData.actif;
-  if (employeeData.user_id !== undefined) dbData.user_id = employeeData.user_id;
-  
-  return dbData;
+const convertToDB = (employee: Partial<Employee>): any => {
+  return {
+    partner_id: employee.partner_id,
+    nom: employee.nom,
+    prenom: employee.prenom,
+    genre: employee.genre,
+    email: employee.email,
+    telephone: employee.telephone,
+    adresse: employee.adresse,
+    poste: employee.poste,
+    role: employee.role,
+    type_contrat: employee.type_contrat,
+    salaire_net: employee.salaire_net,
+    date_embauche: employee.date_embauche,
+    actif: employee.actif,
+    user_id: employee.user_id
+  };
 };
 
 class EmployeeService {
@@ -66,7 +64,7 @@ class EmployeeService {
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .order('nom', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return (data || []).map(convertFromDB);
@@ -74,7 +72,7 @@ class EmployeeService {
       console.error('Erreur lors de la récupération des employés:', error);
       throw error;
     }
-      }
+  }
 
   // Récupérer un employé par ID
   async getById(id: string): Promise<Employee | null> {
@@ -100,19 +98,33 @@ class EmployeeService {
         .from('employees')
         .select('*')
         .eq('partner_id', partnerId)
-        .order('nom', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return (data || []).map(convertFromDB);
     } catch (error) {
-      console.error('Erreur lors de la récupération des employés du partenaire:', error);
+      console.error('Erreur lors de la récupération des employés par partenaire:', error);
       throw error;
     }
   }
 
-  // Créer un nouvel employé
-  async create(employeeData: Partial<Employee>): Promise<Employee> {
+  // Créer un nouvel employé avec envoi automatique de SMS et email
+  async create(employeeData: Partial<Employee>): Promise<{
+    employee: Employee;
+    smsResults: {
+      employe: { success: boolean; message?: string; error?: string };
+      admin: { success: boolean; message?: string; error?: string };
+    };
+    emailResults: {
+      employe: { success: boolean; message?: string; error?: string };
+    };
+    accountResults: {
+      employe: { success: boolean; password?: string; error?: string };
+    };
+  }> {
     try {
+      console.log('🚀 Création de l\'employé:', `${employeeData.prenom} ${employeeData.nom}`);
+      
       const dbData = convertToDB(employeeData);
       dbData.actif = employeeData.actif ?? true;
 
@@ -122,10 +134,178 @@ class EmployeeService {
         .select()
         .single();
 
-      if (error) throw error;
-      return convertFromDB(data);
+      if (error) {
+        console.error('❌ Erreur lors de la création de l\'employé:', error);
+        throw error;
+      }
+
+      console.log('✅ Employé créé avec succès:', data.id);
+
+      // Résultats des SMS
+      const smsResults = {
+        employe: { success: false, message: '', error: '' },
+        admin: { success: false, message: '', error: '' }
+      };
+
+      // Résultats des emails
+      const emailResults = {
+        employe: { success: false, message: '', error: '' }
+      };
+
+      // Résultats des comptes créés
+      const accountResults = {
+        employe: { success: false, password: undefined, error: '' }
+      };
+
+      // Créer le compte employé automatiquement via API si l'email est fourni
+      if (employeeData.email) {
+        try {
+          console.log('🔐 Création automatique du compte employé...');
+          
+          // Récupérer le nom du partenaire pour l'email
+          let partenaireNom = 'Votre entreprise';
+          if (employeeData.partner_id) {
+            try {
+              const { data: partnerData } = await supabase
+                .from('partners')
+                .select('nom')
+                .eq('id', employeeData.partner_id)
+                .single();
+              if (partnerData) {
+                partenaireNom = partnerData.nom;
+              }
+            } catch (partnerError) {
+              console.log('⚠️ Impossible de récupérer le nom du partenaire:', partnerError);
+            }
+          }
+          
+          const employeeWithId = { 
+            ...employeeData, 
+            id: data.id,
+            partenaireNom 
+          };
+          
+          // Appeler l'API route pour créer le compte
+          const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+          const response = await fetch(`${baseUrl}/api/auth/create-employee-accounts`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ employeeData: employeeWithId }),
+          });
+
+          if (!response.ok) {
+            console.error('❌ Erreur API:', response.status, response.statusText);
+            throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
+          }
+
+          const apiResult = await response.json();
+          
+          if (!apiResult.success) {
+            console.error('❌ Erreur API result:', apiResult);
+            throw new Error(apiResult.error || 'Erreur création compte via API');
+          }
+
+          const accountCreationResults = apiResult.results;
+          const apiSmsResults = accountCreationResults.smsResults || {};
+          const apiEmailResults = accountCreationResults.emailResults || {};
+
+          console.log('📊 Résultats API route:');
+          console.log('  - Compte:', accountCreationResults.account);
+          console.log('  - SMS:', apiSmsResults);
+          console.log('  - Emails:', apiEmailResults);
+
+          // Traiter les résultats du compte employé
+          if (accountCreationResults.account.success) {
+            accountResults.employe = {
+              success: true,
+              password: accountCreationResults.account.account?.password,
+              error: ''
+            };
+            
+            console.log('✅ Compte employé créé avec succès');
+            
+            // Utiliser les résultats SMS/email de l'API
+            smsResults.employe = apiSmsResults.employe || {
+              success: false,
+              message: '',
+              error: 'Aucun résultat SMS de l\'API'
+            };
+
+            emailResults.employe = apiEmailResults.employe || {
+              success: false,
+              message: '',
+              error: 'Aucun résultat email de l\'API'
+            };
+          } else {
+            accountResults.employe = {
+              success: false,
+              password: undefined,
+              error: accountCreationResults.account.error || 'Erreur création compte employé'
+            };
+            smsResults.employe = {
+              success: false,
+              message: '',
+              error: accountResults.employe.error
+            };
+            emailResults.employe = {
+              success: false,
+              message: '',
+              error: accountResults.employe.error
+            };
+            console.log('❌ Échec création compte employé:', accountResults.employe.error);
+          }
+
+        } catch (accountError) {
+          console.error('❌ Erreur lors de la création du compte:', accountError);
+          
+          // NE PAS supprimer automatiquement l'employé
+          // Laisser l'utilisateur décider s'il veut continuer ou annuler
+          console.log('⚠️ Employé créé mais compte non créé. L\'utilisateur peut le créer manuellement.');
+          
+          // Mettre à jour les résultats d'erreur
+          accountResults.employe = {
+            success: false,
+            password: undefined,
+            error: `Erreur création compte: ${accountError instanceof Error ? accountError.message : String(accountError)}`
+          };
+        }
+      }
+
+      // Envoyer un SMS à l'administrateur
+      try {
+        const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom}. Compte employé configuré.`;
+        const adminSMSResult = await smsService.sendSMS({
+          to: ['+224625212115'],
+          message: adminMessage
+        });
+        smsResults.admin = {
+          success: adminSMSResult.success,
+          message: adminSMSResult.success ? 'SMS admin envoyé' : '',
+          error: adminSMSResult.error || adminSMSResult.message || ''
+        };
+      } catch (smsError) {
+        smsResults.admin = {
+          success: false,
+          message: '',
+          error: `Erreur SMS admin: ${smsError}`
+        };
+      }
+
+      console.log('✅ Création employé terminée');
+      console.log('📊 Résultats finaux:');
+      console.log('  - Employé:', data.id);
+      console.log('  - Compte employé:', accountResults.employe.success ? '✅' : '❌');
+
+      return {
+        employee: convertFromDB(data),
+        smsResults,
+        emailResults,
+        accountResults
+      };
     } catch (error) {
-      console.error('Erreur lors de la création de l\'employé:', error);
+      console.error('❌ Erreur employeeService.create:', error);
       throw error;
     }
   }
@@ -134,8 +314,6 @@ class EmployeeService {
   async update(id: string, employeeData: Partial<Employee>): Promise<Employee> {
     try {
       const dbData = convertToDB(employeeData);
-      dbData.updated_at = new Date().toISOString();
-
       const { data, error } = await supabase
         .from('employees')
         .update(dbData)
@@ -167,13 +345,13 @@ class EmployeeService {
   }
 
   // Rechercher des employés
-  async search(query: string): Promise<Employee[]> {
+  async search(term: string): Promise<Employee[]> {
     try {
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .or(`nom.ilike.%${query}%,prenom.ilike.%${query}%,email.ilike.%${query}%,telephone.ilike.%${query}%`)
-        .order('nom', { ascending: true });
+        .or(`nom.ilike.%${term}%,prenom.ilike.%${term}%,email.ilike.%${term}%,poste.ilike.%${term}%`)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return (data || []).map(convertFromDB);
@@ -184,95 +362,37 @@ class EmployeeService {
   }
 
   // Obtenir les statistiques des employés
-  async getStats(): Promise<{
-    total: number;
-    actifs: number;
-    inactifs: number;
-    parGenre: Record<string, number>;
-    parContrat: Record<string, number>;
-    salaireMoyen: number;
-  }> {
+  async getStatistics(): Promise<any> {
     try {
-      const { data, error } = await supabase
+      const { data: employees, error } = await supabase
         .from('employees')
         .select('*');
 
       if (error) throw error;
 
-      const employees = (data || []).map(convertFromDB);
-      
-      const total = employees.length;
-      const actifs = employees.filter(emp => emp.actif).length;
-      const inactifs = total - actifs;
-      
-      const parGenre = employees.reduce((acc, emp) => {
-        acc[emp.genre] = (acc[emp.genre] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      const parContrat = employees.reduce((acc, emp) => {
-        acc[emp.type_contrat] = (acc[emp.type_contrat] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      const salaires = employees
-        .filter(emp => emp.salaire_net && emp.salaire_net > 0)
-        .map(emp => emp.salaire_net!);
-      
-      const salaireMoyen = salaires.length > 0 
-        ? salaires.reduce((sum, salaire) => sum + salaire, 0) / salaires.length 
-        : 0;
+      const totalEmployees = employees?.length || 0;
+      const activeEmployees = employees?.filter(emp => emp.actif).length || 0;
+      const inactiveEmployees = totalEmployees - activeEmployees;
+
+      // Calculer les nouveaux employés ce mois
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const newEmployeesThisMonth = employees?.filter(emp => 
+        new Date(emp.created_at) >= startOfMonth
+      ).length || 0;
 
       return {
-        total,
-        actifs,
-        inactifs,
-        parGenre,
-        parContrat,
-        salaireMoyen
+        totalEmployees,
+        activeEmployees,
+        inactiveEmployees,
+        newEmployeesThisMonth,
+        trend: newEmployeesThisMonth > 0 ? 'Hausse' : newEmployeesThisMonth === 0 ? 'Stable' : 'Baisse'
       };
     } catch (error) {
-      console.error('Erreur lors du calcul des statistiques des employés:', error);
-      throw error;
-    }
-  }
-
-  // Obtenir les employés actifs
-  async getActive(): Promise<Employee[]> {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('actif', true)
-        .order('nom', { ascending: true });
-
-      if (error) throw error;
-      return (data || []).map(convertFromDB);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des employés actifs:', error);
-        throw error;
-      }
-  }
-
-  // Obtenir les nouveaux employés du mois
-  async getNewThisMonth(): Promise<Employee[]> {
-    try {
-      const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .gte('created_at', firstDayOfMonth)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return (data || []).map(convertFromDB);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des nouveaux employés:', error);
+      console.error('Erreur lors de la récupération des statistiques:', error);
       throw error;
     }
   }
 }
 
-export const employeeService = new EmployeeService(); 
+export default new EmployeeService(); 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
-import { employeeService } from '@/services/employeeService';
+import employeeService from '@/services/employeeService';
 import { partnerService } from '@/services/partnerService';
 import serviceService from '@/services/serviceService';
 import { transactionService } from '@/services/transactionService';

@@ -5,7 +5,7 @@ import { Star, MapPin } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import dynamic from 'next/dynamic';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
-import { employeeService } from '@/services/employeeService';
+import employeeService from '@/services/employeeService';
 import { partnerService } from '@/services/partnerService';
 
 // Chargement dynamique du composant de carte pour éviter les problèmes de rendu côté serveur

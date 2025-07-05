@@ -4,7 +4,7 @@ import smsService from './smsService';
 import employeeAccountService from './employeeAccountService';
 import { employeeSyncService } from './employeeSyncService';
 import { generatePassword, validateEmail, sendSMS } from '@/lib/utils';
-import { employeeService } from './employeeService';
+import employeeService from './employeeService';
 
 // Configuration Supabase - Variables définies directement
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';

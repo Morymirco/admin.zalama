@@ -1,5 +1,5 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Loader2 } from 'lucide-react';
 
 interface Alerte {
   id: string;
@@ -16,7 +16,7 @@ interface Alerte {
 interface ModaleSuppressionAlerteProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
   alerte: Alerte | null;
 }
 
@@ -26,7 +26,20 @@ const ModaleSuppressionAlerte: React.FC<ModaleSuppressionAlerteProps> = ({
   onConfirm,
   alerte
 }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+
   if (!isOpen || !alerte) return null;
+
+  const handleConfirm = async () => {
+    try {
+      setIsDeleting(true);
+      await onConfirm();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -35,7 +48,8 @@ const ModaleSuppressionAlerte: React.FC<ModaleSuppressionAlerteProps> = ({
           <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Confirmer la suppression</h3>
           <button 
             onClick={onClose}
-            className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors"
+            disabled={isDeleting}
+            className="text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="h-5 w-5" />
           </button>
@@ -49,15 +63,18 @@ const ModaleSuppressionAlerte: React.FC<ModaleSuppressionAlerteProps> = ({
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors"
+              disabled={isDeleting}
+              className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Annuler
             </button>
             <button
-              onClick={onConfirm}
-              className="px-4 py-2 bg-[var(--zalama-danger)] hover:bg-[var(--zalama-danger-accent)] text-white rounded-lg transition-colors"
+              onClick={handleConfirm}
+              disabled={isDeleting}
+              className="px-4 py-2 bg-[var(--zalama-danger)] hover:bg-[var(--zalama-danger-accent)] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Supprimer
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isDeleting ? 'Suppression...' : 'Supprimer'}
             </button>
           </div>
         </div>

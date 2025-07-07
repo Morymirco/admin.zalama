@@ -1,5 +1,3 @@
-import { Resend } from 'resend';
-
 export interface EmailMessage {
   to: string;
   subject: string;
@@ -34,23 +32,26 @@ export interface PartnershipApprovalAdminEmailData {
   adminContacts: Array<{ nom: string; prenom: string; email: string; telephone: string; role: string }>;
 }
 
-class EmailService {
-  private resend = new Resend('re_aQWgf3nW_Ht5jAsAUj6BzqspyDqxEcCwB');
+class EmailClientService {
+  private baseUrl = '/api/email/send';
 
   async sendEmail(message: EmailMessage): Promise<any> {
     try {
-      const result = await this.resend.emails.send({
-        from: 'ZaLaMa <noreply@zalama.com>',
-        to: message.to,
-        subject: message.subject,
-        html: message.html,
-        text: message.text
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
       });
 
-      return {
-        success: true,
-        id: result.data?.id
-      };
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'envoi de l\'email');
+      }
+
+      return result;
     } catch (error) {
       console.error('Erreur lors de l\'envoi de l\'email:', error);
       return {
@@ -671,4 +672,4 @@ class EmailService {
   }
 }
 
-export default new EmailService(); 
+export default new EmailClientService(); 

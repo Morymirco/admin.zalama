@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-// Initialiser Resend avec la clé API
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Clé API Resend côté serveur (en dur pour éviter les problèmes de variables d'environnement)
+const resend = new Resend('re_aQWgf3nW_Ht5jAsAUj6BzqspyDqxEcCwB');
 
 // Configuration email (à remplacer par un vrai service comme SendGrid, Resend, etc.)
 const EMAIL_CONFIG = {
@@ -12,11 +12,13 @@ const EMAIL_CONFIG = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { to, subject, html, text } = await request.json();
+    const body = await request.json();
+    const { to, subject, html, text } = body;
 
+    // Validation des données
     if (!to || !subject || !html) {
       return NextResponse.json(
-        { success: false, error: 'Destinataire, sujet et contenu HTML requis' },
+        { error: 'Données manquantes: to, subject, html sont requis' },
         { status: 400 }
       );
     }
@@ -24,39 +26,33 @@ export async function POST(request: NextRequest) {
     console.log('📧 Email - Envoi vers:', to);
     console.log('📧 Email - Sujet:', subject);
 
-    // Envoyer l'email via Resend
+    // Envoi de l'email via Resend
     const result = await resend.emails.send({
       from: 'ZaLaMa <noreply@zalamagn.com>',
-      to: [to],
+      to: to,
       subject: subject,
       html: html,
-      text: text || html.replace(/<[^>]*>/g, ''), // Fallback au texte si pas fourni
+      text: text
     });
 
-    console.log('📧 Test Email - Résultat:', result);
+    console.log('✅ Email envoyé avec succès:', result.data?.id);
 
-    if (result.data) {
-      return NextResponse.json({
-        success: true,
-        message: 'Email envoyé avec succès',
-        id: result.data.id
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        error: result.error?.message || 'Erreur lors de l\'envoi de l\'email',
-        message: 'Échec de l\'envoi de l\'email'
-      }, { status: 500 });
-    }
+    return NextResponse.json({
+      success: true,
+      id: result.data?.id,
+      message: 'Email envoyé avec succès'
+    });
 
   } catch (error) {
-    console.error('❌ Erreur API test Email:', error);
+    console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
     
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Erreur inconnue',
-      message: 'Erreur lors de l\'envoi de l\'email'
-    }, { status: 500 });
+    return NextResponse.json(
+      { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inattendue'
+      },
+      { status: 500 }
+    );
   }
 }
 

@@ -1,5 +1,5 @@
 import smsService from './smsService';
-import emailService from './emailService';
+import emailClientService from './emailClientService';
 import { createClient } from '@supabase/supabase-js';
 import { generatePassword, validateEmail } from '@/lib/utils';
 
@@ -216,7 +216,7 @@ class PartnerAccountService {
     }
 
     try {
-      await emailService.sendWelcomeEmailToRH({
+              await emailClientService.sendWelcomeEmailToRH({
         nom: rhData.nom_rh,
         email: rhData.email_rh,
         password: accountResult.account?.password || '',
@@ -272,7 +272,7 @@ class PartnerAccountService {
     }
 
     try {
-      await emailService.sendWelcomeEmailToResponsable({
+              await emailClientService.sendWelcomeEmailToResponsable({
         nom: responsableData.nom_representant,
         email: responsableData.email_representant,
         password: accountResult.account?.password || '',

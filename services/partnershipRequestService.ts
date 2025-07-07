@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { PartnershipRequest, PartnershipRequestStats, PartnershipRequestFilters } from '@/types/partnershipRequest';
+import partnershipNotificationService from './partnershipNotificationService';
 
 // Configuration Supabase - Variables définies directement
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc4NzI1OCwiZXhwIjoyMDY2MzYzMjU4fQ.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -89,9 +90,39 @@ class PartnershipRequestService {
     }
   }
 
-  // Approuver une demande
+  // Approuver une demande avec notifications automatiques
   async approve(id: string): Promise<PartnershipRequest> {
-    return this.updateStatus(id, 'approved');
+    try {
+      console.log('🔄 Approbation de la demande de partenariat:', id);
+      
+      // Mettre à jour le statut
+      const approvedRequest = await this.updateStatus(id, 'approved');
+      
+      // Envoyer les notifications automatiquement
+      try {
+        console.log('📧 Envoi des notifications d\'approbation...');
+        const notificationResult = await partnershipNotificationService.sendApprovalNotifications(id);
+        
+        if (notificationResult.success) {
+          console.log('✅ Notifications envoyées avec succès');
+          if (notificationResult.details) {
+            console.log('📊 Détails des notifications:');
+            console.log('   SMS:', notificationResult.details.sms?.success ? '✅' : '❌');
+            console.log('   Email:', notificationResult.details.email?.success ? '✅' : '❌');
+          }
+        } else {
+          console.warn('⚠️ Échec de l\'envoi des notifications:', notificationResult.error);
+        }
+      } catch (notificationError) {
+        console.error('❌ Erreur lors de l\'envoi des notifications:', notificationError);
+        // Ne pas faire échouer l'approbation si les notifications échouent
+      }
+      
+      return approvedRequest;
+    } catch (error) {
+      console.error('Erreur partnershipRequestService.approve:', error);
+      throw error;
+    }
   }
 
   // Rejeter une demande

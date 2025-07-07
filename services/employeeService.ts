@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { generatePassword, validateEmail } from '@/lib/utils';
 import smsService from './smsService';
-import emailService from './emailService';
+import emailClientService from './emailClientService';
 import { Employe } from '@/types/partenaire';
 import { Employee } from '@/types/employee';
 

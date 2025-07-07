@@ -1,6 +1,6 @@
 import { generatePassword, sendSMS } from '@/lib/utils';
 import smsService from './smsService';
-import emailService from './emailService';
+import emailClientService from './emailClientService';
 
 interface EmployeeAccountData {
   email: string;
@@ -155,7 +155,7 @@ class EmployeeAccountService {
     }
 
     try {
-      const emailResult = await emailService.sendWelcomeEmailToEmployee({
+      const emailResult = await emailClientService.sendWelcomeEmailToEmployee({
         nom: `${employeeData.prenom} ${employeeData.nom}`,
         email: employeeData.email,
         password: accountResult.account?.password || '',

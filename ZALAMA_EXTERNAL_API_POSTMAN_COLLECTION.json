@@ -1,0 +1,317 @@
+{
+  "info": {
+    "name": "ZaLaMa External API",
+    "description": "API externe pour l'envoi de notifications SMS et emails",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "URL de base de l'API (développement)"
+    },
+    {
+      "key": "apiKey",
+      "value": "zalama_external_key_2024",
+      "type": "string",
+      "description": "Clé API pour l'authentification"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔧 Test de Connexion",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text",
+            "description": "Clé API requise pour l'authentification"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/external/test",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "test"]
+        },
+        "description": "Teste la connexion à l'API et vérifie l'authentification"
+      },
+      "response": []
+    },
+    {
+      "name": "📧 Envoi Email Direct",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipients\": [\"user@example.com\"],\n  \"subject\": \"Test Email via API Externe\",\n  \"message\": \"Ceci est un test d'email envoyé via l'API externe ZaLaMa.\",\n  \"type\": \"email\",\n  \"metadata\": {\n    \"source\": \"postman-test\",\n    \"priority\": \"normal\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/external/notifications",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "notifications"]
+        },
+        "description": "Envoie un email direct à un ou plusieurs destinataires"
+      },
+      "response": []
+    },
+    {
+      "name": "📱 Envoi SMS Direct",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipients\": [\"+224123456789\"],\n  \"message\": \"Test SMS via API externe ZaLaMa\",\n  \"type\": \"sms\",\n  \"metadata\": {\n    \"source\": \"postman-test\",\n    \"priority\": \"normal\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/external/notifications",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "notifications"]
+        },
+        "description": "Envoie un SMS direct à un ou plusieurs numéros"
+      },
+      "response": []
+    },
+    {
+      "name": "📬 Envoi Email + SMS",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipients\": [\"user@example.com\", \"+224123456789\"],\n  \"subject\": \"Notification importante\",\n  \"message\": \"Message envoyé par email et SMS via l'API externe.\",\n  \"type\": \"both\",\n  \"metadata\": {\n    \"source\": \"postman-test\",\n    \"priority\": \"high\",\n    \"category\": \"notification\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/external/notifications",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "notifications"]
+        },
+        "description": "Envoie un message par email ET SMS simultanément"
+      },
+      "response": []
+    },
+    {
+      "name": "📋 Template - Bienvenue",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"template\": \"welcome\",\n  \"recipients\": [\"user@example.com\"],\n  \"variables\": {\n    \"name\": \"John Doe\",\n    \"company\": \"TechCorp\",\n    \"action\": \"se connecter\"\n  },\n  \"type\": \"email\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/external/notifications/templates",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "notifications", "templates"]
+        },
+        "description": "Envoie un email de bienvenue avec variables personnalisées"
+      },
+      "response": []
+    },
+    {
+      "name": "📋 Template - Notification",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"template\": \"notification\",\n  \"recipients\": [\"+224123456789\"],\n  \"variables\": {\n    \"name\": \"Alice\",\n    \"company\": \"StartupXYZ\",\n    \"action\": \"valider le contrat\"\n  },\n  \"type\": \"sms\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/external/notifications/templates",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "notifications", "templates"]
+        },
+        "description": "Envoie un SMS de notification avec variables personnalisées"
+      },
+      "response": []
+    },
+    {
+      "name": "🚨 Template - Alerte",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"template\": \"alert\",\n  \"recipients\": [\"admin@company.com\", \"+224123456789\"],\n  \"variables\": {\n    \"name\": \"Système\",\n    \"company\": \"ZaLaMa\",\n    \"action\": \"vérifier les logs\"\n  },\n  \"type\": \"both\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/external/notifications/templates",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "notifications", "templates"]
+        },
+        "description": "Envoie une alerte par email ET SMS avec variables personnalisées"
+      },
+      "response": []
+    },
+    {
+      "name": "📧 Email Multi-Destinataires",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipients\": [\n    \"user1@example.com\",\n    \"user2@example.com\",\n    \"user3@example.com\"\n  ],\n  \"subject\": \"Annonce importante\",\n  \"message\": \"Message envoyé à plusieurs destinataires.\",\n  \"type\": \"email\",\n  \"metadata\": {\n    \"source\": \"bulk-notification\",\n    \"priority\": \"normal\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/external/notifications",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "notifications"]
+        },
+        "description": "Envoie un email à plusieurs destinataires simultanément"
+      },
+      "response": []
+    },
+    {
+      "name": "📱 SMS Multi-Destinataires",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipients\": [\n    \"+224123456789\",\n    \"+224987654321\",\n    \"+224555666777\"\n  ],\n  \"message\": \"SMS envoyé à plusieurs numéros.\",\n  \"type\": \"sms\",\n  \"metadata\": {\n    \"source\": \"bulk-sms\",\n    \"priority\": \"normal\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/external/notifications",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "external", "notifications"]
+        },
+        "description": "Envoie un SMS à plusieurs numéros simultanément"
+      },
+      "response": []
+    }
+  ]
+} 

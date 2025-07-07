@@ -12,6 +12,7 @@ export interface Employe {
   typeContrat: 'CDI' | 'CDD' | 'Consultant' | 'Stage' | 'Autre';
   salaireNet: number;
   dateEmbauche: string;
+  user_id?: string; // Référence vers le compte Supabase Auth
 }
 
 export interface Partenaire {

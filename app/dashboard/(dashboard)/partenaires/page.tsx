@@ -547,19 +547,25 @@ export default function PartenairesPage() {
         type: (form.querySelector('#type') as HTMLSelectElement)?.value || '',
         secteur: (form.querySelector('#domaine') as HTMLInputElement)?.value || '',
         description: (form.querySelector('#description') as HTMLTextAreaElement)?.value || '',
-        nom_representant: (form.querySelector('#nomRepresentant') as HTMLInputElement)?.value || '',
-        email_representant: (form.querySelector('#emailRepresentant') as HTMLInputElement)?.value || '',
-        telephone_representant: (form.querySelector('#telephoneRepresentant') as HTMLInputElement)?.value || '',
-        nom_rh: (form.querySelector('#nomRH') as HTMLInputElement)?.value || '',
-        email_rh: (form.querySelector('#emailRH') as HTMLInputElement)?.value || '',
-        telephone_rh: (form.querySelector('#telephoneRH') as HTMLInputElement)?.value || '',
-        rccm: (form.querySelector('#rccm') as HTMLInputElement)?.value || '',
-        nif: (form.querySelector('#nif') as HTMLInputElement)?.value || '',
         email: (form.querySelector('#email') as HTMLInputElement)?.value || '',
         telephone: (form.querySelector('#telephone') as HTMLInputElement)?.value || '',
         adresse: (form.querySelector('#adresse') as HTMLInputElement)?.value || '',
         site_web: (form.querySelector('#siteWeb') as HTMLInputElement)?.value || '',
-        actif: (form.querySelector('#actif') as HTMLInputElement)?.checked || false
+        actif: (form.querySelector('#actif') as HTMLInputElement)?.checked || false,
+        // Informations légales
+        rccm: (form.querySelector('#rccm') as HTMLInputElement)?.value || '',
+        nif: (form.querySelector('#nif') as HTMLInputElement)?.value || '',
+        // Informations du représentant
+        nom_representant: (form.querySelector('#nom_representant') as HTMLInputElement)?.value || '',
+        email_representant: (form.querySelector('#email_representant') as HTMLInputElement)?.value || '',
+        telephone_representant: (form.querySelector('#telephone_representant') as HTMLInputElement)?.value || '',
+        // Informations RH
+        nom_rh: (form.querySelector('#nom_rh') as HTMLInputElement)?.value || '',
+        email_rh: (form.querySelector('#email_rh') as HTMLInputElement)?.value || '',
+        telephone_rh: (form.querySelector('#telephone_rh') as HTMLInputElement)?.value || '',
+        // Informations financières
+        nombre_employes: parseInt((form.querySelector('#nombre_employes') as HTMLInputElement)?.value || '0'),
+        salaire_net_total: parseFloat((form.querySelector('#salaire_net_total') as HTMLInputElement)?.value || '0')
       };
 
       // Mettre à jour le partenaire

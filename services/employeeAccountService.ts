@@ -309,6 +309,62 @@ class EmployeeAccountService {
       return { success: false, error: `Erreur lors de la réinitialisation du mot de passe: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
+
+  // Renvoyer les identifiants à un employé existant
+  async resendEmployeeCredentials(employeeData: any): Promise<{
+    password: { success: boolean; password?: string; error?: string };
+    sms: SMSResult;
+    email: EmailResult;
+  }> {
+    const results = {
+      password: { success: false, error: '' } as { success: boolean; password?: string; error?: string },
+      sms: { success: false, error: '' } as SMSResult,
+      email: { success: false, error: '' } as EmailResult
+    };
+
+    try {
+      // Réinitialiser le mot de passe
+      console.log('🔄 Réinitialisation du mot de passe pour:', employeeData.email);
+      results.password = await this.resetEmployeePassword(employeeData.id);
+      
+      if (results.password.success && results.password.password) {
+        console.log('✅ Mot de passe réinitialisé, envoi des notifications...');
+        
+        // Créer un objet avec le nouveau mot de passe pour les notifications
+        const accountWithNewPassword = {
+          success: true,
+          account: {
+            ...employeeData,
+            password: results.password.password
+          }
+        };
+        
+        // Envoyer SMS et email en parallèle
+        const [smsResult, emailResult] = await Promise.allSettled([
+          this.sendEmployeeAccountSMS(employeeData, accountWithNewPassword),
+          this.sendEmployeeAccountEmail(employeeData, accountWithNewPassword)
+        ]);
+        
+        results.sms = smsResult.status === 'fulfilled' ? smsResult.value : { success: false, error: 'Erreur lors de l\'envoi du SMS' };
+        results.email = emailResult.status === 'fulfilled' ? emailResult.value : { success: false, error: 'Erreur lors de l\'envoi de l\'email' };
+        
+        console.log('📊 Résultats des notifications:');
+        console.log('   SMS:', results.sms.success ? '✅' : '❌', results.sms.error || '');
+        console.log('   Email:', results.email.success ? '✅' : '❌', results.email.error || '');
+        
+      } else {
+        console.warn('⚠️ Échec de la réinitialisation du mot de passe, notifications annulées');
+      }
+    } catch (error) {
+      console.error('❌ Erreur inattendue lors de la réinitialisation des identifiants:', error);
+      results.password = { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erreur inattendue lors de la réinitialisation'
+      };
+    }
+
+    return results;
+  }
 }
 
 export default new EmployeeAccountService(); 

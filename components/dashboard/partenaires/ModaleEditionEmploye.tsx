@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Send, Mail, MessageSquare } from 'lucide-react';
 import { Employe } from '@/types/partenaire';
+import employeeAccountService from '@/services/employeeAccountService';
+import { toast } from 'react-hot-toast';
 
 interface ModaleEditionEmployeProps {
   isOpen: boolean;
@@ -16,6 +18,12 @@ const ModaleEditionEmploye: React.FC<ModaleEditionEmployeProps> = ({
   employe
 }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [isSendingCredentials, setIsSendingCredentials] = useState(false);
+  const [credentialsResult, setCredentialsResult] = useState<{
+    password: { success: boolean; password?: string; error?: string };
+    sms: { success: boolean; error?: string };
+    email: { success: boolean; error?: string };
+  } | null>(null);
 
   if (!isOpen || !employe) return null;
 
@@ -46,6 +54,31 @@ const ModaleEditionEmploye: React.FC<ModaleEditionEmployeProps> = ({
       console.error('Erreur lors de la modification:', error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleResendCredentials = async () => {
+    try {
+      setIsSendingCredentials(true);
+      setCredentialsResult(null);
+      
+      const result = await employeeAccountService.resendEmployeeCredentials(employe);
+      setCredentialsResult(result);
+      
+      if (result.password.success) {
+        // Vérifier si c'est un nouveau compte ou une réinitialisation
+        const message = result.password.message?.includes('créé') 
+          ? 'Compte utilisateur créé et identifiants envoyés avec succès'
+          : 'Identifiants renvoyés avec succès';
+        toast.success(message);
+      } else {
+        toast.error('Erreur lors du renvoi des identifiants');
+      }
+    } catch (error) {
+      console.error('Erreur lors du renvoi des identifiants:', error);
+      toast.error('Erreur lors du renvoi des identifiants');
+    } finally {
+      setIsSendingCredentials(false);
     }
   };
 
@@ -244,6 +277,87 @@ const ModaleEditionEmploye: React.FC<ModaleEditionEmployeProps> = ({
                 <label htmlFor="actif" className="ml-3 text-sm font-medium text-[var(--zalama-text)] cursor-pointer">
                   Employé actif
                 </label>
+              </div>
+            </div>
+
+            {/* Renvoi d'identifiants */}
+            <div>
+              <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3 border-b border-[var(--zalama-border)] pb-2">
+                Renvoi d'identifiants
+              </h4>
+              <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-4">
+                <p className="text-sm text-[var(--zalama-text-secondary)] mb-4">
+                  Renvoyer un nouveau mot de passe à l'employé par SMS et email.
+                </p>
+                
+                <button
+                  type="button"
+                  onClick={handleResendCredentials}
+                  disabled={isSendingCredentials || !employe.email || !employe.telephone}
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-green)] hover:bg-[var(--zalama-green-accent)] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSendingCredentials && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <Send className="h-4 w-4" />
+                  {isSendingCredentials ? 'Envoi en cours...' : 'Renvoyer les identifiants'}
+                </button>
+                
+                {!employe.email && (
+                  <p className="text-sm text-[var(--zalama-warning)] mt-2">
+                    ⚠️ L'email est requis pour renvoyer les identifiants
+                  </p>
+                )}
+                
+                {!employe.telephone && (
+                  <p className="text-sm text-[var(--zalama-warning)] mt-2">
+                    ⚠️ Le téléphone est requis pour l'envoi SMS
+                  </p>
+                )}
+                
+                {/* Résultats des envois */}
+                {credentialsResult && (
+                  <div className="mt-4 space-y-2">
+                    <h5 className="text-sm font-medium text-[var(--zalama-text)]">Résultats de l'envoi :</h5>
+                    
+                    {/* Mot de passe */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-[var(--zalama-text-secondary)]">Compte :</span>
+                      {credentialsResult.password.success ? (
+                        <span className="text-[var(--zalama-success)] flex items-center gap-1">
+                          {credentialsResult.password.message?.includes('créé') ? '✅ Créé' : '✅ Réinitialisé'}
+                          {credentialsResult.password.password && (
+                            <span className="text-xs bg-[var(--zalama-success)]/10 px-2 py-1 rounded">
+                              {credentialsResult.password.password}
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-[var(--zalama-danger)]">❌ Échec</span>
+                      )}
+                    </div>
+                    
+                    {/* SMS */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <MessageSquare className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+                      <span className="text-[var(--zalama-text-secondary)]">SMS :</span>
+                      {credentialsResult.sms.success ? (
+                        <span className="text-[var(--zalama-success)]">✅ Envoyé</span>
+                      ) : (
+                        <span className="text-[var(--zalama-danger)]">❌ Échec</span>
+                      )}
+                    </div>
+                    
+                    {/* Email */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+                      <span className="text-[var(--zalama-text-secondary)]">Email :</span>
+                      {credentialsResult.email.success ? (
+                        <span className="text-[var(--zalama-success)]">✅ Envoyé</span>
+                      ) : (
+                        <span className="text-[var(--zalama-danger)]">❌ Échec</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

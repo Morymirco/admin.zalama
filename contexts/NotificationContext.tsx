@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
 import { useNotifications as useNotificationsHook } from '@/hooks/useNotifications';
 import { Notification } from '@/services/notificationService';
 
@@ -48,22 +48,34 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     loadNotifications
   } = useNotificationsHook();
 
-  const refreshUnreadCount = async () => {
+  const refreshUnreadCount = useCallback(async () => {
     await loadNotifications();
-  };
+  }, [loadNotifications]);
+
+  const contextValue = useMemo(() => ({
+    unreadCount: stats.non_lues,
+    notifications, 
+    stats,
+    loading,
+    error,
+    refreshUnreadCount, 
+    markAsRead, 
+    markAllAsRead,
+    deleteNotification
+  }), [
+    stats.non_lues,
+    notifications,
+    stats,
+    loading,
+    error,
+    refreshUnreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification
+  ]);
 
   return (
-    <NotificationContext.Provider value={{ 
-      unreadCount: stats.non_lues,
-      notifications, 
-      stats,
-      loading,
-      error,
-      refreshUnreadCount, 
-      markAsRead, 
-      markAllAsRead,
-      deleteNotification
-    }}>
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

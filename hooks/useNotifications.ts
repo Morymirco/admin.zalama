@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { notificationService, Notification, NotificationStats } from '../services/notificationService';
 import { useAuth } from './useAuth';
 
@@ -14,12 +14,14 @@ export const useNotifications = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadingRef = useRef(false);
 
   // Charger les notifications
   const loadNotifications = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id || loadingRef.current) return;
 
     try {
+      loadingRef.current = true;
       setLoading(true);
       setError(null);
 
@@ -37,6 +39,7 @@ export const useNotifications = () => {
       setError('Erreur lors du chargement des notifications');
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [user?.id]);
 
@@ -139,14 +142,21 @@ export const useNotifications = () => {
 
   // Charger les notifications au montage et quand l'utilisateur change
   useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+    if (user?.id) {
+      loadNotifications();
+    }
+  }, [user?.id]);
 
   // Recharger les notifications toutes les 5 minutes
   useEffect(() => {
-    const interval = setInterval(loadNotifications, 5 * 60 * 1000);
+    if (!user?.id) return;
+    
+    const interval = setInterval(() => {
+      loadNotifications();
+    }, 5 * 60 * 1000);
+    
     return () => clearInterval(interval);
-  }, [loadNotifications]);
+  }, [user?.id, loadNotifications]);
 
   // Nettoyer les anciennes notifications quotidiennement
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client"
 import { Bell, Sun, Moon, ChevronRight } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationDrawer from '@/components/dashboard/notifications/NotificationDrawer';
 import Link from 'next/link';
@@ -38,14 +38,21 @@ export default function DashboardHeader() {
   };
   
   // Gérer l'ouverture/fermeture du drawer de notifications
-  const toggleNotifications = () => {
-    setNotificationsOpen(!notificationsOpen);
-    
-    // Rafraîchir le compteur lorsqu'on ouvre/ferme le drawer
-    if (!notificationsOpen) {
-      refreshUnreadCount();
-    }
-  };
+  const toggleNotifications = useCallback(() => {
+    setNotificationsOpen(prev => {
+      const newState = !prev;
+      
+      // Rafraîchir le compteur seulement lors de l'ouverture
+      if (newState) {
+        // Utiliser setTimeout pour éviter les conflits de rendu
+        setTimeout(() => {
+          refreshUnreadCount();
+        }, 0);
+      }
+      
+      return newState;
+    });
+  }, [refreshUnreadCount]);
 
   return (
     <>

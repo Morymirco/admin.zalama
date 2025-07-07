@@ -5,24 +5,24 @@ CREATE TABLE public.admin_users (
   id uuid NOT NULL,
   email character varying NOT NULL UNIQUE,
   display_name character varying NOT NULL,
-  role USER-DEFINED NOT NULL DEFAULT 'user'::admin_role,
   partenaire_id uuid,
-  active boolean DEFAULT true,
   last_login timestamp with time zone,
+  role USER-DEFINED NOT NULL DEFAULT 'user'::admin_role,
+  active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT admin_users_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.alerts (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   titre character varying NOT NULL,
   description text,
   type USER-DEFINED NOT NULL,
-  statut USER-DEFINED NOT NULL DEFAULT 'Nouvelle'::alert_status,
   source character varying,
   assigne_a uuid,
-  date_creation timestamp with time zone DEFAULT now(),
   date_resolution timestamp with time zone,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  statut USER-DEFINED NOT NULL DEFAULT 'Nouvelle'::alert_status,
+  date_creation timestamp with time zone DEFAULT now(),
   priorite integer DEFAULT 1,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
@@ -30,28 +30,28 @@ CREATE TABLE public.alerts (
   CONSTRAINT alerts_assigne_a_fkey FOREIGN KEY (assigne_a) REFERENCES public.admin_users(id)
 );
 CREATE TABLE public.avis (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  employee_id uuid,
   partner_id uuid,
   note integer NOT NULL CHECK (note >= 1 AND note <= 5),
   commentaire text,
   type_retour text CHECK (type_retour = ANY (ARRAY['positif'::text, 'negatif'::text])),
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   date_avis timestamp with time zone DEFAULT now(),
   approuve boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  employee_id uuid,
   CONSTRAINT avis_pkey PRIMARY KEY (id),
-  CONSTRAINT avis_employe_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id),
   CONSTRAINT avis_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id),
+  CONSTRAINT avis_employe_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id),
   CONSTRAINT avis_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id)
 );
 CREATE TABLE public.dashboard_widgets (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   nom character varying NOT NULL,
   type USER-DEFINED NOT NULL,
   configuration jsonb,
   position_x integer,
   position_y integer,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   largeur integer DEFAULT 1,
   hauteur integer DEFAULT 1,
   actif boolean DEFAULT true,
@@ -60,22 +60,21 @@ CREATE TABLE public.dashboard_widgets (
   CONSTRAINT dashboard_widgets_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.demandes_avance_salaire (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   employe_id uuid,
   montant_demande numeric NOT NULL,
   motif text NOT NULL,
-  date_demande timestamp with time zone DEFAULT now(),
-  statut USER-DEFINED DEFAULT 'EN_ATTENTE'::demande_statut,
   commentaire text,
   date_traitement timestamp with time zone,
   numero_reception character varying,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  date_demande timestamp with time zone DEFAULT now(),
+  statut USER-DEFINED DEFAULT 'EN_ATTENTE'::demande_statut,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT demandes_avance_salaire_pkey PRIMARY KEY (id),
   CONSTRAINT demandes_avance_salaire_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id)
 );
 CREATE TABLE public.employees (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   partner_id uuid,
   nom character varying NOT NULL,
   prenom character varying NOT NULL,
@@ -88,48 +87,49 @@ CREATE TABLE public.employees (
   type_contrat USER-DEFINED NOT NULL,
   salaire_net numeric,
   date_embauche date,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   actif boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  photo_url character varying,
   user_id uuid,
   CONSTRAINT employees_pkey PRIMARY KEY (id),
-  CONSTRAINT employees_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT employees_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id)
+  CONSTRAINT employees_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id),
+  CONSTRAINT employees_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.financial_transactions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   montant numeric NOT NULL,
   type USER-DEFINED NOT NULL,
   description text,
   partenaire_id uuid,
   utilisateur_id uuid,
   service_id uuid,
-  statut USER-DEFINED NOT NULL DEFAULT 'En attente'::transaction_status,
-  date_transaction timestamp with time zone DEFAULT now(),
   date_validation timestamp with time zone,
   reference character varying,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  statut USER-DEFINED NOT NULL DEFAULT 'En attente'::transaction_status,
+  date_transaction timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   transaction_id bigint,
   CONSTRAINT financial_transactions_pkey PRIMARY KEY (id),
   CONSTRAINT financial_transactions_partenaire_id_fkey FOREIGN KEY (partenaire_id) REFERENCES public.partners(id),
-  CONSTRAINT financial_transactions_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.employees(id),
-  CONSTRAINT financial_transactions_service_id_fkey FOREIGN KEY (service_id) REFERENCES public.services(id)
+  CONSTRAINT financial_transactions_service_id_fkey FOREIGN KEY (service_id) REFERENCES public.services(id),
+  CONSTRAINT financial_transactions_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.employees(id)
 );
 CREATE TABLE public.notifications (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid,
   titre character varying NOT NULL,
   message text,
+  date_lecture timestamp with time zone,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   type USER-DEFINED NOT NULL DEFAULT 'Information'::notification_type,
   lu boolean DEFAULT false,
   date_creation timestamp with time zone DEFAULT now(),
-  date_lecture timestamp with time zone,
   CONSTRAINT notifications_pkey PRIMARY KEY (id),
   CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.admin_users(id)
 );
 CREATE TABLE public.partners (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   nom character varying NOT NULL,
   type character varying NOT NULL,
   secteur character varying NOT NULL,
@@ -147,6 +147,7 @@ CREATE TABLE public.partners (
   adresse text,
   site_web character varying,
   logo_url character varying,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   date_adhesion timestamp with time zone DEFAULT now(),
   actif boolean DEFAULT true,
   nombre_employes integer DEFAULT 0,
@@ -157,7 +158,6 @@ CREATE TABLE public.partners (
   CONSTRAINT partners_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.partnership_requests (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   company_name character varying NOT NULL,
   legal_status character varying NOT NULL,
   rccm character varying NOT NULL,
@@ -178,6 +178,7 @@ CREATE TABLE public.partnership_requests (
   hr_full_name character varying NOT NULL,
   hr_email character varying NOT NULL CHECK (hr_email::text ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'::text),
   hr_phone character varying NOT NULL CHECK (length(hr_phone::text) <= 20),
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   agreement boolean NOT NULL DEFAULT false,
   status character varying DEFAULT 'pending'::character varying CHECK (status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'in_review'::character varying]::text[])),
   created_at timestamp with time zone DEFAULT now(),
@@ -186,11 +187,11 @@ CREATE TABLE public.partnership_requests (
 );
 CREATE TABLE public.password_attempts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
+  attempt_count integer DEFAULT 1,
+  last_attempt timestamp with time zone DEFAULT now(),
   user_id uuid,
   ip_address inet,
   user_agent text,
-  attempt_count integer DEFAULT 1,
-  last_attempt timestamp with time zone DEFAULT now(),
   locked_until timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
@@ -198,69 +199,68 @@ CREATE TABLE public.password_attempts (
   CONSTRAINT password_attempts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.performance_metrics (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   nom character varying NOT NULL,
   valeur numeric NOT NULL,
   unite character varying,
   categorie character varying,
   date_mesure date NOT NULL,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   periode character varying DEFAULT 'jour'::character varying,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT performance_metrics_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.salary_advance_requests (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   employe_id uuid,
   partenaire_id uuid,
   montant_demande numeric NOT NULL,
   type_motif character varying NOT NULL,
   motif text NOT NULL,
   numero_reception character varying,
-  frais_service numeric DEFAULT 0,
   montant_total numeric NOT NULL,
   salaire_disponible numeric,
   avance_disponible numeric,
-  statut USER-DEFINED NOT NULL DEFAULT 'En attente'::transaction_status,
-  date_creation timestamp with time zone DEFAULT now(),
   date_validation timestamp with time zone,
   date_rejet timestamp with time zone,
   motif_rejet text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  frais_service numeric DEFAULT 0,
+  statut USER-DEFINED NOT NULL DEFAULT 'En attente'::transaction_status,
+  date_creation timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT salary_advance_requests_pkey PRIMARY KEY (id),
-  CONSTRAINT salary_advance_requests_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id),
-  CONSTRAINT salary_advance_requests_partenaire_id_fkey FOREIGN KEY (partenaire_id) REFERENCES public.partners(id)
+  CONSTRAINT salary_advance_requests_partenaire_id_fkey FOREIGN KEY (partenaire_id) REFERENCES public.partners(id),
+  CONSTRAINT salary_advance_requests_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id)
 );
 CREATE TABLE public.security_events (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid,
   event_type text NOT NULL,
   ip_address inet,
   user_agent text,
   location_data jsonb,
-  risk_score integer DEFAULT 0,
   details jsonb,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  risk_score integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT security_events_pkey PRIMARY KEY (id),
   CONSTRAINT security_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.services (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   nom character varying NOT NULL,
   description text,
   categorie character varying NOT NULL,
   frais_attribues numeric,
   pourcentage_max numeric,
   duree character varying,
-  disponible boolean DEFAULT true,
   image_url character varying,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  disponible boolean DEFAULT true,
   date_creation timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT services_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.transactions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   demande_avance_id uuid,
   employe_id uuid,
   entreprise_id uuid,
@@ -269,8 +269,9 @@ CREATE TABLE public.transactions (
   methode_paiement USER-DEFINED NOT NULL,
   numero_compte character varying,
   numero_reception character varying,
-  date_transaction timestamp with time zone DEFAULT now(),
   recu_url character varying,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  date_transaction timestamp with time zone DEFAULT now(),
   date_creation timestamp with time zone DEFAULT now(),
   statut USER-DEFINED DEFAULT 'EFFECTUEE'::transaction_statut,
   created_at timestamp with time zone DEFAULT now(),
@@ -281,32 +282,32 @@ CREATE TABLE public.transactions (
   CONSTRAINT transactions_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id)
 );
 CREATE TABLE public.user_activities (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid,
   action character varying NOT NULL,
   details jsonb,
   ip_address inet,
   user_agent text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone DEFAULT now(),
   risk_score integer DEFAULT 0,
   CONSTRAINT user_activities_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.users (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
   email character varying NOT NULL UNIQUE,
   nom character varying NOT NULL,
   prenom character varying NOT NULL,
   telephone character varying,
   adresse text,
-  type USER-DEFINED NOT NULL DEFAULT 'Étudiant'::user_type,
-  statut USER-DEFINED NOT NULL DEFAULT 'En attente'::user_status,
   photo_url character varying,
   organisation character varying,
   poste character varying,
   niveau_etudes character varying,
   etablissement character varying,
-  date_inscription timestamp with time zone DEFAULT now(),
   derniere_connexion timestamp with time zone,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type USER-DEFINED NOT NULL DEFAULT 'Étudiant'::user_type,
+  statut USER-DEFINED NOT NULL DEFAULT 'En attente'::user_status,
+  date_inscription timestamp with time zone DEFAULT now(),
   actif boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),

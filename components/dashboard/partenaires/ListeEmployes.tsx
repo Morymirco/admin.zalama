@@ -40,6 +40,7 @@ interface ListeEmployesProps {
   }>;
   onUpdateEmploye: (id: string, employe: Partial<Omit<Employe, 'id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   onDeleteEmploye: (id: string) => Promise<void>;
+  onRefresh?: () => void;
 }
 
 const ListeEmployes: React.FC<ListeEmployesProps> = ({
@@ -49,7 +50,8 @@ const ListeEmployes: React.FC<ListeEmployesProps> = ({
   loading,
   onAddEmploye,
   onUpdateEmploye,
-  onDeleteEmploye
+  onDeleteEmploye,
+  onRefresh
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -130,12 +132,20 @@ const ListeEmployes: React.FC<ListeEmployesProps> = ({
     await onUpdateEmploye(id, employeData);
     setShowEditModal(false);
     setSelectedEmploye(null);
+    // Rafraîchir les données après modification
+    if (onRefresh) {
+      setTimeout(() => onRefresh(), 500);
+    }
   };
 
   const handleConfirmDeleteEmploye = async (id: string) => {
     await onDeleteEmploye(id);
     setShowDeleteModal(false);
     setSelectedEmploye(null);
+    // Rafraîchir les données après suppression
+    if (onRefresh) {
+      setTimeout(() => onRefresh(), 500);
+    }
   };
 
   return (

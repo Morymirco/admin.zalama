@@ -70,7 +70,8 @@ export default function PartenaireDetailPage() {
       // Ajouter l'employé à la liste locale
       if (result.account.success) {
         await createEmploye(employeeData);
-        await loadPartenaireDetail(partnerId);
+        // Rafraîchir les données après ajout
+        setTimeout(() => loadPartenaireDetail(partnerId), 500);
       }
       
       // Retourner les résultats pour affichage dans le modal
@@ -91,6 +92,8 @@ export default function PartenaireDetailPage() {
     try {
       await updateEmploye(id, employeeData);
       toast.success('Employé mis à jour avec succès');
+      // Rafraîchir les données après mise à jour
+      setTimeout(() => loadPartenaireDetail(partnerId), 500);
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'employé:', error);
       toast.error('Erreur lors de la mise à jour de l\'employé');
@@ -101,6 +104,8 @@ export default function PartenaireDetailPage() {
     try {
       await deleteEmploye(id);
       toast.success('Employé supprimé avec succès');
+      // Rafraîchir les données après suppression
+      setTimeout(() => loadPartenaireDetail(partnerId), 500);
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'employé:', error);
       toast.error('Erreur lors de la suppression de l\'employé');
@@ -421,6 +426,7 @@ export default function PartenaireDetailPage() {
             onAddEmploye={handleAddEmployee}
             onUpdateEmploye={handleUpdateEmployee}
             onDeleteEmploye={handleDeleteEmployee}
+            onRefresh={() => loadPartenaireDetail(partnerId)}
           />
         </div>
       ) : (

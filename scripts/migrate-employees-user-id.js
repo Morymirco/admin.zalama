@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';

@@ -26,6 +26,7 @@
     "test-employee-sms": "node scripts/test-employee-sms-integration.js",
     "test-employee-creation": "node scripts/test-employee-creation.js",
     "test-employee-creation-with-auth": "node scripts/test-employee-creation-with-auth.js",
+    "test-employee-api-creation": "node scripts/test-employee-api-creation.js",
     "migrate-employees-user-id": "node scripts/migrate-employees-user-id.js",
     "test-employee-sync": "node scripts/test-employee-sync-integration.js",
     "cleanup-test-employee": "node scripts/cleanup-test-employee.js",

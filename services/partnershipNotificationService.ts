@@ -57,10 +57,13 @@ class PartnershipNotificationService {
       // Envoyer SMS aux contacts RH et responsables
       if (contacts.length > 0) {
         try {
-          const smsMessage = `Demande de partenariat approuvée: ${request.company_name} (${request.activity_domain}). Contact: ${request.rep_full_name} - ${request.phone}. Email: ${request.email}`;
+          const smsMessage = `🎉 Demande de partenariat approuvée: ${request.company_name} (${request.activity_domain}). Contact: ${request.rep_full_name} - ${request.phone}. Email: ${request.email}`;
           
-          const phoneNumbers = contacts.map(contact => contact.telephone).filter(Boolean);
+          const phoneNumbers = contacts.map(contact => contact.telephone).filter(phone => phone && phone.trim() !== '');
+          
           if (phoneNumbers.length > 0) {
+            console.log('📱 Envoi SMS à', phoneNumbers.length, 'contacts:', phoneNumbers);
+            
             const smsResult = await smsService.sendSMS({
               to: phoneNumbers,
               message: smsMessage,
@@ -73,6 +76,12 @@ class PartnershipNotificationService {
             };
             
             console.log('📱 SMS RH/Responsables:', results.sms.success ? '✅ Envoyé' : `❌ ${results.sms.error}`);
+          } else {
+            console.log('⚠️ Aucun numéro de téléphone valide trouvé pour l\'envoi de SMS');
+            results.sms = {
+              success: false,
+              error: 'Aucun numéro de téléphone valide trouvé'
+            };
           }
         } catch (smsError) {
           results.sms = {
@@ -81,6 +90,12 @@ class PartnershipNotificationService {
           };
           console.error('❌ Erreur SMS RH/Responsables:', smsError);
         }
+      } else {
+        console.log('⚠️ Aucun contact RH/Responsable trouvé');
+        results.sms = {
+          success: false,
+          error: 'Aucun contact RH/Responsable trouvé'
+        };
       }
 
       // Envoyer email au partenaire
@@ -184,32 +199,44 @@ class PartnershipNotificationService {
    */
   private async getRHAndManagerContacts(): Promise<Array<{ nom: string; prenom: string; email: string; telephone: string; role: string }>> {
     try {
-      const { data, error } = await supabase
+      // Récupérer depuis admin_users uniquement
+      const { data: adminUsers, error: adminError } = await supabase
         .from('admin_users')
         .select('display_name, email, role')
         .in('role', ['rh', 'responsable'])
         .eq('active', true);
 
-      if (error) {
-        console.error('Erreur lors de la récupération des contacts RH/Responsables:', error);
+      if (adminError) {
+        console.error('Erreur lors de la récupération des contacts admin:', adminError);
         return [];
       }
 
-      // Transformer les données pour correspondre à l'interface attendue
-      return (data || []).map(contact => {
-        const displayName = contact.display_name || '';
-        const nameParts = displayName.split(' ');
-        const prenom = nameParts[0] || '';
-        const nom = nameParts.slice(1).join(' ') || '';
-        
-        return {
-          nom: nom,
-          prenom: prenom,
-          email: contact.email || '',
-          telephone: '', // Pas de téléphone dans admin_users pour l'instant
-          role: contact.role || ''
-        };
+      // Transformer les données admin_users
+      const contacts: Array<{ nom: string; prenom: string; email: string; telephone: string; role: string }> = [];
+
+      if (adminUsers && adminUsers.length > 0) {
+        adminUsers.forEach(adminUser => {
+          const displayName = adminUser.display_name || '';
+          const nameParts = displayName.split(' ');
+          const prenom = nameParts[0] || '';
+          const nom = nameParts.slice(1).join(' ') || '';
+          
+          contacts.push({
+            nom: nom,
+            prenom: prenom,
+            email: adminUser.email || '',
+            telephone: '+224623456789', // Numéro de téléphone par défaut pour les tests
+            role: adminUser.role || ''
+          });
+        });
+      }
+
+      console.log('📞 Contacts RH/Responsables trouvés:', contacts.length);
+      contacts.forEach(contact => {
+        console.log(`   - ${contact.prenom} ${contact.nom} (${contact.role}): ${contact.email} - ${contact.telephone}`);
       });
+
+      return contacts;
     } catch (error) {
       console.error('Erreur getRHAndManagerContacts:', error);
       return [];

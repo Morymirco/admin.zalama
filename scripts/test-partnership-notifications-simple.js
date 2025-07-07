@@ -1,215 +1,143 @@
-const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 
 // Configuration Supabase
-const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc4NzI1OCwiZXhwIjoyMDY2MzYzMjU4fQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Variables d\'environnement Supabase manquantes');
+  process.exit(1);
+}
 
-async function testPartnershipNotificationsSimple() {
-  console.log('🧪 Test simplifié des notifications de partenariat...\n');
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Simuler une demande de partenariat de test
+const testRequest = {
+  id: 'test-request-123',
+  company_name: 'Entreprise Test SMS',
+  rep_full_name: 'John Doe',
+  hr_full_name: 'Jane Smith',
+  email: 'test@example.com',
+  phone: '+224623456789',
+  activity_domain: 'Technologie',
+  status: 'approved',
+  created_at: new Date().toISOString()
+};
+
+async function testPartnershipNotifications() {
+  console.log('🧪 Test des notifications partenariat (SMS + Email)...\n');
 
   try {
-    // 1. Vérifier la connexion Supabase
-    console.log('1️⃣ Vérification de la connexion Supabase...');
-    const { data: testData, error: testError } = await supabase
-      .from('partnership_requests')
-      .select('count')
-      .limit(1);
-
-    if (testError) {
-      console.error('❌ Erreur de connexion Supabase:', testError);
-      return;
-    }
-    console.log('✅ Connexion Supabase OK\n');
-
-    // 2. Récupérer une demande de partenariat existante
-    console.log('2️⃣ Récupération d\'une demande de partenariat...');
-    const { data: requests, error: requestsError } = await supabase
-      .from('partnership_requests')
-      .select('*')
-      .limit(5);
-
-    if (requestsError) {
-      console.error('❌ Erreur lors de la récupération des demandes:', requestsError);
-      return;
-    }
-
-    if (!requests || requests.length === 0) {
-      console.log('⚠️ Aucune demande de partenariat trouvée');
-      console.log('💡 Créons une demande de test...');
-      
-      // Créer une demande de test
-      const testRequest = {
-        company_name: 'Entreprise Test Notifications',
-        legal_status: 'SARL',
-        rccm: 'RC123456789',
-        nif: 'NIF123456789',
-        activity_domain: 'Technologie',
-        headquarters_address: '123 Rue Test, Conakry',
-        phone: '+224123456789',
-        email: 'test@example.com',
-        employees_count: 50,
-        payroll: '50000000',
-        cdi_count: 30,
-        cdd_count: 20,
-        payment_date: '2024-01-15',
-        rep_full_name: 'John Doe',
-        rep_position: 'Directeur',
-        rep_email: 'john.doe@example.com',
-        rep_phone: '+224123456789',
-        hr_full_name: 'Jane Smith',
-        hr_email: 'jane.smith@example.com',
-        hr_phone: '+224987654321',
-        agreement: true,
-        status: 'pending'
-      };
-
-      const { data: newRequest, error: createError } = await supabase
-        .from('partnership_requests')
-        .insert([testRequest])
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('❌ Erreur lors de la création de la demande de test:', createError);
-        return;
-      }
-
-      console.log('✅ Demande de test créée:', newRequest.id);
-      requests.push(newRequest);
-    }
-
-    const testRequest = requests[0];
-    console.log('✅ Demande trouvée:', testRequest.company_name, `(ID: ${testRequest.id})\n`);
-
-    // 3. Vérifier les contacts RH et responsables
-    console.log('3️⃣ Vérification des contacts RH et responsables...');
-    const { data: adminContacts, error: contactsError } = await supabase
+    // 1. Vérifier les contacts RH disponibles
+    console.log('1️⃣ Vérification des contacts RH...');
+    const { data: contacts, error: contactsError } = await supabase
       .from('admin_users')
-      .select('display_name, email, role')
-      .in('role', ['rh', 'responsable', 'manager'])
+      .select('display_name, email, role, active')
+      .in('role', ['rh', 'responsable'])
       .eq('active', true);
 
     if (contactsError) {
       console.error('❌ Erreur lors de la récupération des contacts:', contactsError);
-    } else {
-      console.log(`✅ ${adminContacts?.length || 0} contacts RH/Responsables trouvés`);
-      if (adminContacts && adminContacts.length > 0) {
-        adminContacts.forEach(contact => {
-          console.log(`   - ${contact.display_name} (${contact.role}) - ${contact.email}`);
-        });
-      } else {
-        console.log('⚠️ Aucun contact RH/Responsable trouvé');
-        console.log('💡 Créons un contact de test...');
-        
-        // Créer un contact de test
-        const testContact = {
-          id: '00000000-0000-0000-0000-000000000001',
-          email: 'rh.test@zalama.com',
-          display_name: 'RH Test',
-          role: 'rh',
-          active: true
-        };
-
-        const { data: newContact, error: createContactError } = await supabase
-          .from('admin_users')
-          .insert([testContact])
-          .select()
-          .single();
-
-        if (createContactError) {
-          console.error('❌ Erreur lors de la création du contact de test:', createContactError);
-        } else {
-          console.log('✅ Contact de test créé:', newContact.display_name);
-          adminContacts.push(newContact);
-        }
-      }
+      return;
     }
-    console.log('');
 
-    // 4. Vérifier les variables d'environnement
-    console.log('4️⃣ Vérification des variables d\'environnement...');
-    const requiredEnvVars = [
-      'RESEND_API_KEY',
-      'NIMBA_SMS_API_KEY',
-      'NIMBA_SMS_SENDER_NAME'
-    ];
-
-    let envVarsOk = true;
-    requiredEnvVars.forEach(envVar => {
-      const value = process.env[envVar];
-      if (value) {
-        console.log(`   ✅ ${envVar}: Configuré`);
-      } else {
-        console.log(`   ❌ ${envVar}: Non configuré`);
-        envVarsOk = false;
-      }
+    console.log(`✅ ${contacts.length} contacts RH/Responsables trouvés:`);
+    contacts.forEach(contact => {
+      const displayName = contact.display_name || '';
+      const nameParts = displayName.split(' ');
+      const prenom = nameParts[0] || '';
+      const nom = nameParts.slice(1).join(' ') || '';
+      console.log(`   - ${prenom} ${nom} (${contact.role}): ${contact.email} - +224623456789`);
     });
 
-    if (!envVarsOk) {
-      console.log('\n⚠️ Certaines variables d\'environnement ne sont pas configurées');
-      console.log('💡 Les notifications peuvent ne pas fonctionner correctement');
-    }
-    console.log('');
-
-    // 5. Simuler l'approbation
-    console.log('5️⃣ Simulation de l\'approbation...');
+    // 2. Tester l'envoi de SMS
+    console.log('\n2️⃣ Test de l\'envoi de SMS...');
+    // Utiliser un numéro de téléphone par défaut pour tous les contacts
+    const phoneNumbers = contacts.map(() => '+224623456789');
     
-    // Remettre le statut en pending pour le test
-    await supabase
-      .from('partnership_requests')
-      .update({ status: 'pending' })
-      .eq('id', testRequest.id);
+    if (phoneNumbers.length > 0) {
+      console.log(`📱 Envoi de SMS à ${phoneNumbers.length} contacts:`, phoneNumbers);
+      
+      // Simuler l'envoi de SMS via l'API route
+      const smsData = {
+        to: phoneNumbers,
+        message: `🧪 TEST SMS: Demande de partenariat approuvée: ${testRequest.company_name} (${testRequest.activity_domain}). Contact: ${testRequest.rep_full_name} - ${testRequest.phone}. Email: ${testRequest.email}`,
+        sender_name: 'ZaLaMa'
+      };
 
-    console.log('🔄 Test d\'approbation...');
-    const { data: approvedRequest, error: approvalError } = await supabase
-      .from('partnership_requests')
-      .update({ 
-        status: 'approved',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', testRequest.id)
-      .select()
-      .single();
+      try {
+        const response = await fetch('http://localhost:3000/api/sms/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(smsData),
+        });
 
-    if (approvalError) {
-      console.error('❌ Erreur lors de l\'approbation:', approvalError);
+        if (!response.ok) {
+          throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ SMS envoyé avec succès:', result);
+      } catch (smsError) {
+        console.error('❌ Erreur lors de l\'envoi de SMS:', smsError.message);
+      }
     } else {
-      console.log('✅ Demande approuvée avec succès');
-      console.log('   Statut:', approvedRequest.status);
-      console.log('   Entreprise:', approvedRequest.company_name);
-      console.log('   Représentant:', approvedRequest.rep_full_name);
-      console.log('   Email:', approvedRequest.email);
+      console.log('⚠️ Aucun numéro de téléphone valide trouvé pour l\'envoi de SMS');
     }
 
-    // 6. Afficher les informations pour les tests manuels
-    console.log('\n6️⃣ Informations pour les tests manuels :');
-    console.log('📧 Email du partenaire:', testRequest.email);
-    console.log('📱 Téléphone du partenaire:', testRequest.phone);
-    console.log('🏢 Entreprise:', testRequest.company_name);
-    console.log('👤 Représentant:', testRequest.rep_full_name);
-    console.log('👥 Responsable RH:', testRequest.hr_full_name);
-    
-    if (adminContacts && adminContacts.length > 0) {
-      console.log('\n📧 Contacts admin à notifier :');
-      adminContacts.forEach(contact => {
-        console.log(`   - ${contact.display_name} (${contact.role}): ${contact.email}`);
+    // 3. Tester l'envoi d'email
+    console.log('\n3️⃣ Test de l\'envoi d\'email...');
+    const emailData = {
+      to: testRequest.email,
+      subject: `🧪 TEST - Demande de partenariat approuvée - ${testRequest.company_name}`,
+      html: `
+        <h1>🧪 Test Email - Partenariat Approuvé</h1>
+        <p>Ceci est un test d'envoi d'email pour la demande de partenariat :</p>
+        <ul>
+          <li><strong>Entreprise :</strong> ${testRequest.company_name}</li>
+          <li><strong>Représentant :</strong> ${testRequest.rep_full_name}</li>
+          <li><strong>Responsable RH :</strong> ${testRequest.hr_full_name}</li>
+          <li><strong>Email :</strong> ${testRequest.email}</li>
+          <li><strong>Téléphone :</strong> ${testRequest.phone}</li>
+          <li><strong>Domaine d'activité :</strong> ${testRequest.activity_domain}</li>
+        </ul>
+        <p>Date du test : ${new Date().toLocaleString('fr-FR')}</p>
+      `
+    };
+
+    try {
+      const response = await fetch('http://localhost:3000/api/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData),
       });
+
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Email envoyé avec succès:', result);
+    } catch (emailError) {
+      console.error('❌ Erreur lors de l\'envoi d\'email:', emailError.message);
     }
 
+    // 4. Résumé du test
+    console.log('\n📊 Résumé du test:');
+    console.log(`   - Contacts RH/Responsables: ${contacts.length}`);
+    console.log(`   - Numéros de téléphone valides: ${phoneNumbers.length}`);
+    console.log(`   - Email de test: ${testRequest.email}`);
     console.log('\n🎉 Test terminé !');
-    console.log('\n💡 Pour tester les notifications complètes :');
-    console.log('   1. Aller sur /dashboard/partenaires');
-    console.log('   2. Approuver une demande de partenariat');
-    console.log('   3. Vérifier les logs dans la console');
-    console.log('   4. Vérifier les emails et SMS reçus');
 
   } catch (error) {
-    console.error('❌ Erreur générale:', error);
+    console.error('❌ Erreur générale lors du test:', error);
   }
 }
 
 // Exécuter le test
-testPartnershipNotificationsSimple(); 
+testPartnershipNotifications(); 

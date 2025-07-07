@@ -252,30 +252,70 @@ export async function POST(request: NextRequest) {
     // Envoyer SMS et email à l'employé si le compte a été créé
     if (results.success && results.account) {
       try {
-        // SMS à l'employé
-        const employeSMSMessage = `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${results.account.password}\nConnectez-vous sur https://admin.zalama.com`;
-        const employeSMSResult = await directSmsService.sendSMS([employeeData.telephone], employeSMSMessage);
-        smsResults.employe = {
-          success: employeSMSResult.success,
-          message: employeSMSResult.success ? 'SMS employé envoyé' : '',
-          error: employeSMSResult.error || employeSMSResult.message || ''
-        };
+        // SMS à l'employé (seulement si téléphone fourni)
+        if (employeeData.telephone) {
+          const employeSMSMessage = `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${results.account.password}\nConnectez-vous sur https://admin.zalama.com`;
+          const employeSMSResult = await directSmsService.sendSMS([employeeData.telephone], employeSMSMessage);
+          smsResults.employe = {
+            success: employeSMSResult.success,
+            message: employeSMSResult.success ? 'SMS employé envoyé' : '',
+            error: employeSMSResult.error || employeSMSResult.message || ''
+          };
+          console.log('📱 SMS employé:', smsResults.employe.success ? '✅ Envoyé' : `❌ ${smsResults.employe.error}`);
+        } else {
+          smsResults.employe = {
+            success: false,
+            message: '',
+            error: 'Aucun numéro de téléphone fourni'
+          };
+          console.log('⚠️ SMS employé: Aucun numéro de téléphone fourni');
+        }
 
-        // Email à l'employé
-        const employeEmailSubject = `Compte employé créé - ${employeeData.prenom} ${employeeData.nom}`;
-        const employeEmailBody = `
-          <h2>Votre compte employé a été créé</h2>
-          <p><strong>Employé:</strong> ${employeeData.prenom} ${employeeData.nom}</p>
-          <p><strong>Email:</strong> ${employeeData.email}</p>
-          <p><strong>Mot de passe:</strong> ${results.account.password}</p>
-          <p>Vous pouvez maintenant vous connecter à l'interface d'administration.</p>
-        `;
-        const employeEmailResult = await directEmailService.sendEmail(employeeData.email, employeEmailSubject, employeEmailBody);
-        emailResults.employe = {
-          success: employeEmailResult.success,
-          message: employeEmailResult.success ? 'Email employé envoyé' : '',
-          error: employeEmailResult.error || employeEmailResult.message || ''
-        };
+        // Email à l'employé (seulement si email fourni)
+        if (employeeData.email) {
+          const employeEmailSubject = `Compte employé créé - ${employeeData.prenom} ${employeeData.nom}`;
+          const employeEmailBody = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #3b82f6;">🎉 Votre compte employé a été créé avec succès</h2>
+              
+              <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #1e293b; margin-top: 0;">Informations de connexion</h3>
+                <p><strong>Nom complet:</strong> ${employeeData.prenom} ${employeeData.nom}</p>
+                <p><strong>Email de connexion:</strong> ${employeeData.email}</p>
+                <p><strong>Mot de passe temporaire:</strong> <code style="background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${results.account.password}</code></p>
+              </div>
+              
+              <div style="background-color: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="color: #065f46; margin-top: 0;">🔐 Sécurité</h4>
+                <p>Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
+              </div>
+              
+              <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="color: #1e40af; margin-top: 0;">🌐 Accès à la plateforme</h4>
+                <p>Vous pouvez maintenant vous connecter à l'interface d'administration ZaLaMa :</p>
+                <p><a href="https://admin.zalama.com" style="color: #3b82f6; text-decoration: none;">https://admin.zalama.com</a></p>
+              </div>
+              
+              <p style="color: #64748b; font-size: 14px; margin-top: 30px;">
+                Si vous avez des questions, n'hésitez pas à contacter votre administrateur.
+              </p>
+            </div>
+          `;
+          const employeEmailResult = await directEmailService.sendEmail(employeeData.email, employeEmailSubject, employeEmailBody);
+          emailResults.employe = {
+            success: employeEmailResult.success,
+            message: employeEmailResult.success ? 'Email employé envoyé' : '',
+            error: employeEmailResult.error || employeEmailResult.message || ''
+          };
+          console.log('📧 Email employé:', emailResults.employe.success ? '✅ Envoyé' : `❌ ${emailResults.employe.error}`);
+        } else {
+          emailResults.employe = {
+            success: false,
+            message: '',
+            error: 'Aucun email fourni'
+          };
+          console.log('⚠️ Email employé: Aucun email fourni');
+        }
       } catch (error) {
         console.error('Erreur envoi SMS/email employé:', error);
         smsResults.employe.error = `Erreur SMS employé: ${error}`;

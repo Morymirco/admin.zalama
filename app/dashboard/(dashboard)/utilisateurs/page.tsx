@@ -139,7 +139,7 @@ export default function EmployesPage() {
       await createEmployee(employeeData);
       
       setShowAddModal(false);
-      toast.success('Employé ajouté avec succès');
+      toast.success("Employé ajouté avec succès. Les identifiants ont été envoyés par SMS au numéro.");
       
     } catch (error) {
       console.error("Erreur lors de l'ajout de l'employé:", error);

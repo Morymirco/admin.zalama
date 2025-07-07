@@ -24,6 +24,8 @@
     "test-sms-api": "node scripts/test-sms-api-route.js",
     "test-sms-email": "node scripts/test-sms-email.js",
     "test-employee-sms": "node scripts/test-employee-sms-integration.js",
+    "test-employee-creation": "node scripts/test-employee-creation.js",
+    "cleanup-test-employee": "node scripts/cleanup-test-employee.js",
     "test-all-services": "node scripts/test-all-services.js",
     "create-admin": "node scripts/create-admin-user.js",
     "migrate-users": "node scripts/migrate-users-to-admin-table.js",

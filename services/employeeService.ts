@@ -215,6 +215,14 @@ class EmployeeService {
           console.log('  - Compte:', accountCreationResults.account);
           console.log('  - SMS:', apiSmsResults);
           console.log('  - Emails:', apiEmailResults);
+          
+          // Logs détaillés des résultats SMS/Email
+          if (apiSmsResults.employe) {
+            console.log('📱 SMS employé:', apiSmsResults.employe.success ? '✅ Envoyé' : `❌ ${apiSmsResults.employe.error}`);
+          }
+          if (apiEmailResults.employe) {
+            console.log('📧 Email employé:', apiEmailResults.employe.success ? '✅ Envoyé' : `❌ ${apiEmailResults.employe.error}`);
+          }
 
           // Traiter les résultats du compte employé
           if (accountCreationResults.account.success) {
@@ -275,7 +283,11 @@ class EmployeeService {
 
       // Envoyer un SMS à l'administrateur
       try {
-        const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom}. Compte employé configuré.`;
+        const partenaireNom = employeeData.partner_id ? 
+          (await supabase.from('partners').select('nom').eq('id', employeeData.partner_id).single()).data?.nom || 'Partenaire inconnu' : 
+          'Aucun partenaire';
+          
+        const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom} (${partenaireNom}). Email: ${employeeData.email}. Compte employé configuré.`;
         const adminSMSResult = await smsService.sendSMS({
           to: ['+224625212115'],
           message: adminMessage
@@ -285,12 +297,14 @@ class EmployeeService {
           message: adminSMSResult.success ? 'SMS admin envoyé' : '',
           error: adminSMSResult.error || adminSMSResult.message || ''
         };
+        console.log('📱 SMS admin:', smsResults.admin.success ? '✅ Envoyé' : `❌ ${smsResults.admin.error}`);
       } catch (smsError) {
         smsResults.admin = {
           success: false,
           message: '',
           error: `Erreur SMS admin: ${smsError}`
         };
+        console.log('❌ Erreur SMS admin:', smsError);
       }
 
       console.log('✅ Création employé terminée');

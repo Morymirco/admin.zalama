@@ -40,7 +40,7 @@ export default function PartenaireDetailPage() {
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
 
   // Hooks pour récupérer les données
-  const { partenaire, loading: partnerLoading, error: partnerError } = useSupabasePartnerDetail(partnerId);
+  const { partenaire, loading: partnerLoading, error: partnerError, loadPartenaireDetail } = useSupabasePartnerDetail(partnerId);
   const { 
     employes, 
     loading: employeesLoading, 
@@ -70,6 +70,7 @@ export default function PartenaireDetailPage() {
       // Ajouter l'employé à la liste locale
       if (result.account.success) {
         await createEmploye(employeeData);
+        await loadPartenaireDetail(partnerId);
       }
       
       // Retourner les résultats pour affichage dans le modal

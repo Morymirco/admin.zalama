@@ -50,6 +50,7 @@ const DemandesAvanceSalaire: React.FC<DemandesAvanceSalaireProps> = ({ partnerId
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'demandes' | 'transactions'>('demandes');
+  const [processingRequest, setProcessingRequest] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,6 +87,42 @@ const DemandesAvanceSalaire: React.FC<DemandesAvanceSalaireProps> = ({ partnerId
       {status}
     </span>
   );
+
+  const handleApproveRequest = async (demandeId: string) => {
+    setProcessingRequest(demandeId);
+    try {
+      await salaryAdvanceService.approve(demandeId);
+      // Recharger les données
+      const [demandesData, transactionsData] = await Promise.all([
+        salaryAdvanceService.getDemandesByPartner(partnerId),
+        salaryAdvanceService.getTransactionsByPartner(partnerId)
+      ]);
+      setDemandes(demandesData);
+      setTransactions(transactionsData);
+    } catch (err) {
+      setError('Erreur lors de l\'approbation de la demande');
+    } finally {
+      setProcessingRequest(null);
+    }
+  };
+
+  const handleRejectRequest = async (demandeId: string) => {
+    setProcessingRequest(demandeId);
+    try {
+      await salaryAdvanceService.reject(demandeId, 'Demande rejetée par l\'administrateur');
+      // Recharger les données
+      const [demandesData, transactionsData] = await Promise.all([
+        salaryAdvanceService.getDemandesByPartner(partnerId),
+        salaryAdvanceService.getTransactionsByPartner(partnerId)
+      ]);
+      setDemandes(demandesData);
+      setTransactions(transactionsData);
+    } catch (err) {
+      setError('Erreur lors du rejet de la demande');
+    } finally {
+      setProcessingRequest(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -262,6 +299,36 @@ const DemandesAvanceSalaire: React.FC<DemandesAvanceSalaireProps> = ({ partnerId
                     </div>
                     <p className="text-[var(--zalama-text)]">{demande.motif}</p>
                   </div>
+
+                  {/* Boutons d'action pour les demandes en attente */}
+                  {demande.statut === 'En attente' && (
+                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--zalama-border)]">
+                      <button
+                        onClick={() => handleRejectRequest(demande.id)}
+                        disabled={processingRequest === demande.id}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {processingRequest === demande.id ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <XCircle className="h-4 w-4" />
+                        )}
+                        Rejeter
+                      </button>
+                      <button
+                        onClick={() => handleApproveRequest(demande.id)}
+                        disabled={processingRequest === demande.id}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 hover:border-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {processingRequest === demande.id ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4" />
+                        )}
+                        Approuver
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

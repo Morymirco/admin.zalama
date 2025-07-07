@@ -1,0 +1,244 @@
+openapi: 3.0.0
+info:
+  title: ZaLaMa External Notification API
+  version: "1.0.0"
+  description: |
+    API externe pour l'envoi de SMS et d'emails via ZaLaMa, utilisable par des applications partenaires.
+    Authentification par clé API (`x-api-key` ou `Authorization: Bearer ...`).
+servers:
+  - url: https://admin.zalama.com/api/external
+    description: Production
+  - url: http://localhost:3000/api/external
+    description: Local
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Recipient:
+      type: object
+      properties:
+        phone:
+          type: string
+          example: "+224623456789"
+        email:
+          type: string
+          example: "user@example.com"
+        name:
+          type: string
+          example: "Nom Utilisateur"
+    Message:
+      type: object
+      properties:
+        subject:
+          type: string
+          example: "Sujet de l'email"
+        content:
+          type: string
+          example: "Contenu du message"
+        html:
+          type: string
+          example: "<h1>Contenu HTML</h1>"
+    NotificationRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [sms, email, both]
+        recipients:
+          type: array
+          items:
+            $ref: "#/components/schemas/Recipient"
+        message:
+          $ref: "#/components/schemas/Message"
+        metadata:
+          type: object
+          properties:
+            partner_id:
+              type: string
+            user_id:
+              type: string
+            request_id:
+              type: string
+    TemplateNotificationRequest:
+      type: object
+      properties:
+        template:
+          type: string
+          enum: [welcome, notification, alert]
+        recipients:
+          type: array
+          items:
+            $ref: "#/components/schemas/Recipient"
+        variables:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          properties:
+            partner_id:
+              type: string
+            user_id:
+              type: string
+            request_id:
+              type: string
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+paths:
+  /notifications:
+    get:
+      summary: Statut de l'API et des services
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statut de l'API
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  status: { type: string }
+                  services:
+                    type: object
+                    properties:
+                      sms:
+                        type: object
+                        properties:
+                          available: { type: boolean }
+                          balance: { type: object }
+                          currency: { type: string }
+                      email:
+                        type: object
+                        properties:
+                          available: { type: boolean }
+                  timestamp: { type: string }
+                  version: { type: string }
+        '401':
+          description: Clé API manquante ou invalide
+    post:
+      summary: Envoi de notifications personnalisées (SMS, email ou les deux)
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationRequest"
+      responses:
+        '200':
+          description: Résultat de l'envoi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  results:
+                    type: object
+                    properties:
+                      sms: { type: array, items: { type: object } }
+                      email: { type: array, items: { type: object } }
+                      total: { type: integer }
+                      success: { type: integer }
+                      failed: { type: integer }
+                  timestamp: { type: string }
+        '401':
+          description: Clé API manquante ou invalide
+
+  /notifications/templates:
+    get:
+      summary: Liste des templates disponibles
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  templates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        description: { type: string }
+                        variables: { type: array, items: { type: string } }
+                  timestamp: { type: string }
+        '401':
+          description: Clé API manquante ou invalide
+    post:
+      summary: Envoi de notifications avec template prédéfini
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateNotificationRequest"
+      responses:
+        '200':
+          description: Résultat de l'envoi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  template: { type: string }
+                  results:
+                    type: object
+                    properties:
+                      sms: { type: array, items: { type: object } }
+                      email: { type: array, items: { type: object } }
+                      total: { type: integer }
+                      success: { type: integer }
+                      failed: { type: integer }
+                  timestamp: { type: string }
+        '401':
+          description: Clé API manquante ou invalide
+
+  /test:
+    get:
+      summary: Test d'accessibilité de l'API externe
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: API accessible
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  status: { type: string }
+                  timestamp: { type: string }
+                  version: { type: string }
+        '401':
+          description: Clé API manquante ou invalide 

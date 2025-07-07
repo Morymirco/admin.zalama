@@ -41,7 +41,9 @@
     "start:fast": "NEXT_TELEMETRY_DISABLED=1 next start",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "cache:clear": "rm -rf .next/cache",
-    "perf:test": "node scripts/test-dashboard-simple.js"
+    "perf:test": "node scripts/test-dashboard-simple.js",
+    "test-payment-page": "node scripts/test-payment-page.js",
+    "setup-lengo": "node scripts/setup-lengo-credentials.js"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
@@ -81,6 +83,7 @@
     "react-leaflet": "^5.0.0",
     "recharts": "^2.15.3",
     "resend": "^4.6.0",
+    "sonner": "^2.0.6",
     "tailwind-merge": "^3.2.0",
     "zod": "^3.24.4"
   },

@@ -14,6 +14,10 @@ const supabase = createClient(
   supabaseAnonKey
 );
 
+// Client pour les opérations admin (création de comptes Auth)
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey);
+
 // Fonction utilitaire pour convertir les données de la DB vers l'interface
 const convertFromDB = (dbEmployee: any): Employee => {
   return {
@@ -125,9 +129,82 @@ class EmployeeService {
     try {
       console.log('🚀 Création de l\'employé:', `${employeeData.prenom} ${employeeData.nom}`);
       
+      let userId: string | null = null;
+      let password: string | null = null;
+
+      // Si email fourni, créer le compte Auth d'abord
+      if (employeeData.email) {
+        try {
+          console.log('🔐 Création du compte Auth...');
+          
+          // Générer un mot de passe sécurisé
+          password = generatePassword();
+          
+          // Créer le compte dans Supabase Auth
+          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: employeeData.email,
+            password: password,
+            email_confirm: true,
+            user_metadata: {
+              display_name: `${employeeData.prenom} ${employeeData.nom}`,
+              role: 'user',
+              partenaire_id: employeeData.partner_id
+            }
+          });
+
+          if (authError) {
+            console.error('❌ Erreur création compte Auth:', authError);
+            throw new Error(`Erreur création compte Auth: ${authError.message}`);
+          }
+
+          userId = authData.user.id;
+          console.log('✅ Compte Auth créé:', userId);
+          
+          // Créer l'entrée dans admin_users
+          console.log('🔐 Création de l\'entrée admin_users...');
+          const accountData = {
+            id: authData.user.id,
+            email: employeeData.email,
+            display_name: `${employeeData.prenom} ${employeeData.nom}`,
+            role: 'user',
+            partenaire_id: employeeData.partner_id,
+            active: true
+          };
+
+          const { error: adminError } = await supabase
+            .from('admin_users')
+            .insert([accountData]);
+
+          if (adminError) {
+            console.error('❌ Erreur création admin_users:', adminError);
+            // Supprimer le compte Auth créé en cas d'erreur
+            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+            throw new Error(`Erreur création admin_users: ${adminError.message}`);
+          }
+
+          console.log('✅ Entrée admin_users créée');
+          
+        } catch (authError) {
+          console.error('❌ Erreur lors de la création du compte Auth:', authError);
+          // Continuer sans compte Auth si erreur
+          userId = null;
+          password = null;
+        }
+      }
+
+      // Préparer les données pour l'insertion
       const dbData = convertToDB(employeeData);
       dbData.actif = employeeData.actif ?? true;
+      
+      // GARANTIR que user_id est défini si un compte Auth a été créé
+      if (userId) {
+        dbData.user_id = userId;
+        console.log('✅ user_id défini pour l\'employé:', userId);
+      } else {
+        console.warn('⚠️ Aucun user_id défini - pas de compte Auth créé');
+      }
 
+      // Insérer l'employé dans la base de données
       const { data, error } = await supabase
         .from('employees')
         .insert([dbData])
@@ -136,10 +213,45 @@ class EmployeeService {
 
       if (error) {
         console.error('❌ Erreur lors de la création de l\'employé:', error);
+        
+        // Si l'employé n'a pas pu être créé et qu'un compte Auth a été créé, le supprimer
+        if (userId) {
+          try {
+            console.log('🧹 Nettoyage des comptes créés suite à l\'échec...');
+            await supabaseAdmin.auth.admin.deleteUser(userId);
+            await supabase.from('admin_users').delete().eq('id', userId);
+            console.log('✅ Comptes Auth et admin_users supprimés');
+          } catch (deleteError) {
+            console.error('⚠️ Erreur lors de la suppression des comptes:', deleteError);
+          }
+        }
+        
         throw error;
       }
 
       console.log('✅ Employé créé avec succès:', data.id);
+      console.log('📊 Vérification finale:');
+      console.log('  - Employé ID:', data.id);
+      console.log('  - User ID:', data.user_id || 'NULL');
+      console.log('  - Email:', data.email);
+
+      // Vérification critique que l'employé a bien un user_id si un compte Auth a été créé
+      if (userId && !data.user_id) {
+        console.error('❌ ERREUR CRITIQUE: user_id manquant après création!');
+        console.error('   - Compte Auth créé:', userId);
+        console.error('   - Employé créé mais sans user_id');
+        
+        // Nettoyer et échouer
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(userId);
+          await supabase.from('admin_users').delete().eq('id', userId);
+          await supabase.from('employees').delete().eq('id', data.id);
+        } catch (cleanupError) {
+          console.error('⚠️ Erreur lors du nettoyage:', cleanupError);
+        }
+        
+        throw new Error('Erreur critique: user_id manquant après création de l\'employé');
+      }
 
       // Résultats des SMS
       const smsResults = {
@@ -154,132 +266,12 @@ class EmployeeService {
 
       // Résultats des comptes créés
       const accountResults = {
-        employe: { success: false, password: undefined, error: '' }
-      };
-
-      // Créer le compte employé automatiquement via API si l'email est fourni
-      if (employeeData.email) {
-        try {
-          console.log('🔐 Création automatique du compte employé...');
-          
-          // Récupérer le nom du partenaire pour l'email
-          let partenaireNom = 'Votre entreprise';
-          if (employeeData.partner_id) {
-            try {
-              const { data: partnerData } = await supabase
-                .from('partners')
-                .select('nom')
-                .eq('id', employeeData.partner_id)
-                .single();
-              if (partnerData) {
-                partenaireNom = partnerData.nom;
-              }
-            } catch (partnerError) {
-              console.log('⚠️ Impossible de récupérer le nom du partenaire:', partnerError);
-            }
-          }
-          
-          const employeeWithId = { 
-            ...employeeData, 
-            id: data.id,
-            partenaireNom 
-          };
-          
-          // Appeler l'API route pour créer le compte
-          const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
-          const response = await fetch(`${baseUrl}/api/auth/create-employee-accounts`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ employeeData: employeeWithId }),
-          });
-
-          if (!response.ok) {
-            console.error('❌ Erreur API:', response.status, response.statusText);
-            throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
-          }
-
-          const apiResult = await response.json();
-          
-          if (!apiResult.success) {
-            console.error('❌ Erreur API result:', apiResult);
-            throw new Error(apiResult.error || 'Erreur création compte via API');
-          }
-
-          const accountCreationResults = apiResult.results;
-          const apiSmsResults = accountCreationResults.smsResults || {};
-          const apiEmailResults = accountCreationResults.emailResults || {};
-
-          console.log('📊 Résultats API route:');
-          console.log('  - Compte:', accountCreationResults.account);
-          console.log('  - SMS:', apiSmsResults);
-          console.log('  - Emails:', apiEmailResults);
-
-          // Logs détaillés des résultats SMS/Email
-          if (apiSmsResults.employe) {
-            console.log('📱 SMS employé:', apiSmsResults.employe.success ? '✅ Envoyé' : `❌ ${apiSmsResults.employe.error}`);
-          }
-          if (apiEmailResults.employe) {
-            console.log('📧 Email employé:', apiEmailResults.employe.success ? '✅ Envoyé' : `❌ ${apiEmailResults.employe.error}`);
-          }
-
-          // Traiter les résultats du compte employé
-          if (accountCreationResults.account.success) {
-            accountResults.employe = {
-              success: true,
-              password: accountCreationResults.account.account?.password,
-              error: ''
-            };
-            
-            console.log('✅ Compte employé créé avec succès');
-            
-            // Utiliser les résultats SMS/email de l'API
-            smsResults.employe = apiSmsResults.employe || {
-              success: false,
-              message: '',
-              error: 'Aucun résultat SMS de l\'API'
-            };
-
-            emailResults.employe = apiEmailResults.employe || {
-              success: false,
-              message: '',
-              error: 'Aucun résultat email de l\'API'
-            };
-          } else {
-            accountResults.employe = {
-              success: false,
-              password: undefined,
-              error: accountCreationResults.account.error || 'Erreur création compte employé'
-            };
-            smsResults.employe = {
-              success: false,
-              message: '',
-              error: accountResults.employe.error
-            };
-            emailResults.employe = {
-              success: false,
-              message: '',
-              error: accountResults.employe.error
-            };
-            console.log('❌ Échec création compte employé:', accountResults.employe.error);
-          }
-
-        } catch (accountError) {
-          console.error('❌ Erreur lors de la création du compte:', accountError);
-          
-          // NE PAS supprimer automatiquement l'employé
-          // Laisser l'utilisateur décider s'il veut continuer ou annuler
-          console.log('⚠️ Employé créé mais compte non créé. L\'utilisateur peut le créer manuellement.');
-          
-          // Mettre à jour les résultats d'erreur
-          accountResults.employe = {
-            success: false,
-            password: undefined,
-            error: `Erreur création compte: ${accountError instanceof Error ? accountError.message : String(accountError)}`
-          };
+        employe: { 
+          success: !!userId, 
+          password: password || undefined, 
+          error: userId ? '' : 'Aucun email fourni ou erreur création compte'
         }
-      }
+      };
 
       // Envoyer un SMS à l'administrateur
       try {
@@ -287,7 +279,7 @@ class EmployeeService {
           (await supabase.from('partners').select('nom').eq('id', employeeData.partner_id).single()).data?.nom || 'Partenaire inconnu' : 
           'Aucun partenaire';
           
-        const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom} (${partenaireNom}). Email: ${employeeData.email}. Compte employé configuré.`;
+        const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom} (${partenaireNom}). Email: ${employeeData.email || 'Non fourni'}. Compte employé: ${userId ? 'Créé' : 'Non créé'}.`;
         const adminSMSResult = await smsService.sendSMS({
           to: ['+224625212115'],
           message: adminMessage
@@ -310,6 +302,7 @@ class EmployeeService {
       console.log('✅ Création employé terminée');
       console.log('📊 Résultats finaux:');
       console.log('  - Employé:', data.id);
+      console.log('  - User ID:', data.user_id || 'Non créé');
       console.log('  - Compte employé:', accountResults.employe.success ? '✅' : '❌');
 
       return {

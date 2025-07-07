@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // NOUVELLE APPROCHE: Créer d'abord le compte Auth, puis l'employé avec le user_id
+    console.log('🔄 Création du compte Auth en premier...');
+
     // Créer le compte dans Supabase Auth (avec clé service role)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: employeeData.email,
@@ -116,8 +119,7 @@ export async function POST(request: NextRequest) {
       user_metadata: {
         display_name: `${employeeData.prenom} ${employeeData.nom}`,
         role: 'user',
-        partenaire_id: employeeData.partner_id,
-        employee_id: employeeData.id
+        partenaire_id: employeeData.partner_id
       }
     });
 
@@ -139,6 +141,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log('✅ Compte Auth créé avec succès:', authData.user.id);
 
     // Créer l'enregistrement dans admin_users
     const accountData = {
@@ -166,12 +170,95 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('✅ Compte admin_users créé avec succès');
+
+    // NOUVELLE LOGIQUE: Créer ou mettre à jour l'employé avec le user_id
+    let employeeRecord;
+    
+    if (employeeData.id) {
+      // Si l'employé existe déjà, le mettre à jour avec le user_id
+      console.log('🔄 Mise à jour de l\'employé existant avec user_id...');
+      
+      const { data: updatedEmployee, error: updateError } = await supabase
+        .from('employees')
+        .update({ 
+          user_id: authData.user.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', employeeData.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Erreur lors de la mise à jour de l\'employé:', updateError);
+        // Nettoyer les comptes créés en cas d'erreur
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        await supabase.from('admin_users').delete().eq('id', authData.user.id);
+        return NextResponse.json(
+          { success: false, error: 'Erreur lors de la mise à jour de l\'employé' },
+          { status: 500 }
+        );
+      }
+      
+      employeeRecord = updatedEmployee;
+      console.log('✅ Employé mis à jour avec user_id:', authData.user.id);
+      
+    } else {
+      // Si l'employé n'existe pas encore, le créer avec le user_id
+      console.log('🔄 Création de l\'employé avec user_id...');
+      
+      const employeeToCreate = {
+        ...employeeData,
+        user_id: authData.user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: newEmployee, error: createError } = await supabase
+        .from('employees')
+        .insert([employeeToCreate])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Erreur lors de la création de l\'employé:', createError);
+        // Nettoyer les comptes créés en cas d'erreur
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        await supabase.from('admin_users').delete().eq('id', authData.user.id);
+        return NextResponse.json(
+          { success: false, error: 'Erreur lors de la création de l\'employé' },
+          { status: 500 }
+        );
+      }
+      
+      employeeRecord = newEmployee;
+      console.log('✅ Employé créé avec user_id:', authData.user.id);
+    }
+
+    // Vérification finale que l'employé a bien un user_id
+    if (!employeeRecord.user_id) {
+      console.error('❌ ERREUR CRITIQUE: L\'employé n\'a pas de user_id après création/mise à jour');
+      // Nettoyer les comptes créés
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      await supabase.from('admin_users').delete().eq('id', authData.user.id);
+      return NextResponse.json(
+        { success: false, error: 'Erreur critique: user_id manquant' },
+        { status: 500 }
+      );
+    }
+
+    console.log('🎉 Processus de création terminé avec succès!');
+    console.log(`   - Compte Auth: ${authData.user.id}`);
+    console.log(`   - Compte Admin: ${accountRecord.id}`);
+    console.log(`   - Employé: ${employeeRecord.id} avec user_id: ${employeeRecord.user_id}`);
+
     return NextResponse.json({
       success: true,
       account: {
         ...accountRecord,
         password: password // Retourner le mot de passe pour affichage temporaire
-      }
+      },
+      employee: employeeRecord
     });
 
   } catch (error) {

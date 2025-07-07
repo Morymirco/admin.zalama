@@ -1,5 +1,5 @@
 "use client";
-import { Home, Users, BarChart2, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, ChevronDown, ChevronUp, Database, FileText, MessageSquare, Mail, Send } from 'lucide-react';
+import { Home, Users, BarChart2, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, ChevronDown, ChevronUp, Database, FileText, MessageSquare, Mail, Send, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -9,6 +9,7 @@ const navItems = [
   { label: 'Tableau de bord', icon: Home, href: '/dashboard' },
   { label: 'Utilisateurs', icon: Users, href: '/dashboard/utilisateurs' },
   { label: 'Finances', icon: BarChart2, href: '/dashboard/finances' },
+  { label: 'Paiements', icon: CreditCard, href: '/dashboard/paiements' },
   { label: 'Services', icon: PieChart, href: '/dashboard/services' },
   { label: 'Partenaires', icon: Users, href: '/dashboard/partenaires' },
   { label: 'Avis', icon: MessageSquare, href: '/dashboard/avis' },

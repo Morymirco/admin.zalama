@@ -202,7 +202,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                 Employé créé
               </h4>
               <p className="text-green-700 dark:text-green-300">
-                {summaryData.employe.prenom} {summaryData.employe.nom} - {summaryData.employe.poste}
+                {summaryData.employee.prenom} {summaryData.employee.nom} - {summaryData.employee.poste}
               </p>
             </div>
 
@@ -225,7 +225,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                 {summaryData.account.success ? (
                   <div className="space-y-2">
                     <p className="text-blue-700 dark:text-blue-300">
-                      Email: <span className="font-mono">{summaryData.employe.email}</span>
+                      Email: <span className="font-mono">{summaryData.employee.email}</span>
                     </p>
                     {summaryData.account.password && (
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
@@ -264,7 +264,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                 
                 {summaryData.sms.success ? (
                   <p className="text-green-700 dark:text-green-300">
-                    Les identifiants ont été envoyés par SMS au numéro {summaryData.employe.telephone}
+                    Les identifiants ont été envoyés par SMS au numéro {summaryData.employee.telephone}
                   </p>
                 ) : (
                   <p className="text-orange-700 dark:text-orange-300">

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { Employe } from '@/types/partenaire';
 import ModaleAjoutEmploye from './ModaleAjoutEmploye';
+import ModaleEditionEmploye from './ModaleEditionEmploye';
+import ModaleSuppressionEmploye from './ModaleSuppressionEmploye';
 import Image from 'next/image';
 
 interface ListeEmployesProps {
@@ -50,6 +52,9 @@ const ListeEmployes: React.FC<ListeEmployesProps> = ({
   onDeleteEmploye
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedEmploye, setSelectedEmploye] = useState<Employe | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('nom');
@@ -109,6 +114,28 @@ const ListeEmployes: React.FC<ListeEmployesProps> = ({
       case 'Consultant': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
     }
+  };
+
+  const handleEditEmploye = (employe: Employe) => {
+    setSelectedEmploye(employe);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteEmploye = (employe: Employe) => {
+    setSelectedEmploye(employe);
+    setShowDeleteModal(true);
+  };
+
+  const handleUpdateEmploye = async (id: string, employeData: Partial<Omit<Employe, 'id' | 'created_at' | 'updated_at'>>) => {
+    await onUpdateEmploye(id, employeData);
+    setShowEditModal(false);
+    setSelectedEmploye(null);
+  };
+
+  const handleConfirmDeleteEmploye = async (id: string) => {
+    await onDeleteEmploye(id);
+    setShowDeleteModal(false);
+    setSelectedEmploye(null);
   };
 
   return (
@@ -254,12 +281,15 @@ const ListeEmployes: React.FC<ListeEmployesProps> = ({
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button className="p-1 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded">
+                  <button 
+                    onClick={() => handleEditEmploye(employe)}
+                    className="p-1 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded transition-colors"
+                  >
                     <Edit className="h-4 w-4" />
                   </button>
                   <button 
-                    onClick={() => onDeleteEmploye(employe.id)}
-                    className="p-1 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded"
+                    onClick={() => handleDeleteEmploye(employe)}
+                    className="p-1 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -337,6 +367,28 @@ const ListeEmployes: React.FC<ListeEmployesProps> = ({
         onSubmit={onAddEmploye}
         partnerId={partnerId}
         partnerName={partnerName}
+      />
+
+      {/* Modal d'édition d'employé */}
+      <ModaleEditionEmploye
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedEmploye(null);
+        }}
+        onSubmit={handleUpdateEmploye}
+        employe={selectedEmploye}
+      />
+
+      {/* Modal de suppression d'employé */}
+      <ModaleSuppressionEmploye
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedEmploye(null);
+        }}
+        onConfirm={handleConfirmDeleteEmploye}
+        employe={selectedEmploye}
       />
     </div>
   );

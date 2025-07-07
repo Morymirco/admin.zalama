@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Employee, Partner } from '@/types/employee';
-import { partenaireService, employeService } from '@/services/partenaireService';
+import { partenaireService } from '@/services/partenaireService';
+import employeeService from '@/services/employeeService';
 
 interface UseSupabaseEmployeesReturn {
   employees: Employee[];
@@ -90,36 +91,9 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
       const partnersData = await partenaireService.getAll();
       setPartners(partnersData || []);
       
-      // Charger les employés par lots pour améliorer les performances
-      const allEmployees: Employee[] = [];
-      const partners = partnersData || [];
-      
-      // Charger les 3 premiers partenaires en priorité
-      const priorityPartners = partners.slice(0, 3);
-      for (const partner of priorityPartners) {
-        try {
-          const partnerEmployees = await employeService.getByPartnerId(partner.id);
-          allEmployees.push(...partnerEmployees);
-        } catch (err) {
-          console.error(`Erreur lors du chargement des employés du partenaire ${partner.id}:`, err);
-        }
-      }
-      
-      // Mettre à jour les employés prioritaires
+      // Charger tous les employés en une seule requête
+      const allEmployees = await employeeService.getAll();
       setEmployees(allEmployees);
-      
-      // Charger les partenaires restants en arrière-plan
-      if (partners.length > 3) {
-        const remainingPartners = partners.slice(3);
-        for (const partner of remainingPartners) {
-          try {
-            const partnerEmployees = await employeService.getByPartnerId(partner.id);
-            setEmployees(prev => [...prev, ...partnerEmployees]);
-          } catch (err) {
-            console.error(`Erreur lors du chargement des employés du partenaire ${partner.id}:`, err);
-          }
-        }
-      }
     } catch (err) {
       console.error('Erreur lors du chargement des employés:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des employés');
@@ -141,7 +115,8 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
       // Statistiques par partenaire
       const parPartenaire: Record<string, number> = {};
       for (const employee of employees) {
-        const partnerName = partners.find(p => p.id === employee.partner_id)?.nom || 'Inconnu';
+        const partner = partners.find(p => p.id === employee.partner_id);
+        const partnerName = partner?.nom || 'Inconnu';
         parPartenaire[partnerName] = (parPartenaire[partnerName] || 0) + 1;
       }
       
@@ -186,8 +161,8 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   // Créer un employé
   const createEmployee = useCallback(async (employeeData: Partial<Employee>): Promise<Employee> => {
     try {
-      const result = await employeService.create(employeeData as any);
-      const newEmployee = result.employe;
+      const result = await employeeService.create(employeeData as any);
+      const newEmployee = result.employee;
       
       setEmployees(prev => [...prev, newEmployee]);
       await loadStats(); // Recharger les statistiques
@@ -201,7 +176,7 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   // Mettre à jour un employé
   const updateEmployee = useCallback(async (id: string, employeeData: Partial<Employee>): Promise<Employee> => {
     try {
-      const updatedEmployee = await employeService.update(id, employeeData);
+      const updatedEmployee = await employeeService.update(id, employeeData);
       setEmployees(prev => prev.map(employee => employee.id === id ? updatedEmployee : employee));
       await loadStats(); // Recharger les statistiques
       return updatedEmployee;
@@ -214,7 +189,7 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   // Supprimer un employé
   const deleteEmployee = useCallback(async (id: string): Promise<void> => {
     try {
-      await employeService.delete(id);
+      await employeeService.delete(id);
       setEmployees(prev => prev.filter(employee => employee.id !== id));
       await loadStats(); // Recharger les statistiques
     } catch (err) {
@@ -226,7 +201,7 @@ export const useSupabaseEmployees = (itemsPerPage: number = 10): UseSupabaseEmpl
   // Rechercher des employés
   const searchEmployees = useCallback(async (query: string): Promise<Employee[]> => {
     try {
-      const results = await employeService.search(query);
+      const results = await employeeService.search(query);
       return results;
     } catch (err) {
       console.error('Erreur lors de la recherche d\'employés:', err);

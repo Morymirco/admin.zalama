@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 // Importation des composants
 import {
   StatistiquesUtilisateurs,
-  ResumeUtilisateurs,
   ListeUtilisateurs,
   ModaleAjoutUtilisateur,
   ModaleEditionUtilisateur,
@@ -325,14 +324,6 @@ export default function EmployesPage() {
         isLoading={statsLoading}
       />
       
-      {/* Résumé des employés */}
-      <ResumeUtilisateurs 
-        totalUtilisateurs={filteredEmployes.length}
-        utilisateursActifs={filteredEmployes.filter(u => u.actif).length}
-        utilisateursInactifs={filteredEmployes.filter(u => !u.actif).length}
-        isLoading={isLoading}
-      />
-      
       {/* Liste des employés */}
       <ListeUtilisateurs 
         utilisateurs={currentItems}
@@ -343,6 +334,7 @@ export default function EmployesPage() {
         currentPage={currentPage}
         itemsPerPage={10}
         isLoading={isLoading}
+        partners={partners}
         onSearch={handleSearch}
         onTypeFilterChange={handlePartnerFilterChange}
         onPageChange={handlePageChange}

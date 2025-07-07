@@ -24,6 +24,7 @@ import { useSupabasePartnershipRequests } from '@/hooks/useSupabasePartnershipRe
 
 // Types
 import { Partenaire } from '@/types/partenaire';
+import { PartnershipRequest } from '@/types/partnershipRequest';
 
 interface StatistiquePartenaire {
   type: string;
@@ -48,6 +49,7 @@ export default function PartenairesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentPartenaire, setCurrentPartenaire] = useState<Partenaire | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('tous');
+  const [prefillData, setPrefillData] = useState<any>(null);
 
   // Utilisation du hook Supabase
   const {
@@ -201,6 +203,30 @@ export default function PartenairesPage() {
     setShowDeleteModal(true);
   };
 
+  // Handler pour ajouter un partenaire depuis une demande approuvée
+  const handleAddPartnerFromRequest = (request: PartnershipRequest) => {
+    // Préparer les données pré-remplies depuis la demande
+    const prefillDataFromRequest = {
+      nom: request.company_name,
+      secteur: request.activity_domain,
+      description: `Partenaire approuvé le ${new Date().toLocaleDateString('fr-FR')}`,
+      nom_representant: request.rep_full_name,
+      email_representant: request.rep_email,
+      telephone_representant: request.rep_phone,
+      nom_rh: request.hr_full_name,
+      email_rh: request.hr_email,
+      telephone_rh: request.hr_phone,
+      rccm: request.rccm,
+      nif: request.nif,
+      email: request.email,
+      telephone: request.phone,
+      adresse: request.headquarters_address
+    };
+    
+    setPrefillData(prefillDataFromRequest);
+    setShowAddModal(true);
+  };
+
   // Handlers pour les demandes
   const handleSearchDemandes = (term: string) => {
     if (term.trim()) {
@@ -333,6 +359,7 @@ export default function PartenairesPage() {
           onDelete={deleteRequest}
           onSearch={handleSearchDemandes}
           onFilterByStatus={handleFilterByStatus}
+          onAddPartner={handleAddPartnerFromRequest}
         />
       </div>
 
@@ -468,8 +495,12 @@ export default function PartenairesPage() {
       <ModaleAjoutPartenaire
         isOpen={showAddModal}
         types={types}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false);
+          setPrefillData(null);
+        }}
         onSubmit={handleSubmitAddPartenaire}
+        prefillData={prefillData}
       />
 
       <ModaleEditionPartenaire
@@ -488,6 +519,8 @@ export default function PartenairesPage() {
       />
     </div>
   );
+
+
 
   // Handlers pour les formulaires CRUD
   async function handleSubmitAddPartenaire(e: React.FormEvent<HTMLFormElement>) {

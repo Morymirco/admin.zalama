@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Users, Calendar, CheckCircle, XCircle, Eye, MoreHorizontal, Download, FileText } from 'lucide-react';
+import { Search, Users, Calendar, CheckCircle, XCircle, Eye, MoreHorizontal, Download, FileText, Building } from 'lucide-react';
 import { PartnershipRequest } from '@/types/partnership';
 import { PDFService } from '@/services/pdfService';
 import { toast } from 'react-hot-toast';
@@ -14,6 +14,7 @@ interface TableauDemandesProps {
   onDelete: (id: string) => void;
   onSearch: (term: string) => void;
   onFilterByStatus: (status: string) => void;
+  onAddPartner?: (request: PartnershipRequest) => void;
 }
 
 const TableauDemandes: React.FC<TableauDemandesProps> = ({
@@ -24,7 +25,8 @@ const TableauDemandes: React.FC<TableauDemandesProps> = ({
   onSetInReview,
   onDelete,
   onSearch,
-  onFilterByStatus
+  onFilterByStatus,
+  onAddPartner
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -287,6 +289,17 @@ const TableauDemandes: React.FC<TableauDemandesProps> = ({
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
                         </>
+                      )}
+
+                      {/* Action pour ajouter le partenaire après approbation */}
+                      {request.status === 'approved' && onAddPartner && (
+                        <button
+                          onClick={() => onAddPartner(request)}
+                          className="p-1 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
+                          title="Ajouter le partenaire"
+                        >
+                          <Building className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
                   </td>

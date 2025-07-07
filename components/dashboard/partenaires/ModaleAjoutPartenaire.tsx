@@ -8,13 +8,30 @@ interface ModaleAjoutPartenaireProps {
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   types: string[];
+  prefillData?: {
+    nom?: string;
+    secteur?: string;
+    description?: string;
+    nom_representant?: string;
+    email_representant?: string;
+    telephone_representant?: string;
+    nom_rh?: string;
+    email_rh?: string;
+    telephone_rh?: string;
+    rccm?: string;
+    nif?: string;
+    email?: string;
+    telephone?: string;
+    adresse?: string;
+  };
 }
 
 const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  types
+  types,
+  prefillData
 }) => {
   // États pour le logo
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -57,6 +74,8 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
     fileInputRef.current?.click();
   };
 
+
+
   // Fonction pour nettoyer les numéros de téléphone
   const cleanPhoneNumber = (phone: string): string => {
     // Enlever tous les espaces, tirets et parenthèses
@@ -81,27 +100,75 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
     const form = formRef.current;
     if (!form) return;
 
-    // Préremplir avec des données de test
-    (form.querySelector('#nom') as HTMLInputElement).value = 'Nouvelle Entreprise';
-    (form.querySelector('#type') as HTMLSelectElement).value = 'Entreprise';
-    (form.querySelector('#domaine') as HTMLInputElement).value = 'Technologie';
-    (form.querySelector('#description') as HTMLTextAreaElement).value = 'Description de l\'entreprise...';
-    (form.querySelector('#nomRepresentant') as HTMLInputElement).value = 'John Doe';
-    (form.querySelector('#emailRepresentant') as HTMLInputElement).value = 'john.doe@entreprise.com';
-    (form.querySelector('#telephoneRepresentant') as HTMLInputElement).value = '+224623456789';
-    (form.querySelector('#nomRH') as HTMLInputElement).value = 'Jane Smith';
-    (form.querySelector('#emailRH') as HTMLInputElement).value = 'jane.smith@entreprise.com';
-    (form.querySelector('#telephoneRH') as HTMLInputElement).value = '+224623456790';
-    (form.querySelector('#rccm') as HTMLInputElement).value = 'RC/2024/001';
-    (form.querySelector('#nif') as HTMLInputElement).value = 'NIF2024001';
-    (form.querySelector('#email') as HTMLInputElement).value = 'contact@entreprise.com';
-    (form.querySelector('#telephone') as HTMLInputElement).value = '+224623456788';
-    (form.querySelector('#adresse') as HTMLInputElement).value = '123 Rue Principale, Conakry';
-    (form.querySelector('#siteWeb') as HTMLInputElement).value = 'https://entreprise.com';
-    (form.querySelector('#dateAdhesion') as HTMLInputElement).value = new Date().toISOString().split('T')[0];
-    (form.querySelector('#actif') as HTMLInputElement).checked = true;
+    if (prefillData) {
+      // Pré-remplir avec les données de la demande approuvée
+      if (prefillData.nom) {
+        (form.querySelector('#nom') as HTMLInputElement).value = prefillData.nom;
+      }
+      if (prefillData.secteur) {
+        (form.querySelector('#domaine') as HTMLInputElement).value = prefillData.secteur;
+      }
+      if (prefillData.description) {
+        (form.querySelector('#description') as HTMLTextAreaElement).value = prefillData.description;
+      }
+      if (prefillData.nom_representant) {
+        (form.querySelector('#nomRepresentant') as HTMLInputElement).value = prefillData.nom_representant;
+      }
+      if (prefillData.email_representant) {
+        (form.querySelector('#emailRepresentant') as HTMLInputElement).value = prefillData.email_representant;
+      }
+      if (prefillData.telephone_representant) {
+        (form.querySelector('#telephoneRepresentant') as HTMLInputElement).value = prefillData.telephone_representant;
+      }
+      if (prefillData.nom_rh) {
+        (form.querySelector('#nomRH') as HTMLInputElement).value = prefillData.nom_rh;
+      }
+      if (prefillData.email_rh) {
+        (form.querySelector('#emailRH') as HTMLInputElement).value = prefillData.email_rh;
+      }
+      if (prefillData.telephone_rh) {
+        (form.querySelector('#telephoneRH') as HTMLInputElement).value = prefillData.telephone_rh;
+      }
+      if (prefillData.rccm) {
+        (form.querySelector('#rccm') as HTMLInputElement).value = prefillData.rccm;
+      }
+      if (prefillData.nif) {
+        (form.querySelector('#nif') as HTMLInputElement).value = prefillData.nif;
+      }
+      if (prefillData.email) {
+        (form.querySelector('#email') as HTMLInputElement).value = prefillData.email;
+      }
+      if (prefillData.telephone) {
+        (form.querySelector('#telephone') as HTMLInputElement).value = prefillData.telephone;
+      }
+      if (prefillData.adresse) {
+        (form.querySelector('#adresse') as HTMLInputElement).value = prefillData.adresse;
+      }
 
-    toast.success('Formulaire prérempli avec des données de test');
+      toast.success('Formulaire prérempli avec les données de la demande approuvée');
+    } else {
+      // Préremplir avec des données de test par défaut
+      (form.querySelector('#nom') as HTMLInputElement).value = 'Nouvelle Entreprise';
+      (form.querySelector('#type') as HTMLSelectElement).value = 'Entreprise';
+      (form.querySelector('#domaine') as HTMLInputElement).value = 'Technologie';
+      (form.querySelector('#description') as HTMLTextAreaElement).value = 'Description de l\'entreprise...';
+      (form.querySelector('#nomRepresentant') as HTMLInputElement).value = 'John Doe';
+      (form.querySelector('#emailRepresentant') as HTMLInputElement).value = 'john.doe@entreprise.com';
+      (form.querySelector('#telephoneRepresentant') as HTMLInputElement).value = '+224623456789';
+      (form.querySelector('#nomRH') as HTMLInputElement).value = 'Jane Smith';
+      (form.querySelector('#emailRH') as HTMLInputElement).value = 'jane.smith@entreprise.com';
+      (form.querySelector('#telephoneRH') as HTMLInputElement).value = '+224623456790';
+      (form.querySelector('#rccm') as HTMLInputElement).value = 'RC/2024/001';
+      (form.querySelector('#nif') as HTMLInputElement).value = 'NIF2024001';
+      (form.querySelector('#email') as HTMLInputElement).value = 'contact@entreprise.com';
+      (form.querySelector('#telephone') as HTMLInputElement).value = '+224623456788';
+      (form.querySelector('#adresse') as HTMLInputElement).value = '123 Rue Principale, Conakry';
+      (form.querySelector('#siteWeb') as HTMLInputElement).value = 'https://entreprise.com';
+      (form.querySelector('#dateAdhesion') as HTMLInputElement).value = new Date().toISOString().split('T')[0];
+      (form.querySelector('#actif') as HTMLInputElement).checked = true;
+
+      toast.success('Formulaire prérempli avec des données de test');
+    }
   };
 
   // Gestion de la soumission du formulaire
@@ -182,7 +249,9 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-[var(--zalama-card)] rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-5 border-b border-[var(--zalama-border)]">
-          <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Ajouter un nouveau partenaire</h3>
+          <h3 className="text-lg font-semibold text-[var(--zalama-text)]">
+            {prefillData ? 'Ajouter le partenaire approuvé' : 'Ajouter un nouveau partenaire'}
+          </h3>
           <div className="flex items-center gap-2">
             <button 
               onClick={handlePreFill}
@@ -190,7 +259,9 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
               type="button"
             >
               <Wand2 className="h-4 w-4" />
-              <span className="text-sm">Préremplir</span>
+              <span className="text-sm">
+                {prefillData ? 'Préremplir avec les données approuvées' : 'Préremplir avec des données de test'}
+              </span>
             </button>
             <button 
               onClick={onClose}

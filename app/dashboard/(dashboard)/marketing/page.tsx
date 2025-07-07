@@ -9,7 +9,10 @@ import {
   DollarSign, 
   Clock, 
   CheckCircle, 
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  Eye,
+  Calendar
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -18,10 +21,35 @@ interface SMSBalance {
   currency: string;
 }
 
+interface SMSMessage {
+  id: string;
+  to: string;
+  message: string;
+  sender_name: string;
+  status: string;
+  created_at: string;
+  cost?: number;
+}
+
+interface MessageStats {
+  total: number;
+  sent: number;
+  failed: number;
+  pending: number;
+}
+
 export default function MarketingPage() {
   const [activeTab, setActiveTab] = useState<'sms' | 'email'>('sms');
   const [smsBalance, setSmsBalance] = useState<SMSBalance | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
+  const [recentMessages, setRecentMessages] = useState<SMSMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [messageStats, setMessageStats] = useState<MessageStats>({
+    total: 0,
+    sent: 0,
+    failed: 0,
+    pending: 0
+  });
   
   // États pour SMS
   const [smsMessage, setSmsMessage] = useState('');
@@ -34,9 +62,10 @@ export default function MarketingPage() {
   const [emailRecipients, setEmailRecipients] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
 
-  // Charger le solde SMS au montage
+  // Charger le solde SMS et les messages récents au montage
   useEffect(() => {
     loadSMSBalance();
+    loadRecentMessages();
   }, []);
 
   const loadSMSBalance = async () => {
@@ -49,12 +78,43 @@ export default function MarketingPage() {
         setSmsBalance(data.balance);
       } else {
         console.error('Erreur lors du chargement du solde SMS:', data.error);
+        toast.error('Erreur lors du chargement du solde SMS');
       }
     } catch (error) {
       console.error('Erreur lors du chargement du solde SMS:', error);
+      toast.error('Erreur lors du chargement du solde SMS');
     } finally {
       setLoadingBalance(false);
     }
+  };
+
+  const loadRecentMessages = async () => {
+    try {
+      setLoadingMessages(true);
+      const response = await fetch('/api/sms/messages?limit=10');
+      const data = await response.json();
+      
+      if (data.success) {
+        setRecentMessages(data.messages || []);
+        calculateMessageStats(data.messages || []);
+      } else {
+        console.error('Erreur lors du chargement des messages:', data.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des messages:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const calculateMessageStats = (messages: SMSMessage[]) => {
+    const stats = {
+      total: messages.length,
+      sent: messages.filter(m => m.status === 'sent' || m.status === 'delivered').length,
+      failed: messages.filter(m => m.status === 'failed' || m.status === 'error').length,
+      pending: messages.filter(m => m.status === 'pending' || m.status === 'queued').length
+    };
+    setMessageStats(stats);
   };
 
   const parseRecipients = (recipientsString: string): string[] => {
@@ -123,8 +183,9 @@ export default function MarketingPage() {
         }
       }
 
-      // Recharger le solde
+      // Recharger le solde et les messages
       await loadSMSBalance();
+      await loadRecentMessages();
 
       toast.success(`SMS envoyés: ${sentCount} succès, ${failedCount} échecs`);
       
@@ -208,8 +269,34 @@ export default function MarketingPage() {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'sent':
+      case 'delivered':
+        return 'text-green-600 bg-green-100';
+      case 'failed':
+      case 'error':
+        return 'text-red-600 bg-red-100';
+      case 'pending':
+      case 'queued':
+        return 'text-yellow-600 bg-yellow-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* En-tête */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Marketing</h1>
@@ -219,9 +306,18 @@ export default function MarketingPage() {
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)]">
-          <div className="flex items-center gap-3 mb-2">
-            <MessageSquare className="h-6 w-6 text-[var(--zalama-blue)]" />
-            <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Solde SMS</h3>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <MessageSquare className="h-6 w-6 text-[var(--zalama-blue)]" />
+              <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Solde SMS</h3>
+            </div>
+            <button
+              onClick={loadSMSBalance}
+              disabled={loadingBalance}
+              className="p-1 hover:bg-[var(--zalama-bg-lighter)] rounded-md transition-colors"
+            >
+              <RefreshCw className={`h-4 w-4 text-[var(--zalama-text-secondary)] ${loadingBalance ? 'animate-spin' : ''}`} />
+            </button>
           </div>
           {loadingBalance ? (
             <div className="animate-pulse">
@@ -239,16 +335,74 @@ export default function MarketingPage() {
             <Send className="h-6 w-6 text-[var(--zalama-success)]" />
             <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Messages envoyés</h3>
           </div>
-          <div className="text-2xl font-bold text-[var(--zalama-text)]">0</div>
+          <div className="text-2xl font-bold text-[var(--zalama-success)]">{messageStats.sent}</div>
         </div>
 
         <div className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)]">
           <div className="flex items-center gap-3 mb-2">
-            <Users className="h-6 w-6 text-[var(--zalama-warning)]" />
-            <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Destinataires totaux</h3>
+            <AlertCircle className="h-6 w-6 text-[var(--zalama-warning)]" />
+            <h3 className="text-lg font-semibold text-[var(--zalama-text)]">Messages échoués</h3>
           </div>
-          <div className="text-2xl font-bold text-[var(--zalama-text)]">0</div>
+          <div className="text-2xl font-bold text-[var(--zalama-warning)]">{messageStats.failed}</div>
         </div>
+      </div>
+
+      {/* Messages récents */}
+      <div className="bg-[var(--zalama-card)] rounded-xl p-6 border border-[var(--zalama-border)] mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-[var(--zalama-text)]">Messages récents</h2>
+          <button
+            onClick={loadRecentMessages}
+            disabled={loadingMessages}
+            className="flex items-center gap-2 px-3 py-1 text-sm bg-[var(--zalama-blue)] text-white rounded-md hover:bg-[var(--zalama-blue-accent)] transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${loadingMessages ? 'animate-spin' : ''}`} />
+            Actualiser
+          </button>
+        </div>
+        
+        {loadingMessages ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-4 bg-[var(--zalama-bg-lighter)] rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-[var(--zalama-bg-lighter)] rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : recentMessages.length > 0 ? (
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {recentMessages.map((message) => (
+              <div key={message.id} className="flex items-center justify-between p-3 bg-[var(--zalama-bg-lighter)] rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-[var(--zalama-text)]">{message.to}</span>
+                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(message.status)}`}>
+                      {message.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[var(--zalama-text-secondary)] truncate">{message.message}</p>
+                  <div className="flex items-center gap-4 mt-1">
+                    <span className="text-xs text-[var(--zalama-text-secondary)] flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {formatDate(message.created_at)}
+                    </span>
+                    {message.cost && (
+                      <span className="text-xs text-[var(--zalama-text-secondary)]">
+                        Coût: {message.cost} {smsBalance?.currency}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-[var(--zalama-text-secondary)]">
+            <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>Aucun message récent</p>
+          </div>
+        )}
       </div>
 
       {/* Onglets */}

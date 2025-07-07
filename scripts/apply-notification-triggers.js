@@ -153,7 +153,7 @@ async function testTriggers() {
       .from('admin_users')
       .select('id, email')
       .limit(1);
-
+    
     if (userError || !testUser || testUser.length === 0) {
       console.error('❌ Aucun utilisateur trouvé pour le test');
       return;
@@ -201,7 +201,7 @@ async function testTriggers() {
       console.error('❌ Erreur lors de la création de l\'employé:', employeeError);
       return;
     }
-
+    
     console.log(`✅ Employé créé: ${employee.nom} ${employee.prenom}\n`);
 
     // 4. Vérifier les notifications créées
@@ -231,7 +231,7 @@ async function testTriggers() {
     console.log('✅ Données de test nettoyées\n');
 
     console.log('🎉 Test des triggers terminé avec succès !');
-
+    
   } catch (error) {
     console.error('❌ Erreur lors du test:', error);
   }

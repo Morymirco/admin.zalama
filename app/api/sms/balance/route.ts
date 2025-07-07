@@ -20,7 +20,10 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      balance: account.balance,
+      balance: {
+        balance: account.balance,
+        currency: account.currency || 'GNF'
+      },
       message: 'Solde récupéré avec succès'
     });
 
@@ -45,7 +48,7 @@ export async function GET() {
     return NextResponse.json(
       { 
         success: false, 
-        balance: 0,
+        balance: { balance: 0, currency: 'GNF' },
         error: errorMessage,
         message: 'Impossible de récupérer le solde'
       },

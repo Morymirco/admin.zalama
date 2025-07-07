@@ -213,7 +213,7 @@ export default function EmployesPage() {
   // Afficher un skeleton pendant le chargement initial
   if (!isInitialized || isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6 max-w-4xl mx-auto">
         <div className="animate-pulse">
           {/* Skeleton pour l'en-tête */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -275,7 +275,7 @@ export default function EmployesPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* En-tête avec recherche et filtres */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div className="flex items-center gap-4">

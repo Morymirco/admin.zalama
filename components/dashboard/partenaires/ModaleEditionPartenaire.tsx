@@ -55,56 +55,56 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
                 Informations générales
               </h4>
               <div className="space-y-4">
-                <div>
-                  <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom du partenaire</label>
-                  <input
-                    type="text"
-                    id="nom"
-                    required
-                    defaultValue={partenaire.nom}
+            <div>
+              <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom du partenaire</label>
+              <input
+                type="text"
+                id="nom"
+                required
+                defaultValue={partenaire.nom}
                     disabled={isSaving}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Type</label>
-                    <select
-                      id="type"
-                      required
-                      defaultValue={partenaire.type}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="type" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Type</label>
+                <select
+                  id="type"
+                  required
+                  defaultValue={partenaire.type}
                       disabled={isSaving}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {types.filter(type => type !== 'tous').map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="domaine" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Secteur</label>
-                    <input
-                      type="text"
-                      id="domaine"
-                      required
-                      defaultValue={partenaire.secteur}
+                >
+                  {types.filter(type => type !== 'tous').map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="domaine" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Secteur</label>
+                <input
+                  type="text"
+                  id="domaine"
+                  required
+                  defaultValue={partenaire.secteur}
                       disabled={isSaving}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Description</label>
-                  <textarea
-                    id="description"
-                    rows={3}
-                    defaultValue={partenaire.description}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Description</label>
+              <textarea
+                id="description"
+                rows={3}
+                defaultValue={partenaire.description}
                     disabled={isSaving}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50 disabled:cursor-not-allowed"
-                  ></textarea>
+              ></textarea>
                 </div>
               </div>
             </div>
@@ -138,54 +138,54 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
                 </div>
               </div>
             </div>
-
+            
             {/* Informations de contact */}
             <div>
               <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3 border-b border-[var(--zalama-border)] pb-2">
                 Informations de contact
               </h4>
               <div className="space-y-4">
-                <div>
-                  <label htmlFor="adresse" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Adresse</label>
-                  <input
-                    type="text"
-                    id="adresse"
-                    defaultValue={partenaire.adresse}
+            <div>
+              <label htmlFor="adresse" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Adresse</label>
+              <input
+                type="text"
+                id="adresse"
+                defaultValue={partenaire.adresse}
                     disabled={isSaving}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email</label>
-                    <input
-                      type="email"
-                      id="email"
-                      defaultValue={partenaire.email}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  defaultValue={partenaire.email}
                       disabled={isSaving}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone</label>
-                    <input
-                      type="tel"
-                      id="telephone"
-                      defaultValue={partenaire.telephone}
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Téléphone</label>
+                <input
+                  type="tel"
+                  id="telephone"
+                  defaultValue={partenaire.telephone}
                       disabled={isSaving}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <label htmlFor="siteWeb" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Site Web</label>
-                  <input
-                    type="text"
-                    id="siteWeb"
-                    defaultValue={partenaire.site_web}
+                />
+              </div>
+            </div>
+            
+                          <div>
+                <label htmlFor="siteWeb" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Site Web</label>
+                <input
+                  type="text"
+                  id="siteWeb"
+                  defaultValue={partenaire.site_web}
                     disabled={isSaving}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] disabled:opacity-50 disabled:cursor-not-allowed"
                   />
@@ -306,11 +306,11 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
                   />
                 </div>
               </div>
-            </div>
-
+              </div>
+            
             {/* Statut */}
             <div>
-              <div className="flex items-center">
+            <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="actif"
@@ -321,7 +321,7 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
                 <label htmlFor="actif" className="ml-3 text-sm font-medium text-[var(--zalama-text)] cursor-pointer">
                   Partenaire actif
                 </label>
-              </div>
+                </div>
             </div>
           </div>
           

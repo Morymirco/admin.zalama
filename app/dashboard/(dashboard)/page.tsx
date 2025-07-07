@@ -32,7 +32,7 @@ const DashboardSkeleton = ({ className = "" }: { className?: string }) => (
 
 export default function DashboardPage() {
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 lm:grid-cols-3 gap-6">
         {/* Première rangée - Composants critiques (chargement immédiat) */}
         <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">

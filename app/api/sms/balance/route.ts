@@ -21,7 +21,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       balance: {
-        balance: account.balance,
+      balance: account.balance,
         currency: account.currency || 'GNF'
       },
       message: 'Solde récupéré avec succès'

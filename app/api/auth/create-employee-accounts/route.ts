@@ -254,13 +254,13 @@ export async function POST(request: NextRequest) {
       try {
         // SMS à l'employé (seulement si téléphone fourni)
         if (employeeData.telephone) {
-          const employeSMSMessage = `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${results.account.password}\nConnectez-vous sur https://admin.zalama.com`;
-          const employeSMSResult = await directSmsService.sendSMS([employeeData.telephone], employeSMSMessage);
-          smsResults.employe = {
-            success: employeSMSResult.success,
-            message: employeSMSResult.success ? 'SMS employé envoyé' : '',
-            error: employeSMSResult.error || employeSMSResult.message || ''
-          };
+        const employeSMSMessage = `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${results.account.password}\nConnectez-vous sur https://admin.zalama.com`;
+        const employeSMSResult = await directSmsService.sendSMS([employeeData.telephone], employeSMSMessage);
+        smsResults.employe = {
+          success: employeSMSResult.success,
+          message: employeSMSResult.success ? 'SMS employé envoyé' : '',
+          error: employeSMSResult.error || employeSMSResult.message || ''
+        };
           console.log('📱 SMS employé:', smsResults.employe.success ? '✅ Envoyé' : `❌ ${smsResults.employe.error}`);
         } else {
           smsResults.employe = {
@@ -273,8 +273,8 @@ export async function POST(request: NextRequest) {
 
         // Email à l'employé (seulement si email fourni)
         if (employeeData.email) {
-          const employeEmailSubject = `Compte employé créé - ${employeeData.prenom} ${employeeData.nom}`;
-          const employeEmailBody = `
+        const employeEmailSubject = `Compte employé créé - ${employeeData.prenom} ${employeeData.nom}`;
+        const employeEmailBody = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #3b82f6;">🎉 Votre compte employé a été créé avec succès</h2>
               
@@ -300,13 +300,13 @@ export async function POST(request: NextRequest) {
                 Si vous avez des questions, n'hésitez pas à contacter votre administrateur.
               </p>
             </div>
-          `;
-          const employeEmailResult = await directEmailService.sendEmail(employeeData.email, employeEmailSubject, employeEmailBody);
-          emailResults.employe = {
-            success: employeEmailResult.success,
-            message: employeEmailResult.success ? 'Email employé envoyé' : '',
-            error: employeEmailResult.error || employeEmailResult.message || ''
-          };
+        `;
+        const employeEmailResult = await directEmailService.sendEmail(employeeData.email, employeEmailSubject, employeEmailBody);
+        emailResults.employe = {
+          success: employeEmailResult.success,
+          message: employeEmailResult.success ? 'Email employé envoyé' : '',
+          error: employeEmailResult.error || employeEmailResult.message || ''
+        };
           console.log('📧 Email employé:', emailResults.employe.success ? '✅ Envoyé' : `❌ ${emailResults.employe.error}`);
         } else {
           emailResults.employe = {

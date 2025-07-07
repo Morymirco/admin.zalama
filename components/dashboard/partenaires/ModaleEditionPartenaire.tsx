@@ -54,7 +54,7 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
               <h4 className="text-md font-semibold text-[var(--zalama-text)] mb-3 border-b border-[var(--zalama-border)] pb-2">
                 Informations générales
               </h4>
-              <div className="space-y-4">
+          <div className="space-y-4">
             <div>
               <label htmlFor="nom" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Nom du partenaire</label>
               <input

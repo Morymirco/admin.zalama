@@ -12,7 +12,10 @@ import {
   AlertCircle,
   RefreshCw,
   Eye,
-  Calendar
+  Calendar,
+  ChevronDown,
+  Search,
+  User
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -36,6 +39,18 @@ interface MessageStats {
   sent: number;
   failed: number;
   pending: number;
+}
+
+interface Employee {
+  id: string;
+  label: string;
+  value: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  poste: string;
+  partenaire_nom: string;
 }
 
 export default function MarketingPage() {
@@ -62,11 +77,39 @@ export default function MarketingPage() {
   const [emailRecipients, setEmailRecipients] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
 
+  // États pour la sélection d'employés
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [showEmployeeSelector, setShowEmployeeSelector] = useState(false);
+  const [selectedEmployees, setSelectedEmployees] = useState<Employee[]>([]);
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
+
   // Charger le solde SMS et les messages récents au montage
   useEffect(() => {
     loadSMSBalance();
     loadRecentMessages();
+    loadEmployees();
   }, []);
+
+  const loadEmployees = async () => {
+    try {
+      setLoadingEmployees(true);
+      const response = await fetch('/api/employees?includePhone=true&active=true');
+      const data = await response.json();
+      
+      if (data.success) {
+        setEmployees(data.employees || []);
+      } else {
+        console.error('Erreur lors du chargement des employés:', data.error);
+        toast.error('Erreur lors du chargement des employés');
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des employés:', error);
+      toast.error('Erreur lors du chargement des employés');
+    } finally {
+      setLoadingEmployees(false);
+    }
+  };
 
   const loadSMSBalance = async () => {
     try {
@@ -123,6 +166,31 @@ export default function MarketingPage() {
       .map(recipient => recipient.trim())
       .filter(recipient => recipient.length > 0);
   };
+
+  const toggleEmployeeSelection = (employee: Employee) => {
+    const isSelected = selectedEmployees.some(emp => emp.id === employee.id);
+    
+    if (isSelected) {
+      setSelectedEmployees(selectedEmployees.filter(emp => emp.id !== employee.id));
+    } else {
+      setSelectedEmployees([...selectedEmployees, employee]);
+    }
+  };
+
+  const addSelectedEmployeesToRecipients = () => {
+    const phoneNumbers = selectedEmployees.map(emp => emp.telephone);
+    const currentRecipients = parseRecipients(smsRecipients);
+    const newRecipients = [...new Set([...currentRecipients, ...phoneNumbers])];
+    setSmsRecipients(newRecipients.join('\n'));
+    setSelectedEmployees([]);
+    setShowEmployeeSelector(false);
+    toast.success(`${phoneNumbers.length} employé(s) ajouté(s) aux destinataires`);
+  };
+
+  const filteredEmployees = employees.filter(employee =>
+    employee.label.toLowerCase().includes(employeeSearchTerm.toLowerCase()) ||
+    employee.telephone.includes(employeeSearchTerm)
+  );
 
   const sendBulkSMS = async () => {
     if (!smsMessage.trim()) {
@@ -455,9 +523,93 @@ export default function MarketingPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
-                Destinataires (un par ligne ou séparés par des virgules)
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-[var(--zalama-text)]">
+                  Destinataires (un par ligne ou séparés par des virgules)
+                </label>
+                <button
+                  onClick={() => setShowEmployeeSelector(!showEmployeeSelector)}
+                  className="flex items-center gap-2 px-3 py-1 text-sm bg-[var(--zalama-blue)] text-white rounded-md hover:bg-[var(--zalama-blue-accent)] transition-colors"
+                >
+                  <Users className="h-4 w-4" />
+                  Sélectionner des employés
+                </button>
+              </div>
+
+              {/* Sélecteur d'employés */}
+              {showEmployeeSelector && (
+                <div className="mb-4 p-4 bg-[var(--zalama-bg-lighter)] rounded-lg border border-[var(--zalama-border)]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Search className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher un employé..."
+                      value={employeeSearchTerm}
+                      onChange={(e) => setEmployeeSearchTerm(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-md border border-[var(--zalama-border)] bg-[var(--zalama-card)] text-[var(--zalama-text)] focus:border-[var(--zalama-blue)] focus:outline-none"
+                    />
+                  </div>
+
+                  {loadingEmployees ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--zalama-blue)] mx-auto"></div>
+                      <p className="text-sm text-[var(--zalama-text-secondary)] mt-2">Chargement des employés...</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {filteredEmployees.length > 0 ? (
+                        filteredEmployees.map((employee) => {
+                          const isSelected = selectedEmployees.some(emp => emp.id === employee.id);
+                          return (
+                            <div
+                              key={employee.id}
+                              onClick={() => toggleEmployeeSelection(employee)}
+                              className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
+                                isSelected 
+                                  ? 'bg-[var(--zalama-blue)] text-white' 
+                                  : 'bg-[var(--zalama-card)] hover:bg-[var(--zalama-bg-lighter)]'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                className="h-4 w-4"
+                              />
+                              <User className="h-4 w-4" />
+                              <div className="flex-1">
+                                <div className="text-sm font-medium">{employee.label}</div>
+                                <div className="text-xs opacity-75">{employee.telephone}</div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-center py-4 text-[var(--zalama-text-secondary)]">
+                          <p>Aucun employé trouvé</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedEmployees.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[var(--zalama-border)]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-[var(--zalama-text)]">
+                          {selectedEmployees.length} employé(s) sélectionné(s)
+                        </span>
+                        <button
+                          onClick={addSelectedEmployeesToRecipients}
+                          className="px-3 py-1 text-sm bg-[var(--zalama-success)] text-white rounded-md hover:bg-[var(--zalama-success-accent)] transition-colors"
+                        >
+                          Ajouter aux destinataires
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <textarea
                 value={smsRecipients}
                 onChange={(e) => setSmsRecipients(e.target.value)}

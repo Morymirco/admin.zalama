@@ -41,14 +41,14 @@ export default function DashboardHeader() {
   const toggleNotifications = useCallback(() => {
     setNotificationsOpen(prev => {
       const newState = !prev;
-      
+    
       // Rafraîchir le compteur seulement lors de l'ouverture
       if (newState) {
         // Utiliser setTimeout pour éviter les conflits de rendu
         setTimeout(() => {
-          refreshUnreadCount();
+      refreshUnreadCount();
         }, 0);
-      }
+    }
       
       return newState;
     });

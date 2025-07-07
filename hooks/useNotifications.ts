@@ -143,7 +143,7 @@ export const useNotifications = () => {
   // Charger les notifications au montage et quand l'utilisateur change
   useEffect(() => {
     if (user?.id) {
-      loadNotifications();
+    loadNotifications();
     }
   }, [user?.id]);
 

@@ -215,7 +215,7 @@ class EmployeeService {
           console.log('  - Compte:', accountCreationResults.account);
           console.log('  - SMS:', apiSmsResults);
           console.log('  - Emails:', apiEmailResults);
-          
+
           // Logs détaillés des résultats SMS/Email
           if (apiSmsResults.employe) {
             console.log('📱 SMS employé:', apiSmsResults.employe.success ? '✅ Envoyé' : `❌ ${apiSmsResults.employe.error}`);

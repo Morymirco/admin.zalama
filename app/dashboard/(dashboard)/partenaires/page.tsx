@@ -527,7 +527,7 @@ export default function PartenairesPage() {
     e.preventDefault();
     
     try {
-      const form = e.currentTarget;
+      console.log('🚀 Début de handleSubmitAddPartenaire');
       
       // Récupérer les données du formulaire depuis le stockage temporaire
       const formData = (window as any).formData;
@@ -537,8 +537,14 @@ export default function PartenairesPage() {
         return;
       }
 
+      console.log('📋 Données du formulaire:', formData);
+      console.log('📊 Nombre de partenaires avant création:', partenaires.length);
+
       // Créer le partenaire
       const result = await createPartenaire(formData);
+      
+      console.log('✅ Partenaire créé avec succès:', result.partenaire);
+      console.log('📊 Nombre de partenaires après création:', partenaires.length);
       
       // Afficher les résultats
       toast.success('Partenaire créé avec succès !');
@@ -551,15 +557,18 @@ export default function PartenairesPage() {
         toast.success(`Compte responsable créé - Mot de passe: ${result.accountResults.responsable.password}`);
       }
       
-      // Fermer la modale
-      setShowAddModal(false);
+      // Rafraîchir la liste des partenaires
+      console.log('🔄 Rafraîchissement de la liste des partenaires...');
+      await refreshPartenaires();
+      console.log('✅ Liste rafraîchie, nombre de partenaires:', partenaires.length);
       
-      // Nettoyer le stockage temporaire
-      delete (window as any).formData;
+      // Le modal se ferme automatiquement après succès
       
     } catch (error) {
-      console.error('Erreur lors de la création du partenaire:', error);
+      console.error('❌ Erreur lors de la création du partenaire:', error);
       toast.error('Erreur lors de la création du partenaire');
+      // Propager l'erreur pour que le modal ne se ferme pas
+      throw error;
     }
   }
 

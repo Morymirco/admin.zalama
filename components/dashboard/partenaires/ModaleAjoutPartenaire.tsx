@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Wand2 } from 'lucide-react';
+import { X, Upload, Wand2, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useFileUpload } from '@/hooks/useFileUpload';
 
@@ -36,6 +36,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
   // États pour le logo
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Références aux champs du formulaire
@@ -175,6 +176,11 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    // Empêcher la double soumission
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
     try {
       const form = e.currentTarget;
       
@@ -189,6 +195,7 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         const uploadResult = await uploadPartnerLogo(logoFile, tempPartnerId);
         if (uploadResult.error) {
           toast.error('Erreur lors de l\'upload du logo');
+          setIsSubmitting(false);
           return;
         }
         logoUrl = uploadResult.url;
@@ -226,20 +233,28 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
         logo_url: logoUrl,
         actif: (form.querySelector('#actif') as HTMLInputElement)?.checked || false,
         nombre_employes: 0,
-        salaire_net_total: 0
+        salaire_net_total: 0,
+        date_adhesion: (form.querySelector('#dateAdhesion') as HTMLInputElement)?.value || new Date().toISOString().split('T')[0]
       };
       
       // Stockage temporaire des données
       (window as any).formData = formData;
       
       // Appel de la fonction onSubmit passée en props
-      onSubmit(e);
+      await onSubmit(e);
       
-      // Fermer la modale après soumission
+      // Fermer la modale après soumission réussie
       onClose();
+      
+      // Nettoyer le stockage temporaire
+      delete (window as any).formData;
+      
     } catch (error) {
       console.error('Erreur lors de la soumission du formulaire:', error);
       toast.error('Une erreur est survenue lors de la soumission du formulaire');
+      // Ne pas fermer la modale en cas d'erreur
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -568,18 +583,24 @@ const ModaleAjoutPartenaire: React.FC<ModaleAjoutPartenaireProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors"
-              // disabled={uploading} // DÉSACTIVÉ TEMPORAIREMENT
+              disabled={isSubmitting}
+              className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors disabled:opacity-70"
-              // disabled={uploading} // DÉSACTIVÉ TEMPORAIREMENT
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {/* {uploading ? "Enregistrement..." : "Enregistrer le partenaire"} */}
-              Enregistrer le partenaire
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Création en cours...
+                </>
+              ) : (
+                'Enregistrer le partenaire'
+              )}
             </button>
           </div>
         </form>

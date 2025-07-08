@@ -43,7 +43,10 @@
     "cache:clear": "rm -rf .next/cache",
     "perf:test": "node scripts/test-dashboard-simple.js",
     "test-payment-page": "node scripts/test-payment-page.js",
-    "setup-lengo": "node scripts/setup-lengo-credentials.js"
+    "setup-lengo": "node scripts/setup-lengo-credentials.js",
+    "test-lengo-config": "node scripts/test-lengo-config.js",
+    "test-lengo-api": "node scripts/test-lengo-api-route.js",
+    "test-lengo-logs": "node scripts/test-lengo-with-logs.js"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",

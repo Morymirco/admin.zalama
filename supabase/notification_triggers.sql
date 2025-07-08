@@ -2,12 +2,14 @@
 -- SYSTÈME DE NOTIFICATIONS AUTOMATIQUES
 -- =====================================================
 
--- Fonction pour créer une notification
+-- Fonction pour créer une notification (version améliorée avec employee_id et partner_id)
 CREATE OR REPLACE FUNCTION create_notification(
     p_user_id UUID,
     p_titre VARCHAR,
     p_message TEXT,
-    p_type notification_type DEFAULT 'Information'
+    p_type notification_type DEFAULT 'Information',
+    p_employee_id UUID DEFAULT NULL,
+    p_partner_id UUID DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
@@ -19,14 +21,18 @@ BEGIN
         message,
         type,
         lu,
-        date_creation
+        date_creation,
+        employee_id,
+        partner_id
     ) VALUES (
         p_user_id,
         p_titre,
         p_message,
         p_type,
         false,
-        now()
+        now(),
+        p_employee_id,
+        p_partner_id
     ) RETURNING id INTO notification_id;
     
     RETURN notification_id;
@@ -63,7 +69,9 @@ BEGIN
             'Nouvelle demande d''avance de salaire',
             'L''employé ' || employee_name || ' du partenaire ' || partner_name || 
             ' a soumis une demande d''avance de ' || NEW.montant_demande || ' FCFA.',
-            'Alerte'
+            'Alerte',
+            NEW.employe_id,  -- employee_id
+            NEW.partenaire_id  -- partner_id
         );
     END LOOP;
     
@@ -114,7 +122,9 @@ BEGIN
                     WHEN 'Approuvée' THEN 'Succès'
                     WHEN 'Rejetée' THEN 'Erreur'
                     ELSE 'Information'
-                END
+                END,
+                NEW.employe_id,  -- employee_id
+                NEW.partenaire_id  -- partner_id
             );
         END IF;
     END IF;
@@ -154,7 +164,9 @@ BEGIN
             'Nouvelle transaction financière',
             'Une transaction de ' || NEW.montant || ' FCFA a été effectuée pour ' || 
             partner_name || ' (' || NEW.type || ').',
-            'Information'
+            'Information',
+            NULL,  -- employee_id (pas d'employé spécifique pour les transactions financières)
+            NEW.partenaire_id  -- partner_id
         );
     END LOOP;
     
@@ -186,7 +198,9 @@ BEGIN
             admin_user.id,
             'Nouvelle alerte : ' || NEW.titre,
             NEW.description,
-            'Alerte'
+            'Alerte',
+            NULL,  -- employee_id
+            NULL   -- partner_id
         );
     END LOOP;
     
@@ -196,7 +210,9 @@ BEGIN
             NEW.assigne_a,
             'Alerte assignée : ' || NEW.titre,
             'Une alerte vous a été assignée : ' || NEW.description,
-            'Alerte'
+            'Alerte',
+            NULL,  -- employee_id
+            NULL   -- partner_id
         );
     END IF;
     
@@ -222,7 +238,9 @@ BEGIN
                 NEW.assigne_a,
                 'Alerte résolue : ' || NEW.titre,
                 'L''alerte "' || NEW.titre || '" a été résolue.',
-                'Succès'
+                'Succès',
+                NULL,  -- employee_id
+                NULL   -- partner_id
             );
         END IF;
         
@@ -231,7 +249,9 @@ BEGIN
             (SELECT id FROM admin_users WHERE role = 'admin' AND active = true LIMIT 1),
             'Alerte résolue : ' || NEW.titre,
             'L''alerte "' || NEW.titre || '" a été résolue.',
-            'Succès'
+            'Succès',
+            NULL,  -- employee_id
+            NULL   -- partner_id
         );
     END IF;
     
@@ -277,7 +297,9 @@ BEGIN
             'Nouvel avis reçu',
             'Un nouvel avis de ' || COALESCE(employee_name, 'un employé') || 
             ' pour ' || partner_name || ' (Note: ' || NEW.note || '/5).',
-            'Information'
+            'Information',
+            NEW.employee_id,  -- employee_id
+            NEW.partner_id    -- partner_id
         );
     END LOOP;
     
@@ -310,7 +332,9 @@ BEGIN
             'Nouvelle demande de partenariat',
             'Une nouvelle demande de partenariat a été soumise par ' || 
             NEW.company_name || ' (' || NEW.activity_domain || ').',
-            'Alerte'
+            'Alerte',
+            NULL,  -- employee_id (pas d'employé pour les demandes de partenariat)
+            NULL   -- partner_id (pas encore de partenaire)
         );
     END LOOP;
     
@@ -340,7 +364,9 @@ BEGIN
                 WHEN 'approved' THEN 'Succès'
                 WHEN 'rejected' THEN 'Erreur'
                 ELSE 'Information'
-            END
+            END,
+            NULL,  -- employee_id
+            NULL   -- partner_id
         );
     END IF;
     
@@ -374,7 +400,9 @@ BEGIN
                 'Événement de sécurité détecté',
                 'Un événement de sécurité de type "' || NEW.event_type || 
                 '" a été détecté avec un score de risque de ' || NEW.risk_score || '/10.',
-                'Alerte'
+                'Alerte',
+                NULL,  -- employee_id
+                NULL   -- partner_id
             );
         END LOOP;
     END IF;
@@ -443,6 +471,8 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(use
 CREATE INDEX IF NOT EXISTS idx_notifications_lu ON public.notifications(lu);
 CREATE INDEX IF NOT EXISTS idx_notifications_date_creation ON public.notifications(date_creation);
 CREATE INDEX IF NOT EXISTS idx_notifications_type ON public.notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_employee_id ON public.notifications(employee_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_partner_id ON public.notifications(partner_id);
 
 -- Index pour les triggers
 CREATE INDEX IF NOT EXISTS idx_salary_advance_requests_statut ON public.salary_advance_requests(statut);
@@ -476,7 +506,9 @@ BEGIN
             'Nouvel employé ajouté',
             'Un nouvel employé ' || NEW.nom || ' ' || NEW.prenom || 
             ' a été ajouté au partenaire ' || partner_name || '.',
-            'Information'
+            'Information',
+            NEW.id,      -- employee_id (l'employé nouvellement créé)
+            NEW.partner_id  -- partner_id
         );
     END LOOP;
     
@@ -510,7 +542,9 @@ BEGIN
             'Nouveau partenaire ajouté',
             'Un nouveau partenaire ' || NEW.nom || ' (' || NEW.type || 
             ') a été ajouté au système.',
-            'Succès'
+            'Succès',
+            NULL,     -- employee_id (pas d'employé pour les nouveaux partenaires)
+            NEW.id    -- partner_id (le partenaire nouvellement créé)
         );
     END LOOP;
     
@@ -555,7 +589,9 @@ BEGIN
             'Nouvelle transaction effectuée',
             'Une transaction de ' || NEW.montant || ' FCFA a été effectuée pour ' || 
             employee_name || ' (' || partner_name || ').',
-            'Information'
+            'Information',
+            NEW.employe_id,  -- employee_id
+            (SELECT partner_id FROM employees WHERE id = NEW.employe_id)  -- partner_id via employé
         );
     END LOOP;
     
@@ -589,7 +625,9 @@ BEGIN
             'Nouveau service ajouté',
             'Un nouveau service "' || NEW.nom || '" (' || NEW.categorie || 
             ') a été ajouté au catalogue.',
-            'Information'
+            'Information',
+            NULL,  -- employee_id (pas d'employé pour les nouveaux services)
+            NULL   -- partner_id (pas de partenaire pour les services)
         );
     END LOOP;
     
@@ -623,7 +661,9 @@ BEGIN
                 admin_user.id,
                 'Tentatives de connexion échouées',
                 NEW.attempt_count || ' tentatives de connexion échouées détectées pour l''utilisateur.',
-                'Alerte'
+                'Alerte',
+                NULL,  -- employee_id
+                NULL   -- partner_id
             );
         END LOOP;
     END IF;

@@ -25,7 +25,7 @@ export default function SettingsPage() {
   };
   
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 w-full">
       <Tabs defaultValue="profil" value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-3 mb-6">
           <TabsTrigger value="profil" className="flex items-center gap-2">

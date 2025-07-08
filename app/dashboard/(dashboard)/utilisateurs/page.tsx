@@ -213,17 +213,23 @@ export default function EmployesPage() {
   // Afficher un skeleton pendant le chargement initial
   if (!isInitialized || isLoading) {
     return (
-      <div className="p-4 md:p-6 max-w-4xl mx-auto">
+      <div className="p-4 md:p-6 w-full">
         <div className="animate-pulse">
           {/* Skeleton pour l'en-tête */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-8 w-32 bg-[var(--zalama-bg)] rounded"></div>
-              <div className="h-8 w-48 bg-[var(--zalama-bg)] rounded"></div>
-            </div>
-            <div className="flex items-center gap-3">
+          <div className="mb-6 space-y-4">
+            <div className="flex items-center justify-between">
               <div className="h-8 w-32 bg-[var(--zalama-bg)] rounded"></div>
               <div className="h-8 w-40 bg-[var(--zalama-blue)] rounded"></div>
+            </div>
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="h-4 w-4 bg-[var(--zalama-bg)] rounded"></div>
+                <div className="h-8 flex-1 bg-[var(--zalama-bg)] rounded"></div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 bg-[var(--zalama-bg)] rounded"></div>
+                <div className="h-8 w-32 bg-[var(--zalama-bg)] rounded"></div>
+              </div>
             </div>
           </div>
           
@@ -248,8 +254,8 @@ export default function EmployesPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--zalama-border)]">
-                    {Array.from({ length: 8 }).map((_, index) => (
-                      <th key={index} className="px-6 py-3 text-left">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <th key={index} className="px-4 py-3 text-left">
                         <div className="h-4 w-20 bg-[var(--zalama-bg)] rounded"></div>
                       </th>
                     ))}
@@ -258,8 +264,8 @@ export default function EmployesPage() {
                 <tbody className="divide-y divide-[var(--zalama-border)]">
                   {Array.from({ length: 5 }).map((_, rowIndex) => (
                     <tr key={rowIndex}>
-                      {Array.from({ length: 8 }).map((_, colIndex) => (
-                        <td key={colIndex} className="px-6 py-4">
+                      {Array.from({ length: 6 }).map((_, colIndex) => (
+                        <td key={colIndex} className="px-4 py-4">
                           <div className="h-4 w-24 bg-[var(--zalama-bg)] rounded"></div>
                         </td>
                       ))}
@@ -275,30 +281,40 @@ export default function EmployesPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 w-full">
       {/* En-tête avec recherche et filtres */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div className="flex items-center gap-4">
+      <div className="mb-6 space-y-4">
+        {/* Titre principal */}
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Employés</h1>
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+          <button
+            onClick={handleAddUser}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter un employé
+          </button>
+        </div>
+        
+        {/* Barre de recherche et filtres */}
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Search className="h-4 w-4 text-[var(--zalama-text-secondary)] flex-shrink-0" />
             <input
               type="text"
               placeholder="Rechercher un employé..."
-              className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+              className="flex-1 px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] min-w-0"
               value={searchTerm}
               onChange={handleSearch}
             />
           </div>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Filter className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
             <select
               value={partnerFilter}
               onChange={(e) => handlePartnerFilterChange(e.target.value)}
-              className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+              className="px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
             >
               {partnerOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -307,14 +323,6 @@ export default function EmployesPage() {
               ))}
             </select>
           </div>
-          
-          <button
-            onClick={handleAddUser}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Ajouter un employé
-          </button>
         </div>
       </div>
 

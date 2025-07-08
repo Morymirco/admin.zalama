@@ -90,23 +90,22 @@ export type TransactionStatut = 'EFFECTUEE' | 'EN_COURS' | 'ECHEC' | 'ANNULEE';
 export interface SalaryAdvanceRequest {
   id: string;
   employe_id: string;
-  employe_nom: string;
-  employe_prenom: string;
-  employe_email: string;
   partenaire_id: string;
-  partenaire_nom: string;
   montant_demande: number;
-  montant_net: number;
-  pourcentage_salaire: number;
+  type_motif: string;
   motif: string;
-  statut: 'en_attente' | 'approuvee' | 'rejetee' | 'en_cours' | 'terminee';
-  date_demande: string; // ISO string au lieu de Timestamp
-  date_traitement?: string; // ISO string au lieu de Timestamp
-  date_versement?: string; // ISO string au lieu de Timestamp
-  commentaires?: string;
-  justificatifs?: string[];
-  created_at: string;
-  updated_at: string;
+  numero_reception?: string;
+  montant_total: number;
+  salaire_disponible?: number;
+  avance_disponible?: number;
+  frais_service?: number;
+  statut: TransactionStatus;
+  date_creation?: Date;
+  date_validation?: Date;
+  date_rejet?: Date;
+  motif_rejet?: string;
+  created_at?: Date;
+  updated_at?: Date;
   // Relations
   employe?: Employee;
   partenaire?: Partner;
@@ -162,7 +161,7 @@ export interface SalaryAdvanceRequestFormData {
   type_motif: string;
   motif: string;
   frais_service?: number;
-  montant_total: number;
+  montant_total?: number;
   salaire_disponible?: number;
   avance_disponible?: number;
 }

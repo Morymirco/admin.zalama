@@ -51,7 +51,14 @@ export default function DemandesPage() {
 
   // Utilisation des hooks pour les employés et partenaires
   const { employees, isLoading: employeesLoading } = useSupabaseEmployees();
-  const { partners: partnersData, isLoading: partnersLoading } = useSupabasePartners();
+  const { partenaires: partnersData, isLoading: partnersLoading } = useSupabasePartners();
+
+  // Debug: Afficher les données reçues
+  console.log('🔍 Debug - Page Demandes:');
+  console.log('  - employees:', employees?.length || 0, employees);
+  console.log('  - partnersData:', partnersData?.length || 0, partnersData);
+  console.log('  - employeesLoading:', employeesLoading);
+  console.log('  - partnersLoading:', partnersLoading);
 
   // États pour les modales
   const [showAddModal, setShowAddModal] = useState(false);
@@ -102,30 +109,57 @@ export default function DemandesPage() {
     e.preventDefault();
     
     try {
+      console.log('🚀 Début de la création de demande');
       const form = e.currentTarget;
       
+      // Récupérer les données du formulaire
+      const employeId = (form.querySelector('#add-employe-id') as HTMLSelectElement)?.value || '';
+      const montantDemande = parseFloat((form.querySelector('#add-montant') as HTMLInputElement)?.value || '0');
+      const typeMotif = (form.querySelector('#add-type-motif') as HTMLInputElement)?.value || '';
+      const motif = (form.querySelector('#add-motif') as HTMLTextAreaElement)?.value || '';
+      const fraisService = parseFloat((form.querySelector('#add-frais') as HTMLInputElement)?.value || '0');
+      const montantTotal = parseFloat((form.querySelector('#add-montant-total') as HTMLInputElement)?.value || '0');
+      const salaireDisponible = parseFloat((form.querySelector('#add-salaire-disponible') as HTMLInputElement)?.value || '0');
+      const avanceDisponible = parseFloat((form.querySelector('#add-avance-disponible') as HTMLInputElement)?.value || '0');
+      
+      // Trouver l'employé sélectionné pour récupérer le partenaire
+      const selectedEmployee = employees?.find(emp => emp.id === employeId);
+      const partenaireId = selectedEmployee?.partner_id || '';
+      
+      console.log('📋 Données récupérées du formulaire:');
+      console.log('  - Employé ID:', employeId);
+      console.log('  - Partenaire ID:', partenaireId);
+      console.log('  - Montant demandé:', montantDemande);
+      console.log('  - Type motif:', typeMotif);
+      console.log('  - Motif:', motif);
+      console.log('  - Frais service:', fraisService);
+      console.log('  - Montant total:', montantTotal);
+      console.log('  - Salaire disponible:', salaireDisponible);
+      console.log('  - Avance disponible:', avanceDisponible);
+      
       const requestData: SalaryAdvanceRequestFormData = {
-        employe_id: (form.querySelector('#add-employe-id') as HTMLSelectElement)?.value || '',
-        partenaire_id: (form.querySelector('#add-partenaire-id') as HTMLSelectElement)?.value || '',
-        montant_demande: parseFloat((form.querySelector('#add-montant') as HTMLInputElement)?.value || '0'),
-        type_motif: (form.querySelector('#add-type-motif') as HTMLInputElement)?.value || '',
-        motif: (form.querySelector('#add-motif') as HTMLTextAreaElement)?.value || '',
-        frais_service: parseFloat((form.querySelector('#add-frais') as HTMLInputElement)?.value || '0'),
-        montant_total: parseFloat((form.querySelector('#add-montant-total') as HTMLInputElement)?.value || '0'),
-        salaire_disponible: parseFloat((form.querySelector('#add-salaire-disponible') as HTMLInputElement)?.value || '0'),
-        avance_disponible: parseFloat((form.querySelector('#add-avance-disponible') as HTMLInputElement)?.value || '0'),
+        employe_id: employeId,
+        partenaire_id: partenaireId,
+        montant_demande: montantDemande,
+        type_motif: typeMotif,
+        motif: motif,
+        frais_service: fraisService,
+        montant_total: montantTotal,
+        salaire_disponible: salaireDisponible,
+        avance_disponible: avanceDisponible,
       };
 
+      console.log('📤 Envoi des données au service:', requestData);
       await createRequest(requestData);
       
       setShowAddModal(false);
       toast.success('Demande d\'avance créée avec succès');
       
     } catch (error) {
-      console.error('Erreur lors de la création de la demande:', error);
+      console.error('❌ Erreur lors de la création de la demande:', error);
       toast.error('Erreur lors de la création de la demande');
     }
-  }, [createRequest]);
+  }, [createRequest, employees]);
 
   // Confirmation d'approbation
   const handleConfirmApprove = useCallback(async (motif?: string) => {
@@ -191,7 +225,7 @@ export default function DemandesPage() {
 
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 w-full">
       {/* En-tête avec recherche et filtres */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div className="flex items-center gap-4">
@@ -324,7 +358,7 @@ export default function DemandesPage() {
         onSubmit={handleSubmitAddRequest}
         employees={employees}
         partners={partnersData}
-        isLoading={isLoading}
+        isLoading={employeesLoading || partnersLoading}
       />
       
       {showApproveModal && currentRequest && (

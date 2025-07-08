@@ -47,6 +47,70 @@ const getServiceName = (service: any): string => {
   return 'unknown';
 };
 
+// Fonction pour déterminer la méthode à utiliser pour récupérer les données
+const getFetchMethod = (service: any): string | null => {
+  // Vérifier les méthodes disponibles dans l'ordre de priorité
+  if (typeof service.getAll === 'function') {
+    return 'getAll';
+  }
+  
+  if (typeof service.getUserNotifications === 'function') {
+    return 'getUserNotifications';
+  }
+  
+  if (typeof service.getUnreadNotifications === 'function') {
+    return 'getUnreadNotifications';
+  }
+  
+  if (typeof service.getStats === 'function') {
+    return 'getStats';
+  }
+  
+  if (typeof service.list === 'function') {
+    return 'list';
+  }
+  
+  if (typeof service.fetch === 'function') {
+    return 'fetch';
+  }
+  
+  return null;
+};
+
+// Fonction pour exécuter la méthode appropriée
+const executeFetchMethod = async (service: any, method: string, userId?: string): Promise<any[]> => {
+  switch (method) {
+    case 'getAll':
+      return await service.getAll();
+    
+    case 'getUserNotifications':
+      if (!userId) {
+        throw new Error('userId requis pour getUserNotifications');
+      }
+      return await service.getUserNotifications(userId);
+    
+    case 'getUnreadNotifications':
+      if (!userId) {
+        throw new Error('userId requis pour getUnreadNotifications');
+      }
+      return await service.getUnreadNotifications(userId);
+    
+    case 'getStats':
+      const stats = await service.getStats();
+      // Convertir les stats en tableau si nécessaire
+      return Array.isArray(stats) ? stats : [stats];
+    
+    case 'list':
+      return await service.list();
+    
+    case 'fetch':
+      return await service.fetch();
+    
+    default:
+      throw new Error(`Méthode ${method} non supportée`);
+  }
+};
+
 export function useSupabaseCollection<T>(
   service: any,
   dependencies: any[] = [],
@@ -55,6 +119,7 @@ export function useSupabaseCollection<T>(
     priority?: number;
     enableCache?: boolean;
     debounceMs?: number;
+    userId?: string; // Ajout du userId pour les services qui en ont besoin
   } = {}
 ) {
   const [data, setData] = useState<T[]>([]);
@@ -64,16 +129,23 @@ export function useSupabaseCollection<T>(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const serviceName = getServiceName(service);
+  const fetchMethod = getFetchMethod(service);
   
   const {
     cacheKey = serviceName,
     priority = SERVICE_PRIORITIES[serviceName as keyof typeof SERVICE_PRIORITIES] || 10,
     enableCache = true,
-    debounceMs = 0
+    debounceMs = 0,
+    userId
   } = options;
 
   const fetchData = useCallback(async (signal?: AbortSignal) => {
     try {
+      // Vérifier si le service a une méthode de récupération
+      if (!fetchMethod) {
+        throw new Error(`Service ${serviceName} n'a pas de méthode de récupération de données (getAll, getUserNotifications, etc.)`);
+      }
+
       // Vérifier le cache si activé
       if (enableCache && dataCache.has(cacheKey)) {
         const cached = dataCache.get(cacheKey)!;
@@ -95,9 +167,9 @@ export function useSupabaseCollection<T>(
       setLoading(true);
       setError(null);
       
-      // Utiliser la méthode getAll du service Supabase avec timeout
+      // Utiliser la méthode appropriée avec timeout
       const result = await Promise.race([
-        service.getAll(),
+        executeFetchMethod(service, fetchMethod, userId),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout')), 10000)
         )
@@ -105,12 +177,14 @@ export function useSupabaseCollection<T>(
 
       if (signal?.aborted) return;
 
-      setData(result);
+      // S'assurer que le résultat est un tableau
+      const resultArray = Array.isArray(result) ? result : [result];
+      setData(resultArray);
       
       // Mettre en cache si activé
       if (enableCache) {
         dataCache.set(cacheKey, { 
-          data: result, 
+          data: resultArray, 
           timestamp: Date.now(), 
           loading: false 
         });
@@ -130,7 +204,7 @@ export function useSupabaseCollection<T>(
         setLoading(false);
       }
     }
-  }, [service, cacheKey, enableCache]);
+  }, [service, cacheKey, enableCache, fetchMethod, serviceName, userId]);
 
   useEffect(() => {
     // Annuler la requête précédente

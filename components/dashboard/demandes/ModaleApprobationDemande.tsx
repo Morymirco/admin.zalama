@@ -43,8 +43,8 @@ const ModaleApprobationDemande: React.FC<ModaleApprobationDemandeProps> = ({
   if (!isOpen || !request) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[var(--zalama-bg)] rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow-2xl max-w-md w-full mx-4">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-[var(--zalama-text)] flex items-center gap-2">

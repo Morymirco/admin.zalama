@@ -100,7 +100,7 @@ export default function VisualisationsPage() {
   const etiquettesY = ['8h', '10h', '12h', '14h', '16h'];
   
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 w-full">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Graphique à barres */}
         <GraphiqueBarres

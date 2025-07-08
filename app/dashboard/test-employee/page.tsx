@@ -182,7 +182,7 @@ export default function TestEmployeePage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[var(--zalama-text)] mb-2">
           Test Création Employé avec SMS

@@ -39,10 +39,19 @@ export default function StatistiquesGenerales() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Utiliser nos hooks pour récupérer les données avec priorisation
-  const { data: employees, loading: loadingEmployees } = useSupabaseCollection<Employee>(employeeService);
-  const { data: partners, loading: loadingPartners } = useSupabaseCollection<Partner>(partnerService);
-  const { data: services, loading: loadingServices } = useSupabaseCollection<Service>(serviceService);
-  const { data: transactions, loading: loadingTransactions } = useSupabaseCollection<FinancialTransaction>(transactionService);
+  const { data: employees, loading: loadingEmployees, error: errorEmployees } = useSupabaseCollection<Employee>(employeeService);
+  const { data: partners, loading: loadingPartners, error: errorPartners } = useSupabaseCollection<Partner>(partnerService);
+  const { data: services, loading: loadingServices, error: errorServices } = useSupabaseCollection<Service>(serviceService);
+  const { data: transactions, loading: loadingTransactions, error: errorTransactions } = useSupabaseCollection<FinancialTransaction>(transactionService);
+
+  // Logs de débogage
+  useEffect(() => {
+    console.log('🔍 StatistiquesGenerales - État des données:');
+    console.log('Employees:', { data: employees, loading: loadingEmployees, error: errorEmployees });
+    console.log('Partners:', { data: partners, loading: loadingPartners, error: errorPartners });
+    console.log('Services:', { data: services, loading: loadingServices, error: errorServices });
+    console.log('Transactions:', { data: transactions, loading: loadingTransactions, error: errorTransactions });
+  }, [employees, partners, services, transactions, loadingEmployees, loadingPartners, loadingServices, loadingTransactions, errorEmployees, errorPartners, errorServices, errorTransactions]);
 
   // Initialisation progressive
   useEffect(() => {
@@ -57,7 +66,16 @@ export default function StatistiquesGenerales() {
   const stats = useMemo(() => {
     const loading = loadingEmployees || loadingPartners || loadingServices || loadingTransactions;
     
-    if (loading || !employees.length) {
+    console.log('📊 Calcul des statistiques:', {
+      loading,
+      employeesCount: employees?.length || 0,
+      partnersCount: partners?.length || 0,
+      servicesCount: services?.length || 0,
+      transactionsCount: transactions?.length || 0
+    });
+    
+    if (loading || !employees?.length) {
+      console.log('⚠️ Données non disponibles ou en cours de chargement');
       return {
         employees: {
           totalEmployees: 0,
@@ -147,24 +165,24 @@ export default function StatistiquesGenerales() {
     });
 
     // Statistiques des partenaires (optimisé)
-    const activePartners = partners.filter((partner: Partner) => partner.actif).length;
-    const totalEmployesFromPartners = partners.reduce((sum: number, partner: Partner) => sum + (partner.nombre_employes || 0), 0);
+    const activePartners = partners?.filter((partner: Partner) => partner.actif).length || 0;
+    const totalEmployesFromPartners = partners?.reduce((sum: number, partner: Partner) => sum + (partner.nombre_employes || 0), 0) || 0;
 
     // Statistiques des services (optimisé)
-    const availableServices = services.filter((service: Service) => service.disponible).length;
+    const availableServices = services?.filter((service: Service) => service.disponible).length || 0;
 
     // Statistiques des transactions (optimisé)
-    const montantTotal = transactions.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0);
+    const montantTotal = transactions?.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0) || 0;
     
-    const transactionsCeMois = transactions.filter((transaction: FinancialTransaction) => {
+    const transactionsCeMois = transactions?.filter((transaction: FinancialTransaction) => {
       if (!transaction.date_transaction) return false;
       const transactionDate = new Date(transaction.date_transaction);
       return transactionDate >= firstDayOfMonth;
-    });
+    }) || [];
     
     const montantCeMois = transactionsCeMois.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0);
     
-    return {
+    const result = {
       employees: {
         totalEmployees: employees.length,
         activeEmployees,
@@ -172,21 +190,24 @@ export default function StatistiquesGenerales() {
         employeeTypeData
       },
       partners: {
-        total: partners.length,
+        total: partners?.length || 0,
         actifs: activePartners,
         totalEmployes: totalEmployesFromPartners
       },
       services: {
-        total: services.length,
+        total: services?.length || 0,
         disponibles: availableServices
       },
       transactions: {
-        total: transactions.length,
+        total: transactions?.length || 0,
         montantTotal,
         transactionsCeMois: transactionsCeMois.length,
         montantCeMois
       }
     };
+
+    console.log('✅ Statistiques calculées:', result);
+    return result;
   }, [employees, partners, services, transactions, loadingEmployees, loadingPartners, loadingServices, loadingTransactions]);
 
   // Données pour le graphique circulaire des types d'employés
@@ -200,20 +221,12 @@ export default function StatistiquesGenerales() {
     if (percent < 0.05) return null; // Ne pas afficher les pourcentages trop petits
     
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.7;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor="middle" 
-        dominantBaseline="central"
-        fontSize="12"
-        fontWeight="bold"
-      >
+      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
         {`${(percent * 100).toFixed(0)}%`}
       </text>
     );
@@ -221,30 +234,66 @@ export default function StatistiquesGenerales() {
 
   // Fonction pour formater les montants
   const formatMontant = (montant: number) => {
-    return new Intl.NumberFormat('fr-FR', { 
-      style: 'currency', 
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
       currency: 'GNF',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(montant);
   };
 
-  // Afficher un skeleton pendant le chargement initial
-  if (!isInitialized || loadingEmployees) {
+  // Afficher les erreurs si elles existent
+  const hasErrors = errorEmployees || errorPartners || errorServices || errorTransactions;
+  const isLoading = loadingEmployees || loadingPartners || loadingServices || loadingTransactions;
+
+  if (hasErrors) {
     return (
-      <div>
-        <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Statistiques générales</h2>
-        <div className="animate-pulse">
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-[var(--zalama-bg-lighter)] rounded-lg p-4">
-                <div className="h-4 bg-[var(--zalama-bg)] rounded mb-2"></div>
-                <div className="h-6 bg-[var(--zalama-bg)] rounded"></div>
-              </div>
-            ))}
-          </div>
-          <div className="h-48 bg-[var(--zalama-bg-lighter)] rounded-lg"></div>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-red-800 mb-2">Erreurs de chargement des données</h3>
+        <div className="space-y-2 text-sm text-red-700">
+          {errorEmployees && <div>❌ Employés: {errorEmployees.message}</div>}
+          {errorPartners && <div>❌ Partenaires: {errorPartners.message}</div>}
+          {errorServices && <div>❌ Services: {errorServices.message}</div>}
+          {errorTransactions && <div>❌ Transactions: {errorTransactions.message}</div>}
         </div>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Recharger la page
+        </button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-20 bg-gray-200 rounded"></div>
+            <div className="h-20 bg-gray-200 rounded"></div>
+            <div className="h-20 bg-gray-200 rounded"></div>
+            <div className="h-20 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+        <div className="text-center text-gray-500">Chargement des statistiques...</div>
+      </div>
+    );
+  }
+
+  // Afficher un message si aucune donnée n'est disponible
+  if (!employees?.length && !partners?.length && !services?.length && !transactions?.length) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-gray-400 mb-4">
+          <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune donnée disponible</h3>
+        <p className="text-gray-500">Les statistiques apparaîtront ici une fois que des données seront ajoutées à la base de données.</p>
       </div>
     );
   }

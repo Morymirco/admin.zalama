@@ -25,6 +25,40 @@ export interface NotificationStats {
 }
 
 class NotificationService {
+  // Récupérer toutes les notifications (pour les administrateurs)
+  async getAll(limit?: number): Promise<Notification[]> {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('date_creation', { ascending: false })
+        .limit(limit || 50); // Limite par défaut à 50, ou la valeur passée en paramètre
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération de toutes les notifications:', error);
+      throw error;
+    }
+  }
+
+  // Récupérer les notifications récentes (pour le dashboard)
+  async getRecentNotifications(limit: number = 10): Promise<Notification[]> {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('date_creation', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des notifications récentes:', error);
+      throw error;
+    }
+  }
+
   // Récupérer toutes les notifications d'un utilisateur
   async getUserNotifications(userId: string, limit: number = 50): Promise<Notification[]> {
     try {
@@ -246,7 +280,7 @@ class NotificationService {
           admin.id,
           'Nouvelle demande d\'avance de salaire',
           `L'employé ${employee.nom} ${employee.prenom} du partenaire ${partner.nom} a soumis une demande d'avance de ${amount.toLocaleString()} GNF.`,
-          'Demande'
+          'Information'
         );
       }
     } catch (error) {
@@ -271,7 +305,7 @@ class NotificationService {
             admin.id,
             'Nouvelle transaction importante',
             `Une transaction de ${amount.toLocaleString()} GNF a été enregistrée (Type: ${type}).`,
-            'Transaction'
+            'Information'
           );
         }
       }
@@ -297,7 +331,7 @@ class NotificationService {
             admin.id,
             'Événement de sécurité à haut risque',
             `Un événement de sécurité de niveau ${riskScore} a été détecté (Type: ${eventType}).`,
-            'Sécurité'
+            'Alerte'
           );
         }
       }

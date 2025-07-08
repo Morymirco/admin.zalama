@@ -154,7 +154,7 @@ export default function PerformancePage() {
   ];
   
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 w-full">
       <h1 className="text-2xl font-bold mb-6 text-[var(--zalama-text)]">Objectifs & Performances</h1>
       
       {/* Progression des objectifs mensuels */}

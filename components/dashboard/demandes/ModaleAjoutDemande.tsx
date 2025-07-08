@@ -8,7 +8,14 @@ interface ModaleAjoutDemandeProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  employees: Array<{ id: string; nom: string; prenom: string; email?: string }>;
+  employees: Array<{ 
+    id: string; 
+    nom: string; 
+    prenom: string; 
+    email?: string;
+    salaire_net?: number;
+    partner_id?: string;
+  }>;
   partners: Array<{ id: string; nom: string; email?: string }>;
   isLoading: boolean;
 }
@@ -21,6 +28,11 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
   partners,
   isLoading
 }) => {
+  // Debug: Afficher les données reçues dans la modale
+  console.log('🔍 Debug - ModaleAjoutDemande:');
+  console.log('  - employees:', employees?.length || 0, employees);
+  console.log('  - partners:', partners?.length || 0, partners);
+  console.log('  - isLoading:', isLoading);
   const [formData, setFormData] = useState<SalaryAdvanceRequestFormData>({
     employe_id: '',
     partenaire_id: '',
@@ -55,22 +67,51 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
   }, [isOpen]);
 
   const handleEmployeeChange = (employeeId: string) => {
-    const employee = employees.find(emp => emp.id === employeeId);
+    const employee = (employees || []).find(emp => emp.id === employeeId);
     setSelectedEmployee(employee);
-    setFormData(prev => ({
-      ...prev,
-      employe_id: employeeId,
-      salaire_disponible: employee?.salaire_net || 0,
-    }));
-  };
-
-  const handlePartnerChange = (partnerId: string) => {
-    const partner = partners.find(part => part.id === partnerId);
-    setSelectedPartner(partner);
-    setFormData(prev => ({
-      ...prev,
-      partenaire_id: partnerId,
-    }));
+    
+    // Debug: Afficher les informations de l'employé sélectionné
+    console.log('🔍 Debug - Employé sélectionné:', employee);
+    console.log('  - ID:', employee?.id);
+    console.log('  - Nom:', employee?.nom);
+    console.log('  - Prénom:', employee?.prenom);
+    console.log('  - Salaire net:', employee?.salaire_net);
+    console.log('  - Partner ID:', employee?.partner_id);
+    
+    if (employee) {
+      // Récupérer automatiquement le partenaire de l'employé
+      const partner = (partners || []).find(part => part.id === employee.partner_id);
+      setSelectedPartner(partner);
+      
+      // Debug: Afficher les informations du partenaire
+      console.log('🔍 Debug - Partenaire trouvé:', partner);
+      
+      // Calculer l'avance disponible (par exemple 50% du salaire)
+      const salaireNet = employee.salaire_net || 0;
+      const avanceDisponible = Math.floor(salaireNet * 0.5);
+      
+      console.log('🔍 Debug - Calculs:');
+      console.log('  - Salaire net:', salaireNet);
+      console.log('  - Avance disponible (50%):', avanceDisponible);
+      
+      setFormData(prev => ({
+        ...prev,
+        employe_id: employeeId,
+        partenaire_id: employee.partner_id || '',
+        salaire_disponible: salaireNet,
+        avance_disponible: avanceDisponible,
+      }));
+    } else {
+      // Réinitialiser si aucun employé sélectionné
+      setSelectedPartner(null);
+      setFormData(prev => ({
+        ...prev,
+        employe_id: '',
+        partenaire_id: '',
+        salaire_disponible: 0,
+        avance_disponible: 0,
+      }));
+    }
   };
 
   const calculateTotal = () => {
@@ -91,13 +132,13 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[var(--zalama-bg)] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-[var(--zalama-text)] flex items-center gap-2">
               <Plus className="w-5 h-5" />
-              Nouvelle demande d'avance
+              Nouvelle demande d'avance sur salaire
             </h2>
             <button
               onClick={onClose}
@@ -121,9 +162,12 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
                   value={formData.employe_id}
                   onChange={(e) => handleEmployeeChange(e.target.value)}
                   className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
+                  disabled={isLoading}
                 >
-                  <option value="">Sélectionner un employé</option>
-                  {employees.map((employee) => (
+                  <option value="">
+                    {isLoading ? 'Chargement des employés...' : 'Sélectionner un employé'}
+                  </option>
+                  {(employees || []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
                       {employee.prenom} {employee.nom} {employee.email ? `(${employee.email})` : ''}
                     </option>
@@ -132,24 +176,21 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
               </div>
 
               <div>
-                <label htmlFor="add-partenaire-id" className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
+                <label className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
                   <Building className="w-4 h-4 inline mr-2" />
-                  Partenaire *
+                  Partenaire
                 </label>
-                <select
-                  id="add-partenaire-id"
-                  required
-                  value={formData.partenaire_id}
-                  onChange={(e) => handlePartnerChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
-                >
-                  <option value="">Sélectionner un partenaire</option>
-                  {partners.map((partner) => (
-                    <option key={partner.id} value={partner.id}>
-                      {partner.nom} {partner.email ? `(${partner.email})` : ''}
-                    </option>
-                  ))}
-                </select>
+                <div className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text-secondary)] min-h-[42px] flex items-center">
+                  {selectedPartner ? (
+                    <span className="text-[var(--zalama-text)]">
+                      {selectedPartner.nom} {selectedPartner.email ? `(${selectedPartner.email})` : ''}
+                    </span>
+                  ) : (
+                    <span className="text-[var(--zalama-text-secondary)]">
+                      Sélectionnez d'abord un employé
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -158,13 +199,17 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
               <div>
                 <label htmlFor="add-montant" className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
                   <DollarSign className="w-4 h-4 inline mr-2" />
-                  Montant demandé (GNF) *
+                  Montant de l'avance sur salaire demandé (GNF) *
+                  <span className="text-xs text-[var(--zalama-text-secondary)] ml-2">
+                    (Max: {formatCurrency(formData.avance_disponible)})
+                  </span>
                 </label>
                 <input
                   type="number"
                   id="add-montant"
                   required
                   min="0"
+                  max={formData.avance_disponible}
                   step="1000"
                   value={formData.montant_demande}
                   onChange={(e) => setFormData(prev => ({
@@ -174,6 +219,11 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
                   className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
                   placeholder="0"
                 />
+                {formData.montant_demande > formData.avance_disponible && (
+                  <p className="text-xs text-[var(--zalama-danger)] mt-1">
+                    Le montant demandé ne peut pas dépasser l'avance sur salaire disponible
+                  </p>
+                )}
               </div>
 
               <div>
@@ -210,7 +260,7 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
                   motif: e.target.value
                 }))}
                 className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
-                placeholder="Décrivez le motif de la demande d'avance..."
+                placeholder="Décrivez le motif de la demande d'avance sur salaire..."
               />
             </div>
 
@@ -259,44 +309,41 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
               </div>
 
               <div>
-                <label htmlFor="add-salaire-disponible" className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
+                <label className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
                   Salaire disponible (GNF)
                 </label>
-                <input
-                  type="number"
-                  id="add-salaire-disponible"
-                  min="0"
-                  step="1000"
-                  value={formData.salaire_disponible}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    salaire_disponible: parseFloat(e.target.value) || 0
-                  }))}
-                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
-                  placeholder="0"
-                />
+                <div className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] min-h-[42px] flex items-center">
+                  {formatCurrency(formData.salaire_disponible)}
+                </div>
+                {selectedEmployee && !selectedEmployee.salaire_net && (
+                  <p className="text-xs text-[var(--zalama-warning)] mt-1">
+                    ⚠️ Aucun salaire défini pour cet employé
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Avance disponible */}
             <div>
-              <label htmlFor="add-avance-disponible" className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
+              <label className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
                 Avance disponible (GNF)
               </label>
-              <input
-                type="number"
-                id="add-avance-disponible"
-                min="0"
-                step="1000"
-                value={formData.avance_disponible}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  avance_disponible: parseFloat(e.target.value) || 0
-                }))}
-                className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
-                placeholder="0"
-              />
+              <div className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] min-h-[42px] flex items-center">
+                {formatCurrency(formData.avance_disponible)}
+                <span className="text-xs text-[var(--zalama-text-secondary)] ml-2">
+                  (50% du salaire net)
+                </span>
+              </div>
+              {selectedEmployee && !selectedEmployee.salaire_net && (
+                <p className="text-xs text-[var(--zalama-warning)] mt-1">
+                  ⚠️ Impossible de calculer l'avance sans salaire défini
+                </p>
+              )}
             </div>
+
+            {/* Champs cachés pour les valeurs calculées */}
+            <input type="hidden" id="add-salaire-disponible" value={formData.salaire_disponible} />
+            <input type="hidden" id="add-avance-disponible" value={formData.avance_disponible} />
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--zalama-border)]">

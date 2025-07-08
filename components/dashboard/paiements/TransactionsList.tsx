@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,8 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
     refreshTransactions 
   } = useTransactions();
 
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
   const handleRefresh = async () => {
     try {
       await refreshTransactions();
@@ -77,6 +79,28 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
   const handleTransactionClick = (transaction: Transaction) => {
     if (onTransactionSelect) {
       onTransactionSelect(transaction);
+    }
+  };
+
+  const handleVerifyStatus = async (transaction: Transaction) => {
+    setVerifyingId(transaction.id);
+    try {
+      const response = await fetch('/api/payments/lengo-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pay_id: transaction.numero_transaction })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(`Statut: ${data.lengo_status || data.status || 'Inconnu'}`);
+        await refreshTransactions();
+      } else {
+        toast.error(data.error || 'Erreur lors de la vérification');
+      }
+    } catch (e) {
+      toast.error('Erreur réseau lors de la vérification');
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -175,6 +199,20 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
                     <span className="text-xs text-[var(--zalama-text-secondary)]">
                       {formatDate(transaction.date_creation)}
                     </span>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="ml-2 border-[var(--zalama-border)]"
+                      onClick={e => { e.stopPropagation(); handleVerifyStatus(transaction); }}
+                      disabled={verifyingId === transaction.id}
+                      title="Vérifier le statut"
+                    >
+                      {verifyingId === transaction.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
                 

@@ -7,6 +7,7 @@ import {
   TransactionStatus,
   TransactionStatut
 } from '@/types/salaryAdvanceRequest';
+import { notificationService } from './notificationService';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -16,6 +17,8 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Fonction utilitaire pour convertir les données de la DB vers l'interface
 const convertSalaryAdvanceFromDB = (dbRequest: any): SalaryAdvanceRequest => {
+  console.log('🔄 Conversion des données DB:', dbRequest);
+  
   return {
     id: dbRequest.id,
     employe_id: dbRequest.employe_id,
@@ -109,24 +112,60 @@ class SalaryAdvanceService {
   // Créer une nouvelle demande
   async create(requestData: SalaryAdvanceRequestFormData): Promise<SalaryAdvanceRequest> {
     try {
+      console.log('🚀 Création de demande d\'avance:', requestData);
+      
+      // Préparer les données pour l'insertion
+      const insertData = {
+        employe_id: requestData.employe_id,
+        partenaire_id: requestData.partenaire_id,
+        montant_demande: requestData.montant_demande,
+        type_motif: requestData.type_motif,
+        motif: requestData.motif,
+        frais_service: requestData.frais_service || 0,
+        montant_total: requestData.montant_total || (requestData.montant_demande + (requestData.frais_service || 0)),
+        salaire_disponible: requestData.salaire_disponible,
+        avance_disponible: requestData.avance_disponible,
+        statut: 'En attente',
+        date_creation: new Date().toISOString()
+      };
+
+      console.log('📝 Données à insérer:', insertData);
+
       const { data, error } = await supabase
         .from('salary_advance_requests')
-        .insert([{
-          ...requestData,
-          date_creation: new Date().toISOString(),
-          statut: 'En attente'
-        }])
+        .insert([insertData])
         .select(`
           *,
-          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net, partner_id),
           partenaire:partners(nom, type, secteur, email, telephone)
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur Supabase:', error);
+        throw error;
+      }
+
+      console.log('✅ Demande créée avec succès:', data);
+      
+      // Envoyer une notification aux administrateurs (désactivé temporairement)
+      // TODO: Réactiver une fois les triggers SQL correctement installés
+      /*
+      try {
+        await notificationService.notifySalaryAdvanceRequest(
+          requestData.employe_id,
+          requestData.montant_demande
+        );
+        console.log('📢 Notification envoyée avec succès');
+      } catch (notificationError) {
+        console.warn('⚠️ Erreur lors de l\'envoi de la notification:', notificationError);
+        // Ne pas faire échouer la création de la demande si la notification échoue
+      }
+      */
+      
       return convertSalaryAdvanceFromDB(data);
     } catch (error) {
-      console.error('Erreur lors de la création de la demande:', error);
+      console.error('❌ Erreur lors de la création de la demande:', error);
       throw error;
     }
   }

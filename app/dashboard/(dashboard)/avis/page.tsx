@@ -175,7 +175,7 @@ export default function AvisPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 w-full">
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>

@@ -157,7 +157,7 @@ export async function lengoPayStatus(params: LengoPayStatusParams): Promise<Leng
   const body = JSON.stringify(params);
 
   console.log('🌐 Préparation de l\'appel API Lengo Pay pour vérifier le statut:');
-  console.log('  - URL:', `${LENGO_API_URL}/api/v2/cashin/transaction`);
+  console.log('  - URL:', `${LENGO_API_URL}/api/v2/cashin/transactions`);
   console.log('  - Method: POST');
   console.log('  - Headers:', { 
     'Authorization': LENGO_API_KEY ? 'Basic [HIDDEN]' : '❌ Manquant',
@@ -168,7 +168,7 @@ export async function lengoPayStatus(params: LengoPayStatusParams): Promise<Leng
 
   try {
     console.log('🌐 Envoi de la requête de vérification à l\'API Lengo Pay...');
-    const response = await fetch(`${LENGO_API_URL}/api/v2/cashin/transaction`, {
+    const response = await fetch(`${LENGO_API_URL}/api/v2/cashin/transactions`, {
       method: 'POST',
       headers,
       body,

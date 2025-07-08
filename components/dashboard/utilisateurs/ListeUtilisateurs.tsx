@@ -94,42 +94,24 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
 
   return (
     <>
-      {/* Barre d'outils et filtres */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
-        <div className="relative w-full md:w-64">
-          <input
-            type="text"
-            placeholder="Rechercher un employé..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-            value={safeSearchTerm}
-            onChange={safeOnSearch}
-          />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-[var(--zalama-text-secondary)]" />
+      {/* Informations sur les résultats */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="text-sm text-[var(--zalama-text-secondary)]">
+          {safeFilteredUtilisateurs.length} employé{safeFilteredUtilisateurs.length !== 1 ? 's' : ''} trouvé{safeFilteredUtilisateurs.length !== 1 ? 's' : ''}
         </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <button 
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
-            onClick={safeOnAddClick}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-[var(--zalama-text-secondary)]">Partenaire:</span>
+          <select 
+            value={safeTypeFilter}
+            onChange={(e) => safeOnTypeFilterChange(e.target.value)}
+            className="px-3 py-1 text-sm rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
           >
-            <Plus className="h-4 w-4" />
-            Ajouter un employé
-          </button>
-          
-          <div className="flex items-center">
-            <span className="mr-2 text-[var(--zalama-text)]">Partenaire:</span>
-            <select 
-              value={safeTypeFilter}
-              onChange={(e) => safeOnTypeFilterChange(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-            >
-              {safeTypes.map(type => (
-                <option key={type} value={type}>
-                  {type === 'tous' ? 'Tous les partenaires' : getPartnerName(type)}
-                </option>
-              ))}
-            </select>
-          </div>
+            {safeTypes.map(type => (
+              <option key={type} value={type}>
+                {type === 'tous' ? 'Tous les partenaires' : getPartnerName(type)}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       
@@ -146,85 +128,94 @@ const ListeUtilisateurs: React.FC<ListeUtilisateursProps> = ({
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--zalama-border)]">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Employé</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Partenaire</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Poste</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Salaire</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Statut</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Date d'embauche</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider w-1/4">Employé</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider w-1/5">Contact</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider w-1/6">Partenaire & Poste</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider w-1/6">Salaire & Statut</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider w-1/6">Date d'embauche</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-[var(--zalama-text-secondary)] uppercase tracking-wider w-20">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--zalama-border)]">
                 {currentItems.map((employe) => (
                   <tr key={employe.id} className="hover:bg-[var(--zalama-bg-lighter)]">
-                    <td className="px-2 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0">
+                        <div className="h-10 w-10 flex-shrink-0 relative">
                           <Image 
-                            className="h-10 w-10 rounded-full object-cover" 
+                            className="h-10 w-10 rounded-full object-cover border-2 border-[var(--zalama-border)] shadow-sm" 
                             src={employe.photo_url || '/images/avatar-placeholder.svg'} 
                             width={40}
                             height={40}
-                            alt={`${employe.prenom} ${employe.nom}`}
+                            alt={`Photo de ${employe.prenom} ${employe.nom}`}
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = '/images/avatar-placeholder.svg';
                             }}
                           />
+                          {/* Indicateur de statut en ligne */}
+                          <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white ${
+                            employe.actif ? 'bg-green-500' : 'bg-gray-400'
+                          }`}></div>
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-[var(--zalama-text)]">
+                        <div className="ml-3 min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-[var(--zalama-text)] truncate">
                             {employe.prenom} {employe.nom}
                           </div>
-                          <div className="text-xs text-[var(--zalama-text-secondary)]">
+                          <div className="text-xs text-[var(--zalama-text-secondary)] truncate">
                             {employe.role || 'Employé'}
+                            {employe.genre && (
+                              <span className="ml-1">• {employe.genre}</span>
+                            )}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-4 whitespace-nowrap">
-                      <div className="text-sm text-[var(--zalama-text)]">{employe.email}</div>
-                      <div className="text-xs text-[var(--zalama-text-secondary)]">{employe.telephone}</div>
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-[var(--zalama-text)] truncate">{employe.email}</div>
+                      <div className="text-xs text-[var(--zalama-text-secondary)] truncate">{employe.telephone}</div>
                     </td>
-                    <td className="px-2 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[var(--zalama-bg-lighter)]">
-                          <Building className="h-4 w-4" />
-                          <span>{getPartnerName(employe.partner_id || '')}</span>
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-2 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span className="flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-[var(--zalama-bg-lighter)]">
+                    <td className="px-4 py-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Building className="h-3 w-3 text-[var(--zalama-text-secondary)]" />
+                          <span className="text-xs text-[var(--zalama-text)] truncate">
+                            {getPartnerName(employe.partner_id || '')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
                           {getPosteIcon(employe.poste)}
-                          <span>{employe.poste}</span>
+                          <span className="text-xs text-[var(--zalama-text-secondary)] truncate">
+                            {employe.poste}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-[var(--zalama-text)]">
+                          {formatSalary(employe.salaire_net || 0)}
+                        </div>
+                        <span className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(employe.actif)}`}>
+                          {employe.actif ? 'Actif' : 'Inactif'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-2 py-4 whitespace-nowrap text-sm text-[var(--zalama-text)]">
-                      {formatSalary(employe.salaire_net || 0)}
-                    </td>
-                    <td className="px-2 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(employe.actif)}`}>
-                        {employe.actif ? 'Actif' : 'Inactif'}
-                      </span>
-                    </td>
-                    <td className="px-2 py-4 whitespace-nowrap text-sm text-[var(--zalama-text-secondary)]">
+                    <td className="px-4 py-4 text-sm text-[var(--zalama-text-secondary)]">
                       {employe.date_embauche ? new Date(employe.date_embauche).toLocaleDateString('fr-FR') : 'N/A'}
                     </td>
-                    <td className="px-2 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex justify-end gap-1">
                         <button 
                           onClick={() => safeOnEditClick(employe)}
-                          className="p-2 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded"
+                          className="p-1.5 text-[var(--zalama-blue)] hover:bg-[var(--zalama-blue)]/10 rounded transition-colors"
+                          title="Modifier"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => safeOnDeleteClick(employe)}
-                          className="p-2 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded"
+                          className="p-1.5 text-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/10 rounded transition-colors"
+                          title="Supprimer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

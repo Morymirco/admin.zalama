@@ -75,8 +75,15 @@ export default function PartenaireDetailPage() {
       }
       
       // Retourner les résultats pour affichage dans le modal
+      // L'API retourne { success: true, account: {...}, employee: {...} }
+      const employeData = result.account.account?.employee || result.account.account || {
+        ...employeeData,
+        id: result.account.account?.id || 'temp-id',
+        email: employeeData.email
+      };
+      
       return {
-        employe: result.account.account,
+        employe: employeData,
         account: result.account,
         sms: result.sms,
         email: result.email

@@ -6,13 +6,13 @@ Les employés créés via l'interface utilisateur avaient un `user_id` NULL dans
 
 ## 🔍 **Cause racine**
 
-1. **Processus de création défaillant** : L'employé était créé d'abord sans `user_id`, puis l'API `/api/auth/create-employee-account` était appelée pour créer le compte Auth
+1. **Processus de création défaillant** : L'employé était créé d'abord sans `user_id`, puis l'API `/api/auth/create-employee-accounts` était appelée pour créer le compte Auth
 2. **Mise à jour manquante** : L'API créait le compte Auth et l'entrée `admin_users`, mais ne mettait pas à jour le `user_id` dans la table `employees`
 3. **Gestion d'erreur insuffisante** : Si la mise à jour du `user_id` échouait, le processus continuait sans erreur
 
 ## ✅ **Solutions implémentées**
 
-### 1. **Correction de l'API route** (`app/api/auth/create-employee-account/route.ts`)
+### 1. **Correction de l'API route** (`app/api/auth/create-employee-accounts/route.ts`)
 
 **Nouvelle approche :**
 - Créer d'abord le compte Auth

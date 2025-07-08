@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Appeler l'API de création de compte
-    const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://admin.zalama.com' : 'http://localhost:3001'}/api/auth/create-employee-account`, {
+    const response = await fetch(`${process.env.NODE_ENV === 'production' ? 'https://admin.zalama.com' : 'http://localhost:3001'}/api/auth/create-employee-accounts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

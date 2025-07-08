@@ -66,9 +66,9 @@ async function testEmployeeCreationAPI() {
     console.log('- User ID avant API:', employee.user_id);
 
     // Étape 2: Appeler l'API route pour créer le compte Auth
-    console.log('\n2️⃣ Appel de l\'API route create-employee-account...');
+    console.log('\n2️⃣ Appel de l\'API route create-employee-accounts...');
     
-    const apiUrl = 'http://localhost:3000/api/auth/create-employee-account';
+    const apiUrl = 'http://localhost:3000/api/auth/create-employee-accounts';
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {

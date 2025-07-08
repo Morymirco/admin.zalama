@@ -27,7 +27,7 @@ async function testEmployeeCreationFix() {
   // Test 1: Vérifier l'API de création de compte employé
   console.log('\n1. Test de l\'API de création de compte employé...');
   try {
-    const accountResponse = await fetch(`${BASE_URL}/api/auth/create-employee-account`, {
+    const accountResponse = await fetch(`${BASE_URL}/api/auth/create-employee-accounts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ async function testEmployeeCreationFix() {
   // Test 2: Test avec un email déjà existant
   console.log('\n2. Test avec un email déjà existant...');
   try {
-    const duplicateResponse = await fetch(`${BASE_URL}/api/auth/create-employee-account`, {
+    const duplicateResponse = await fetch(`${BASE_URL}/api/auth/create-employee-accounts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ async function testEmployeeCreationFix() {
   // Test 3: Test avec des données invalides
   console.log('\n3. Test avec des données invalides...');
   try {
-    const invalidResponse = await fetch(`${BASE_URL}/api/auth/create-employee-account`, {
+    const invalidResponse = await fetch(`${BASE_URL}/api/auth/create-employee-accounts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

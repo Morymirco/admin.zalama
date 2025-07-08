@@ -113,7 +113,7 @@ async function testEmployeeCreationSimple() {
   console.log('\n1. Test de l\'API de création de compte employé...');
   try {
     const result = await makeRequest(
-      `${BASE_URL}/api/auth/create-employee-account`,
+      `${BASE_URL}/api/auth/create-employee-accounts`,
       'POST',
       {
         employeeData: {
@@ -140,7 +140,7 @@ async function testEmployeeCreationSimple() {
   console.log('\n2. Test avec un email déjà existant...');
   try {
     const result = await makeRequest(
-      `${BASE_URL}/api/auth/create-employee-account`,
+      `${BASE_URL}/api/auth/create-employee-accounts`,
       'POST',
       {
         employeeData: {
@@ -166,7 +166,7 @@ async function testEmployeeCreationSimple() {
   console.log('\n3. Test avec des données invalides...');
   try {
     const result = await makeRequest(
-      `${BASE_URL}/api/auth/create-employee-account`,
+      `${BASE_URL}/api/auth/create-employee-accounts`,
       'POST',
       {
         employeeData: {

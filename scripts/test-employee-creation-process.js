@@ -57,7 +57,7 @@ async function testEmployeeCreationProcess() {
     console.log('\n🔐 Étape 1: Création du compte via API route');
     
     const accountResult = await makeRequest(
-      `${API_BASE_URL}/api/auth/create-employee-account`,
+              `${API_BASE_URL}/api/auth/create-employee-accounts`,
       'POST',
       { employeeData: testEmployeeData }
     );

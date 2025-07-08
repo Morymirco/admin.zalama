@@ -49,9 +49,9 @@ async function testEmployeeCreation() {
     console.log(`   - Partenaire: ${partner.nom}`);
 
     // Appeler l'API de création d'employé
-    console.log(`\n🔄 Appel de l'API /api/auth/create-employee-account...`);
+    console.log(`\n🔄 Appel de l'API /api/auth/create-employee-accounts...`);
     
-    const response = await fetch('http://localhost:3000/api/auth/create-employee-account', {
+    const response = await fetch('http://localhost:3000/api/auth/create-employee-accounts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

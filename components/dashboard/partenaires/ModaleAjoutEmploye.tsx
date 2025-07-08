@@ -8,13 +8,17 @@ interface ModaleAjoutEmployeProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (employe: Omit<Employe, 'id' | 'created_at' | 'updated_at'>) => Promise<{
-    employe: Employe;
+    employe: Employe & { email?: string };
     account?: {
       success: boolean;
       password?: string;
       error?: string;
     };
     sms?: {
+      success: boolean;
+      error?: string;
+    };
+    email?: {
       success: boolean;
       error?: string;
     };
@@ -49,13 +53,17 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
   const [loading, setLoading] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryData, setSummaryData] = useState<{
-    employe: Employe;
+    employe: Employe & { email?: string };
     account?: {
       success: boolean;
       password?: string;
       error?: string;
     };
     sms?: {
+      success: boolean;
+      error?: string;
+    };
+    email?: {
       success: boolean;
       error?: string;
     };
@@ -202,7 +210,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                 Employé créé
               </h4>
               <p className="text-green-700 dark:text-green-300">
-                {summaryData.employee.prenom} {summaryData.employee.nom} - {summaryData.employee.poste}
+                {summaryData.employee?.prenom || 'Prénom'} {summaryData.employee?.nom || 'Nom'} - {summaryData.employee?.poste || 'Poste'}
               </p>
             </div>
 
@@ -225,7 +233,7 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                 {summaryData.account.success ? (
                   <div className="space-y-2">
                     <p className="text-blue-700 dark:text-blue-300">
-                      Email: <span className="font-mono">{summaryData.employee.email}</span>
+                      Email: <span className="font-mono">{summaryData.employee?.email || 'Email non disponible'}</span>
                     </p>
                     {summaryData.account.password && (
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
@@ -264,11 +272,39 @@ const ModaleAjoutEmploye: React.FC<ModaleAjoutEmployeProps> = ({
                 
                 {summaryData.sms.success ? (
                   <p className="text-green-700 dark:text-green-300">
-                    Les identifiants ont été envoyés par SMS au numéro {summaryData.employee.telephone}
+                    Les identifiants ont été envoyés par SMS au numéro {summaryData.employee?.telephone || 'Numéro non disponible'}
                   </p>
                 ) : (
                   <p className="text-orange-700 dark:text-orange-300">
                     {summaryData.sms.error || 'Impossible d\'envoyer le SMS'}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Informations Email */}
+            {summaryData.email && (
+              <div className={`border rounded-lg p-4 ${
+                summaryData.email.success 
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                  : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+              }`}>
+                <h4 className={`font-semibold mb-2 flex items-center gap-2 ${
+                  summaryData.email.success 
+                    ? 'text-green-800 dark:text-green-200' 
+                    : 'text-orange-800 dark:text-orange-200'
+                }`}>
+                  <Mail className="h-4 w-4" />
+                  {summaryData.email.success ? 'Email envoyé' : 'Email non envoyé'}
+                </h4>
+                
+                {summaryData.email.success ? (
+                  <p className="text-green-700 dark:text-green-300">
+                    Les identifiants ont été envoyés par email à {summaryData.employee?.email || 'Email non disponible'}
+                  </p>
+                ) : (
+                  <p className="text-orange-700 dark:text-orange-300">
+                    {summaryData.email.error || 'Impossible d\'envoyer l\'email'}
                   </p>
                 )}
               </div>

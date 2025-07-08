@@ -4,6 +4,11 @@ import { lengoPayCashin, LengoPayCashinParams } from '@/services/lengoPayService
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mspmrzlqhwpdkkburjiw.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
+}
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const LENGO_SITE_ID = process.env.LENGO_SITE_ID;
 

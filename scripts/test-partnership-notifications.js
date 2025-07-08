@@ -75,7 +75,7 @@ async function testPartnershipNotifications() {
     const { data: adminContacts, error: contactsError } = await supabase
       .from('admin_users')
       .select('nom, prenom, email, telephone, role')
-      .in('role', ['rh', 'responsable', 'manager'])
+      .in('role', ['rh', 'responsable'])
       .eq('active', true);
 
     if (contactsError) {

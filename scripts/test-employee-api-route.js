@@ -22,7 +22,7 @@ async function testCreateEmployeeAccount() {
 
   try {
     // Test de création de compte via API route
-    const response = await fetch(`${API_BASE_URL}/api/auth/create-employee-account`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/create-employee-accounts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ async function testValidation() {
     console.log(`📝 Test: ${testCase.name}`);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/create-employee-account`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/create-employee-accounts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

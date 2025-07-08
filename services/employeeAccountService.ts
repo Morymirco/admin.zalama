@@ -32,7 +32,7 @@ class EmployeeAccountService {
   async createEmployeeAccount(employeeData: any): Promise<{ success: boolean; account?: any; error?: string }> {
     try {
       // Appeler l'API route pour créer le compte
-      const response = await fetch('/api/auth/create-employee-account', {
+      const response = await fetch('/api/auth/create-employee-accounts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,9 +63,15 @@ class EmployeeAccountService {
       }
 
       console.log('✅ Compte employé créé avec succès:', result.account?.email);
+      
+      // L'API retourne { success: true, account: {...}, employee: {...} }
+      // Nous devons retourner les données dans le format attendu par le service
       return { 
         success: true, 
-        account: result.account
+        account: {
+          ...result.account,
+          employee: result.employee // Inclure les données de l'employé
+        }
       };
 
     } catch (error) {

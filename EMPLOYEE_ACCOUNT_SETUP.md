@@ -24,7 +24,7 @@ SUPABASE_SERVICE_ROLE_KEY=votre_service_role_key_ici
 
 Les API routes suivantes doivent être créées dans le dossier `app/api/auth/` :
 
-- `create-employee-account/route.ts` ✅ (créé)
+- `create-employee-accounts/route.ts` ✅ (créé)
 - `delete-employee-account/route.ts` (à créer)
 - `toggle-employee-account/route.ts` (à créer)
 - `reset-employee-password/route.ts` (à créer)

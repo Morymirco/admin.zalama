@@ -285,6 +285,57 @@ class EmployeeService {
         }
       };
 
+      // Envoyer un SMS à l'employé
+      if (employeeData.telephone) {
+        try {
+          console.log('📱 Envoi SMS de bienvenue à l\'employé...');
+          
+          const partenaireNom = employeeData.partner_id ? 
+            (await supabase.from('partners').select('nom').eq('id', employeeData.partner_id).single()).data?.nom || 'Partenaire inconnu' : 
+            'Aucun partenaire';
+            
+          const employeMessage = `Bonjour ${employeeData.prenom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${password}\nConnectez-vous sur https://admin.zalama.com`;
+          
+          const employeSMSResult = await smsService.sendSMS({
+            to: [employeeData.telephone],
+            message: employeMessage
+          });
+          
+          smsResults.employe = {
+            success: employeSMSResult.success,
+            message: employeSMSResult.success ? 'SMS employé envoyé' : '',
+            error: employeSMSResult.error || employeSMSResult.message || ''
+          };
+          
+          if (smsResults.employe.success) {
+            console.log('📱 SMS employé: ✅ Envoyé');
+          } else {
+            const errorMsg = smsResults.employe.error;
+            if (errorMsg.includes('solde insuffisant')) {
+              console.log('📱 SMS employé: ⚠️ Solde insuffisant - SMS non envoyé');
+            } else if (errorMsg.includes('Solde SMS insuffisant')) {
+              console.log('📱 SMS employé: ⚠️ Solde SMS insuffisant - SMS non envoyé');
+            } else {
+              console.log(`📱 SMS employé: ❌ ${smsResults.employe.error}`);
+            }
+          }
+        } catch (smsError) {
+          smsResults.employe = {
+            success: false,
+            message: '',
+            error: `Erreur SMS employé: ${smsError}`
+          };
+          console.log('❌ Erreur SMS employé:', smsError);
+        }
+      } else {
+        console.log('⚠️ Aucun numéro de téléphone fourni pour l\'employé - SMS non envoyé');
+        smsResults.employe = {
+          success: false,
+          message: '',
+          error: 'Aucun numéro de téléphone fourni'
+        };
+      }
+
       // Envoyer un SMS à l'administrateur
       try {
         const partenaireNom = employeeData.partner_id ? 

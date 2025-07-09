@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import { Search, Plus, Filter, RefreshCw, Eye, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { Search, Plus, Filter, RefreshCw, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 // Importation des composants
@@ -13,6 +13,8 @@ import {
   ModaleApprobationDemande,
   ModaleRejetDemande,
   ModaleSuppressionDemande,
+  ModaleDetailDemande,
+  ModalePaiementDemande,
   ListeTransactions
 } from '@/components/dashboard/demandes';
 
@@ -65,6 +67,8 @@ export default function DemandesPage() {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [currentRequest, setCurrentRequest] = useState<UISalaryAdvanceRequest | null>(null);
   const [activeTab, setActiveTab] = useState<'demandes' | 'transactions'>('demandes');
 
@@ -87,6 +91,16 @@ export default function DemandesPage() {
 
   const handleAddRequest = () => {
     setShowAddModal(true);
+  };
+
+  const handleViewRequest = (request: UISalaryAdvanceRequest) => {
+    setCurrentRequest(request);
+    setShowDetailModal(true);
+  };
+
+  const handlePayRequest = (request: UISalaryAdvanceRequest) => {
+    setCurrentRequest(request);
+    setShowPaymentModal(true);
   };
 
   const handleApproveRequest = (request: UISalaryAdvanceRequest) => {
@@ -212,144 +226,280 @@ export default function DemandesPage() {
     }
   }, [currentRequest, deleteRequest]);
 
+  // Fonction pour vérifier le statut des paiements en attente
+  const handleCheckPaymentStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/payments/transactions?check_status=true');
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success('Statut des paiements vérifié avec succès');
+      } else {
+        toast.error('Erreur lors de la vérification des statuts');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification des statuts:', error);
+      toast.error('Erreur lors de la vérification des statuts');
+    }
+  }, []);
+
   // Calculer les éléments de la page courante
   const startIndex = (currentPage - 1) * 10;
   const endIndex = startIndex + 10;
-  const currentItems = filteredRequests.slice(startIndex, endIndex);
+  // const currentItems = filteredRequests.slice(startIndex, endIndex);
 
   // Vérification de sécurité
   const safeStatuses = statuses || ['toutes'];
   const safePartners = partners || ['toutes'];
   const safeFilteredRequests = filteredRequests || [];
 
-
-
   return (
-    <div className="p-4 md:p-6 w-full">
-      {/* En-tête avec recherche et filtres */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Demandes d'avance sur salaire</h1>
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
-            <input
-              type="text"
-              placeholder="Rechercher une demande..."
-              className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
-              value={searchTerm}
-              onChange={handleSearch}
-            />
+    <div className="min-h-screen bg-[var(--zalama-bg)] p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* En-tête principal */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-[var(--zalama-text)] flex items-center gap-2">
+              <FileText className="w-6 h-6 md:w-7 md:h-7 text-[var(--zalama-blue)]" />
+              Demandes d&apos;avance sur salaire
+            </h1>
+            <p className="text-[var(--zalama-text-secondary)] mt-1 text-sm md:text-base">
+              Gérez les demandes d&apos;avance et suivez les transactions
+            </p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
-            <select
-              value={statusFilter}
-              onChange={(e) => handleStatusFilterChange(e.target.value)}
-              className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+
+        {/* Onglets */}
+        <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm border border-[var(--zalama-border)]">
+          <div className="flex border-b border-[var(--zalama-border)]">
+            <button
+              onClick={() => setActiveTab('demandes')}
+              className={`flex-1 px-4 md:px-6 py-3 md:py-4 text-sm font-medium transition-colors ${
+                activeTab === 'demandes'
+                  ? 'text-[var(--zalama-blue)] border-b-2 border-[var(--zalama-blue)] bg-[var(--zalama-bg-light)]'
+                  : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]'
+              }`}
             >
-              {safeStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {status === 'toutes' ? 'Tous les statuts' : status}
-                </option>
-              ))}
-            </select>
-            
-            <select
-              value={partnerFilter}
-              onChange={(e) => handlePartnerFilterChange(e.target.value)}
-              className="px-3 py-1 text-sm border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)]"
+              <div className="flex items-center justify-center gap-2">
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Demandes d&apos;avance</span>
+                <span className="sm:hidden">Demandes</span>
+                {safeFilteredRequests.length > 0 && (
+                  <span className="bg-[var(--zalama-blue)] text-white text-xs px-2 py-1 rounded-full">
+                    {safeFilteredRequests.length}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('transactions')}
+              className={`flex-1 px-4 md:px-6 py-3 md:py-4 text-sm font-medium transition-colors ${
+                activeTab === 'transactions'
+                  ? 'text-[var(--zalama-blue)] border-b-2 border-[var(--zalama-blue)] bg-[var(--zalama-bg-light)]'
+                  : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]'
+              }`}
             >
-              {safePartners.map((partner) => (
-                <option key={partner} value={partner}>
-                  {partner === 'toutes' ? 'Tous les partenaires' : partner}
-                </option>
-              ))}
-            </select>
+              <div className="flex items-center justify-center gap-2">
+                <RefreshCw className="w-4 h-4" />
+                <span className="hidden sm:inline">Transactions</span>
+                <span className="sm:hidden">Trans.</span>
+                {transactions.length > 0 && (
+                  <span className="bg-[var(--zalama-success)] text-white text-xs px-2 py-1 rounded-full">
+                    {transactions.length}
+                  </span>
+                )}
+              </div>
+            </button>
           </div>
           
-          <button
-            onClick={handleAddRequest}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-lg hover:bg-[var(--zalama-blue-accent)] transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Nouvelle demande
-          </button>
+          <div className="p-4 md:p-6 lg:p-8">
+            {activeTab === 'demandes' ? (
+              <div className="space-y-6 lg:space-y-8">
+                {/* En-tête avec recherche et filtres */}
+                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--zalama-text-secondary)]" />
+                      <input
+                        type="text"
+                        placeholder="Rechercher une demande..."
+                        value={searchTerm}
+                        onChange={handleSearch}
+                        className="pl-10 pr-4 py-2 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20 w-full lg:w-96"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Filter className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => handleStatusFilterChange(e.target.value)}
+                        className="px-3 py-2 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20 min-w-[140px]"
+                      >
+                        {safeStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status === 'toutes' ? 'Tous les statuts' : status}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      <select
+                        value={partnerFilter}
+                        onChange={(e) => handlePartnerFilterChange(e.target.value)}
+                        className="px-3 py-2 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20 min-w-[160px]"
+                      >
+                        {safePartners.map((partner) => (
+                          <option key={partner} value={partner}>
+                            {partner === 'toutes' ? 'Tous les partenaires' : partner}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={handleCheckPaymentStatus}
+                      className="flex items-center gap-2 px-3 py-2 bg-[var(--zalama-success)] hover:bg-[var(--zalama-success-accent)] text-white rounded-lg transition-colors text-sm"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span className="hidden sm:inline">Vérifier paiements</span>
+                      <span className="sm:hidden">Vérifier</span>
+                    </button>
+                    
+                    <button
+                      onClick={handleAddRequest}
+                      className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span className="hidden sm:inline">Nouvelle demande</span>
+                      <span className="sm:hidden">Nouvelle</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Statistiques */}
+                <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
+                  <StatistiquesDemandes 
+                    requestStats={stats}
+                    isLoading={statsLoading}
+                  />
+                </div>
+
+                {/* Résumé */}
+                <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
+                  <ResumeDemandes 
+                    requests={requests}
+                    isLoading={isLoading}
+                  />
+                </div>
+
+                {/* Liste des demandes */}
+                <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
+                  <ListeDemandes 
+                    requests={safeFilteredRequests}
+                    isLoading={isLoading}
+                    onView={handleViewRequest}
+                    onPay={handlePayRequest}
+                    onApprove={handleApproveRequest}
+                    onReject={handleRejectRequest}
+                    onDelete={handleDeleteRequest}
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6 lg:space-y-8">
+                {/* En-tête de la page */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-bold text-[var(--zalama-text)] flex items-center gap-2">
+                      <RefreshCw className="w-5 h-5 md:w-6 md:h-6 text-[var(--zalama-blue)]" />
+                      Transactions de paiement
+                    </h2>
+                    <p className="text-[var(--zalama-text-secondary)] mt-1 text-sm md:text-base">
+                      Suivez l&apos;historique des paiements et leur statut
+                    </p>
+                  </div>
+                </div>
+
+                {/* Liste des transactions */}
+                <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
+                  <ListeTransactions 
+                    transactions={transactions || []}
+                    isLoading={transactionsLoading}
+                    onView={(transaction) => {
+                      // TODO: Implement view functionality
+                      console.log('View transaction:', transaction);
+                    }}
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+
+                {/* Informations supplémentaires */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Guide des statuts */}
+                  <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
+                    <h3 className="text-lg font-semibold text-[var(--zalama-text)] mb-4">
+                      Guide des Statuts
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-[var(--zalama-warning)] rounded-full"></div>
+                        <div>
+                          <p className="text-sm font-medium text-[var(--zalama-text)]">En attente</p>
+                          <p className="text-xs text-[var(--zalama-text-secondary)]">Paiement initié, en attente de confirmation</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-[var(--zalama-success)] rounded-full"></div>
+                        <div>
+                          <p className="text-sm font-medium text-[var(--zalama-text)]">Payé</p>
+                          <p className="text-xs text-[var(--zalama-text-secondary)]">Paiement confirmé et traité</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-[var(--zalama-danger)] rounded-full"></div>
+                        <div>
+                          <p className="text-sm font-medium text-[var(--zalama-text)]">Échoué</p>
+                          <p className="text-xs text-[var(--zalama-text-secondary)]">Paiement échoué ou annulé</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions rapides */}
+                  <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
+                    <h3 className="text-lg font-semibold text-[var(--zalama-text)] mb-4">
+                      Actions Rapides
+                    </h3>
+                    <div className="space-y-3">
+                      <button
+                        onClick={handleCheckPaymentStatus}
+                        className="w-full text-left p-3 bg-[var(--zalama-bg)] hover:bg-[var(--zalama-bg-lighter)] rounded-lg transition-colors"
+                      >
+                        <p className="text-sm font-medium text-[var(--zalama-text)]">Vérifier les paiements en attente</p>
+                        <p className="text-xs text-[var(--zalama-text-secondary)]">Mettre à jour le statut des transactions</p>
+                      </button>
+                      <button
+                        onClick={handleAddRequest}
+                        className="w-full text-left p-3 bg-[var(--zalama-bg)] hover:bg-[var(--zalama-bg-lighter)] rounded-lg transition-colors"
+                      >
+                        <p className="text-sm font-medium text-[var(--zalama-text)]">Créer une nouvelle demande</p>
+                        <p className="text-xs text-[var(--zalama-text-secondary)]">Ajouter une demande d&apos;avance</p>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Onglets */}
-      <div className="flex border-b border-[var(--zalama-border)] mb-6">
-        <button
-          onClick={() => setActiveTab('demandes')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'demandes'
-              ? 'text-[var(--zalama-blue)] border-b-2 border-[var(--zalama-blue)]'
-              : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
-          }`}
-        >
-          Demandes ({safeFilteredRequests.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('transactions')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'transactions'
-              ? 'text-[var(--zalama-blue)] border-b-2 border-[var(--zalama-blue)]'
-              : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
-          }`}
-        >
-          Transactions ({transactions.length})
-        </button>
-      </div>
-
-      {activeTab === 'demandes' ? (
-        <>
-          {/* Section des statistiques */}
-          <StatistiquesDemandes 
-            requestStats={stats}
-            isLoading={statsLoading}
-          />
-          
-          {/* Résumé des demandes */}
-          <ResumeDemandes 
-            requests={requests}
-            isLoading={isLoading}
-          />
-          
-          {/* Liste des demandes */}
-          <ListeDemandes 
-            requests={safeFilteredRequests}
-            isLoading={isLoading}
-            onView={(request) => {
-              // TODO: Implement view functionality
-              console.log('View request:', request);
-            }}
-            onApprove={handleApproveRequest}
-            onReject={handleRejectRequest}
-            onDelete={handleDeleteRequest}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
-        </>
-      ) : (
-        <>
-          {/* Liste des transactions */}
-          <ListeTransactions 
-            transactions={transactions || []}
-            isLoading={transactionsLoading}
-            onView={(transaction) => {
-              // TODO: Implement view functionality
-              console.log('View transaction:', transaction);
-            }}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
-        </>
-      )}
       
       {/* Modales */}
       <ModaleAjoutDemande 
@@ -359,6 +509,31 @@ export default function DemandesPage() {
         employees={employees}
         partners={partnersData}
         isLoading={employeesLoading || partnersLoading}
+      />
+      
+      <ModaleDetailDemande
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setCurrentRequest(null);
+        }}
+        request={currentRequest}
+        isLoading={isLoading}
+      />
+      
+      <ModalePaiementDemande
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setCurrentRequest(null);
+        }}
+        request={currentRequest}
+        isLoading={isLoading}
+        onPaymentSuccess={() => {
+          // Rafraîchir les données après un paiement réussi
+          // Le hook useSupabaseSalaryAdvance devrait automatiquement rafraîchir les données
+          console.log('✅ Paiement réussi, données rafraîchies');
+        }}
       />
       
       {showApproveModal && currentRequest && (

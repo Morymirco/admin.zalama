@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('📋 Body reçu:', body);
     
-    // body doit contenir: amount, phone, description, partnerId (optionnel), type_account (optionnel)
-    const { amount, phone, description, partnerId, type_account } = body;
+    // body doit contenir: amount, phone, description, partnerId (optionnel), type_account (optionnel), requestId (optionnel), employeId (optionnel)
+    const { amount, phone, description, partnerId, type_account, requestId, employeId } = body;
 
     if (!amount || !phone || !description) {
       console.error('❌ Paramètres manquants:', { amount, phone, description });
@@ -71,6 +71,8 @@ export async function POST(request: NextRequest) {
       ...lengoParams, 
       description, 
       partnerId,
+      requestId,
+      employeId,
       amount: lengoParams.amount + ' ' + lengoParams.currency,
       originalPhone: phone,
       normalizedPhone: normalizedPhone
@@ -95,6 +97,8 @@ export async function POST(request: NextRequest) {
       numero_compte: phone,
       description: description,
       entreprise_id: partnerId || null,
+      demande_avance_id: requestId || null,
+      employe_id: employeId || null,
       statut: 'EN_ATTENTE',
       date_creation: new Date().toISOString(),
       date_transaction: null,
@@ -114,6 +118,51 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Transaction insérée avec succès:', data);
+
+    // Vérifier le statut du paiement immédiatement après l'insertion
+    console.log('🔍 Vérification immédiate du statut du paiement...');
+    try {
+      const statusResponse = await fetch(`${request.nextUrl.origin}/api/payments/lengo-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pay_id: lengoResult.pay_id
+        })
+      });
+
+      if (statusResponse.ok) {
+        const statusResult = await statusResponse.json();
+        console.log('✅ Statut vérifié:', statusResult);
+        
+        // Si le paiement est déjà réussi, mettre à jour la demande d'avance
+        if (statusResult.db_status === 'PAYE' && requestId) {
+          console.log('🔄 Mise à jour du statut de la demande d\'avance (paiement réussi):', requestId);
+          
+          const { error: updateError } = await supabase
+            .from('salary_advance_requests')
+            .update({ 
+              statut: 'Validé',
+              date_validation: new Date().toISOString(),
+              numero_reception: lengoResult.pay_id
+            })
+            .eq('id', requestId);
+
+          if (updateError) {
+            console.error('⚠️ Erreur lors de la mise à jour du statut de la demande:', updateError);
+          } else {
+            console.log('✅ Statut de la demande d\'avance mis à jour avec succès');
+          }
+        }
+      } else {
+        console.log('⚠️ Impossible de vérifier le statut immédiatement, sera vérifié plus tard');
+      }
+    } catch (statusError) {
+      console.error('⚠️ Erreur lors de la vérification du statut:', statusError);
+      // Ne pas faire échouer la requête principale
+    }
+
     console.log('🎉 Route lengo-cashin terminée avec succès');
 
     return NextResponse.json({

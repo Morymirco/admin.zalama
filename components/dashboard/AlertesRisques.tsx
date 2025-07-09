@@ -25,7 +25,7 @@ export default function AlertesRisques() {
   );
 
   // Limiter le nombre de notifications affichées
-  const maxNotifications = 5;
+  const maxNotifications = 3;
   const displayedNotifications = showAll ? allNotifications : notifications.slice(0, maxNotifications);
   const hasMoreNotifications = showAll ? false : notifications.length > maxNotifications;
 
@@ -73,7 +73,7 @@ export default function AlertesRisques() {
 
     setLoadingMore(true);
     try {
-      const allNotifs = await notificationService.getAll();
+      const allNotifs = await notificationService.getAll(3);
       setAllNotifications(allNotifs);
       setShowAll(true);
     } catch (error) {

@@ -92,6 +92,26 @@ export async function POST(request: NextRequest) {
       // Ne pas retourner d'erreur car le statut LengoPay est valide
     } else {
       console.log('✅ Transaction mise à jour avec succès:', updatedTransaction);
+      
+      // Si la transaction est liée à une demande d'avance et que le paiement est réussi
+      if (updatedTransaction?.demande_avance_id && dbStatus === 'PAYE') {
+        console.log('🔄 Mise à jour du statut de la demande d\'avance:', updatedTransaction.demande_avance_id);
+        
+        const { error: demandUpdateError } = await supabase
+          .from('salary_advance_requests')
+          .update({ 
+            statut: 'Validé',
+            date_validation: new Date().toISOString(),
+            numero_reception: pay_id
+          })
+          .eq('id', updatedTransaction.demande_avance_id);
+
+        if (demandUpdateError) {
+          console.error('⚠️ Erreur lors de la mise à jour du statut de la demande:', demandUpdateError);
+        } else {
+          console.log('✅ Statut de la demande d\'avance mis à jour avec succès');
+        }
+      }
     }
 
     console.log('🎉 Vérification du statut terminée avec succès');

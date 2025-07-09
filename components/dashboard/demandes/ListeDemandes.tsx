@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
-import { Eye, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, Edit, Trash2, CreditCard } from 'lucide-react';
 
 interface ListeDemandesProps {
   requests: UISalaryAdvanceRequest[];
@@ -11,6 +11,7 @@ interface ListeDemandesProps {
   onApprove: (request: UISalaryAdvanceRequest) => void;
   onReject: (request: UISalaryAdvanceRequest) => void;
   onDelete: (request: UISalaryAdvanceRequest) => void;
+  onPay?: (request: UISalaryAdvanceRequest) => void;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -23,6 +24,7 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
   onApprove,
   onReject,
   onDelete,
+  onPay,
   currentPage,
   totalPages,
   onPageChange
@@ -162,6 +164,16 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
                             <XCircle className="w-4 h-4" />
                           </button>
                         </>
+                      )}
+                      
+                      {request.statut === 'Validé' && onPay && (
+                        <button
+                          onClick={() => onPay(request)}
+                          className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Payer"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                        </button>
                       )}
                       
                       <button

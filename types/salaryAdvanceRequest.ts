@@ -1,4 +1,4 @@
-// Type pour les demandes d'avance sur salaire (correspond à la table demandes_avance_salaire)
+// Type pour les demandes d'avance sur salaire (correspond à la table salary_advance_requests)
 export interface DemandeAvanceSalaire {
   id: string;
   employe_id: string;
@@ -182,6 +182,7 @@ export interface UISalaryAdvanceRequest extends Omit<SalaryAdvanceRequest, 'date
   dateCreation: string;
   dateValidation?: string;
   dateRejet?: string;
+  dateModification?: string;
   createdAt: string;
   updatedAt: string;
   employeNom?: string;

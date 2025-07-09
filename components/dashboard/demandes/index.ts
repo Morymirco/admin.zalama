@@ -5,4 +5,6 @@ export { default as ModaleAjoutDemande } from './ModaleAjoutDemande';
 export { default as ModaleApprobationDemande } from './ModaleApprobationDemande';
 export { default as ModaleRejetDemande } from './ModaleRejetDemande';
 export { default as ModaleSuppressionDemande } from './ModaleSuppressionDemande';
+export { default as ModaleDetailDemande } from './ModaleDetailDemande';
+export { default as ModalePaiementDemande } from './ModalePaiementDemande';
 export { default as ListeTransactions } from './ListeTransactions'; 

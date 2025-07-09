@@ -340,7 +340,7 @@ class SalaryAdvanceService {
           *,
           employe:employees(nom, prenom, email, telephone, poste),
           entreprise:partners(nom, type, secteur),
-          demande_avance:demandes_avance_salaire(*)
+          demande_avance:salary_advance_requests(*)
         `)
         .eq('entreprise_id', partnerId)
         .order('date_transaction', { ascending: false });
@@ -422,7 +422,7 @@ class SalaryAdvanceService {
           *,
           employe:employees(nom, prenom, email, telephone, poste),
           entreprise:partners(nom, type, secteur),
-          demande_avance:demandes_avance_salaire(*)
+          demande_avance:salary_advance_requests(*)
         `)
         .order('date_transaction', { ascending: false });
 
@@ -451,7 +451,7 @@ class SalaryAdvanceService {
           *,
           employe:employees(nom, prenom, email, telephone, poste),
           entreprise:partners(nom, type, secteur),
-          demande_avance:demandes_avance_salaire(*)
+          demande_avance:salary_advance_requests(*)
         `)
         .single();
 
@@ -477,7 +477,7 @@ class SalaryAdvanceService {
           *,
           employe:employees(nom, prenom, email, telephone, poste),
           entreprise:partners(nom, type, secteur),
-          demande_avance:demandes_avance_salaire(*)
+          demande_avance:salary_advance_requests(*)
         `)
         .single();
 

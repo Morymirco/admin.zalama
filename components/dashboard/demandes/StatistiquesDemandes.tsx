@@ -74,16 +74,16 @@ const StatistiquesDemandes: React.FC<StatistiquesDemandesProps> = ({ requestStat
       </div>
 
       {/* Cartes de statistiques */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* Total */}
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4 border border-[var(--zalama-border)]">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--zalama-text-secondary)]">Total</p>
-              <p className="text-2xl font-bold text-[var(--zalama-text)]">{requestStats.total}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-[var(--zalama-text-secondary)] truncate">Total</p>
+              <p className="text-xl md:text-2xl font-bold text-[var(--zalama-text)]">{requestStats.total}</p>
             </div>
-            <div className="text-[var(--zalama-blue)]">
-              <FileText className="w-6 h-6" />
+            <div className="text-[var(--zalama-blue)] flex-shrink-0 ml-2">
+              <FileText className="w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
         </div>
@@ -91,12 +91,12 @@ const StatistiquesDemandes: React.FC<StatistiquesDemandesProps> = ({ requestStat
         {/* En attente */}
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4 border border-[var(--zalama-border)]">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--zalama-text-secondary)]">En attente</p>
-              <p className="text-2xl font-bold text-[var(--zalama-warning)]">{requestStats.enAttente}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-[var(--zalama-text-secondary)] truncate">En attente</p>
+              <p className="text-xl md:text-2xl font-bold text-[var(--zalama-warning)]">{requestStats.enAttente}</p>
             </div>
-            <div className="text-[var(--zalama-warning)]">
-              <Clock className="w-6 h-6" />
+            <div className="text-[var(--zalama-warning)] flex-shrink-0 ml-2">
+              <Clock className="w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
         </div>
@@ -104,12 +104,12 @@ const StatistiquesDemandes: React.FC<StatistiquesDemandesProps> = ({ requestStat
         {/* Approuvées */}
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4 border border-[var(--zalama-border)]">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--zalama-text-secondary)]">Approuvées</p>
-              <p className="text-2xl font-bold text-[var(--zalama-success)]">{requestStats.approuvees}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-[var(--zalama-text-secondary)] truncate">Approuvées</p>
+              <p className="text-xl md:text-2xl font-bold text-[var(--zalama-success)]">{requestStats.approuvees}</p>
             </div>
-            <div className="text-[var(--zalama-success)]">
-              <CheckCircle className="w-6 h-6" />
+            <div className="text-[var(--zalama-success)] flex-shrink-0 ml-2">
+              <CheckCircle className="w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
         </div>
@@ -117,12 +117,12 @@ const StatistiquesDemandes: React.FC<StatistiquesDemandesProps> = ({ requestStat
         {/* Rejetées */}
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4 border border-[var(--zalama-border)]">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--zalama-text-secondary)]">Rejetées</p>
-              <p className="text-2xl font-bold text-[var(--zalama-danger)]">{requestStats.rejetees}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-[var(--zalama-text-secondary)] truncate">Rejetées</p>
+              <p className="text-xl md:text-2xl font-bold text-[var(--zalama-danger)]">{requestStats.rejetees}</p>
             </div>
-            <div className="text-[var(--zalama-danger)]">
-              <XCircle className="w-6 h-6" />
+            <div className="text-[var(--zalama-danger)] flex-shrink-0 ml-2">
+              <XCircle className="w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
         </div>
@@ -130,12 +130,12 @@ const StatistiquesDemandes: React.FC<StatistiquesDemandesProps> = ({ requestStat
         {/* Montant total */}
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4 border border-[var(--zalama-border)]">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--zalama-text-secondary)]">Montant total</p>
-              <p className="text-lg font-bold text-[var(--zalama-text)]">{formatCurrency(requestStats.montantTotal)}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-[var(--zalama-text-secondary)] truncate">Montant total</p>
+              <p className="text-sm md:text-lg font-bold text-[var(--zalama-text)] leading-tight">{formatCurrency(requestStats.montantTotal)}</p>
             </div>
-            <div className="text-[var(--zalama-green)]">
-              <DollarSign className="w-6 h-6" />
+            <div className="text-[var(--zalama-green)] flex-shrink-0 ml-2">
+              <DollarSign className="w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
         </div>
@@ -143,12 +143,12 @@ const StatistiquesDemandes: React.FC<StatistiquesDemandesProps> = ({ requestStat
         {/* Montant moyen */}
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-4 border border-[var(--zalama-border)]">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--zalama-text-secondary)]">Montant moyen</p>
-              <p className="text-lg font-bold text-[var(--zalama-text)]">{formatCurrency(requestStats.montantMoyen)}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-[var(--zalama-text-secondary)] truncate">Montant moyen</p>
+              <p className="text-sm md:text-lg font-bold text-[var(--zalama-text)] leading-tight">{formatCurrency(requestStats.montantMoyen)}</p>
             </div>
-            <div className="text-[var(--zalama-blue)]">
-              <TrendingUp className="w-6 h-6" />
+            <div className="text-[var(--zalama-blue)] flex-shrink-0 ml-2">
+              <TrendingUp className="w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import smsService from './smsService';
-import emailClientService from './emailClientService';
+import emailService from './emailService';
 import { createClient } from '@supabase/supabase-js';
 import { generatePassword, validateEmail } from '@/lib/utils';
 
@@ -216,12 +216,19 @@ class PartnerAccountService {
     }
 
     try {
-              await emailClientService.sendWelcomeEmailToRH({
-        nom: rhData.nom_rh,
-        email: rhData.email_rh,
-        password: accountResult.account?.password || '',
-        role: 'rh',
-        partenaireNom: rhData.nom
+              const subject = `Bienvenue sur ZaLaMa - ${rhData.nom}`;
+      const html = `
+        <h2>Bonjour ${rhData.nom_rh},</h2>
+        <p>Votre compte ZaLaMa RH a été créé avec succès.</p>
+        <p><strong>Email :</strong> ${rhData.email_rh}</p>
+        <p><strong>Mot de passe :</strong> ${accountResult.account?.password || ''}</p>
+        <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
+      `;
+      
+      await emailService.sendEmail({
+        to: [rhData.email_rh],
+        subject: subject,
+        html: html
       });
       
       return {
@@ -272,12 +279,19 @@ class PartnerAccountService {
     }
 
     try {
-              await emailClientService.sendWelcomeEmailToResponsable({
-        nom: responsableData.nom_representant,
-        email: responsableData.email_representant,
-        password: accountResult.account?.password || '',
-        role: 'responsable',
-        partenaireNom: responsableData.nom
+              const subject = `Bienvenue sur ZaLaMa - ${responsableData.nom}`;
+      const html = `
+        <h2>Bonjour ${responsableData.nom_representant},</h2>
+        <p>Votre compte ZaLaMa responsable a été créé avec succès.</p>
+        <p><strong>Email :</strong> ${responsableData.email_representant}</p>
+        <p><strong>Mot de passe :</strong> ${accountResult.account?.password || ''}</p>
+        <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
+      `;
+      
+      await emailService.sendEmail({
+        to: [responsableData.email_representant],
+        subject: subject,
+        html: html
       });
       
       return {

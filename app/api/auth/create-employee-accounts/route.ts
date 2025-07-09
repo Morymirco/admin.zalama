@@ -50,29 +50,24 @@ const directSmsService = {
   }
 };
 
+// Import du service email direct
+import emailService from '@/services/emailService';
+
 const directEmailService = {
   async sendEmail(to: string, subject: string, html: string) {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/email/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: to,
-          subject: subject,
-          html: html
-        }),
+      console.log('📧 Envoi email direct via emailService:', { to, subject });
+      
+      const result = await emailService.sendEmail({
+        to: [to],
+        subject: subject,
+        html: html
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erreur HTTP ${response.status}`);
-      }
-
-      return await response.json();
+      console.log('✅ Email envoyé avec succès:', result);
+      return result;
     } catch (error) {
-      console.error('Erreur email direct:', error);
+      console.error('❌ Erreur email direct:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erreur email'

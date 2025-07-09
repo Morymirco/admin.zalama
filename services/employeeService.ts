@@ -332,12 +332,19 @@ class EmployeeService {
           (await supabase.from('partners').select('nom').eq('id', employeeData.partner_id).single()).data?.nom || 'Partenaire inconnu' : 
           'Aucun partenaire';
         
-        const emailResult = await emailService.sendWelcomeEmailToEmployee({
-          nom: `${employeeData.prenom} ${employeeData.nom}`,
-          email: employeeData.email!,
-          password: password!,
-          role: 'employe',
-          partenaireNom: partenaireNom
+        const subject = `Bienvenue sur ZaLaMa - ${partenaireNom}`;
+        const html = `
+          <h2>Bonjour ${employeeData.prenom} ${employeeData.nom},</h2>
+          <p>Votre compte ZaLaMa employé a été créé avec succès.</p>
+          <p><strong>Email :</strong> ${employeeData.email}</p>
+          <p><strong>Mot de passe :</strong> ${password}</p>
+          <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
+        `;
+        
+        const emailResult = await emailService.sendEmail({
+          to: [employeeData.email!],
+          subject: subject,
+          html: html
         });
         
         emailResults.employe = {

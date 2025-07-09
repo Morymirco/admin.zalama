@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
-
-// Clé API Resend côté serveur (en dur pour éviter les problèmes de variables d'environnement)
-const resend = new Resend('re_aQWgf3nW_Ht5jAsAUj6BzqspyDqxEcCwB');
-
-// Configuration email (à remplacer par un vrai service comme SendGrid, Resend, etc.)
-const EMAIL_CONFIG = {
-  from: 'noreply@zalamagn.com',
-  service: 'simulation' // 'sendgrid', 'resend', 'nodemailer', etc.
-};
+import emailService from '@/services/emailService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,33 +9,38 @@ export async function POST(request: NextRequest) {
     // Validation des données
     if (!to || !subject || !html) {
       return NextResponse.json(
-        { error: 'Données manquantes: to, subject, html sont requis' },
+        { success: false, error: 'Données manquantes: to, subject, html sont requis' },
         { status: 400 }
       );
     }
 
-    console.log('📧 Email - Envoi vers:', to);
-    console.log('📧 Email - Sujet:', subject);
+    console.log('📧 Email - Envoi via API:', { to, subject });
 
-    // Envoi de l'email via Resend
-    const result = await resend.emails.send({
-      from: 'ZaLaMa <noreply@zalamagn.com>',
-      to: to,
+    // Utiliser emailService côté serveur
+    const result = await emailService.sendEmail({
+      to: Array.isArray(to) ? to : [to],
       subject: subject,
       html: html,
       text: text
     });
 
-    console.log('✅ Email envoyé avec succès:', result.data?.id);
-
-    return NextResponse.json({
-      success: true,
-      id: result.data?.id,
-      message: 'Email envoyé avec succès'
-    });
+    if (result.success) {
+      console.log('✅ Email envoyé avec succès via API:', result.id);
+      return NextResponse.json({
+        success: true,
+        id: result.id,
+        message: 'Email envoyé avec succès'
+      });
+    } else {
+      console.error('❌ Erreur email via API:', result.error);
+      return NextResponse.json({
+        success: false,
+        error: result.error || 'Erreur lors de l\'envoi de l\'email'
+      }, { status: 500 });
+    }
 
   } catch (error) {
-    console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
+    console.error('❌ Erreur générale lors de l\'envoi de l\'email via API:', error);
     
     return NextResponse.json(
       { 
@@ -61,17 +57,16 @@ export async function GET() {
   try {
     return NextResponse.json({
       success: true,
-      config: EMAIL_CONFIG,
-      message: 'Service email configuré (simulation)'
+      message: 'Service email API disponible',
+      service: 'Resend'
     });
   } catch (error) {
-    console.error('❌ Erreur vérification config email:', error);
+    console.error('❌ Erreur vérification config email API:', error);
     
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Erreur lors de la vérification de la configuration email',
-        details: error
+        error: 'Erreur lors de la vérification de la configuration email'
       },
       { status: 500 }
     );

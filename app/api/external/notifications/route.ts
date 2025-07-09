@@ -40,25 +40,26 @@ const createSMSService = () => {
   };
 };
 
+// Import du service email direct
+import emailService from '@/services/emailService';
+
 const createEmailService = () => {
   return {
     async sendEmail(data: { to: string; subject: string; html: string; text?: string }) {
       try {
-        // Simuler l'envoi email via l'API interne
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/email/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+        console.log('📧 Envoi email externe via emailService:', { to: data.to, subject: data.subject });
+        
+        const result = await emailService.sendEmail({
+          to: [data.to],
+          subject: data.subject,
+          html: data.html,
+          text: data.text
         });
-        
-        if (!response.ok) {
-          throw new Error(`Email API error: ${response.status}`);
-        }
-        
-        const result = await response.json();
+
+        console.log('✅ Email externe envoyé avec succès:', result);
         return { success: true, id: result.id || 'email_' + Date.now() };
       } catch (error) {
-        console.error('Email error:', error);
+        console.error('❌ Email error:', error);
         return { success: false, error: error instanceof Error ? error.message : 'Email error' };
       }
     }

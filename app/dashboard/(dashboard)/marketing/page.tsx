@@ -246,6 +246,7 @@ export default function MarketingPage() {
 
     try {
       setEmailLoading(true);
+      
       const response = await fetch('/api/email/send', {
         method: 'POST',
         headers: {
@@ -254,19 +255,20 @@ export default function MarketingPage() {
         body: JSON.stringify({
           to: recipients,
           subject: emailSubject,
-          message: emailMessage,
+          html: emailMessage,
+          text: emailMessage,
         }),
       });
 
-      const data = await response.json();
+      const result = await response.json();
       
-      if (data.success) {
+      if (result.success) {
         toast.success(`Emails envoyés avec succès à ${recipients.length} destinataire(s)`);
         setEmailSubject('');
         setEmailMessage('');
         setEmailRecipients('');
       } else {
-        toast.error(data.error || 'Erreur lors de l\'envoi des emails');
+        toast.error(result.error || 'Erreur lors de l\'envoi des emails');
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi des emails:', error);

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import smsService from './smsService';
-import emailClientService from './emailClientService';
+import emailService from './emailService';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -101,13 +101,21 @@ class PartnershipNotificationService {
       // Envoyer email au partenaire
       if (request.email) {
         try {
-          const emailResult = await emailClientService.sendPartnershipApprovalEmail({
-            companyName: request.company_name,
-            repName: request.rep_full_name,
-            hrName: request.hr_full_name,
-            email: request.email,
-            activityDomain: request.activity_domain,
-            phone: request.phone
+          const subject = `🎉 Demande de partenariat approuvée - ${request.company_name}`;
+          const html = `
+            <h2>Félicitations ! Votre demande de partenariat a été approuvée</h2>
+            <p><strong>Entreprise :</strong> ${request.company_name}</p>
+            <p><strong>Représentant :</strong> ${request.rep_full_name}</p>
+            <p><strong>RH :</strong> ${request.hr_full_name}</p>
+            <p><strong>Domaine d'activité :</strong> ${request.activity_domain}</p>
+            <p><strong>Téléphone :</strong> ${request.phone}</p>
+            <p>Votre équipe ZaLaMa vous contactera bientôt pour finaliser l'intégration.</p>
+          `;
+          
+          const emailResult = await emailService.sendEmail({
+            to: [request.email],
+            subject: subject,
+            html: html
           });
           
           results.email = {
@@ -128,14 +136,23 @@ class PartnershipNotificationService {
       // Envoyer email aux contacts RH et responsables
       if (contacts.length > 0) {
         try {
-          const adminEmailResult = await emailClientService.sendPartnershipApprovalAdminEmail({
-            companyName: request.company_name,
-            repName: request.rep_full_name,
-            hrName: request.hr_full_name,
-            email: request.email,
-            activityDomain: request.activity_domain,
-            phone: request.phone,
-            adminContacts: contacts
+          const adminSubject = `Nouveau partenariat approuvé - ${request.company_name}`;
+          const adminHtml = `
+            <h2>Nouveau partenariat approuvé</h2>
+            <p><strong>Entreprise :</strong> ${request.company_name}</p>
+            <p><strong>Représentant :</strong> ${request.rep_full_name}</p>
+            <p><strong>RH :</strong> ${request.hr_full_name}</p>
+            <p><strong>Domaine d'activité :</strong> ${request.activity_domain}</p>
+            <p><strong>Contact :</strong> ${request.email} - ${request.phone}</p>
+            <p>Un nouveau partenaire a été approuvé et intégré à la plateforme ZaLaMa.</p>
+          `;
+          
+          // Envoyer aux contacts admin
+          const adminEmails = contacts.map(contact => contact.email).filter(email => email);
+          const adminEmailResult = await emailService.sendEmail({
+            to: adminEmails,
+            subject: adminSubject,
+            html: adminHtml
           });
           
           if (!results.email.success) {

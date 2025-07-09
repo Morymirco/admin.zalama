@@ -1,6 +1,6 @@
 import { generatePassword, sendSMS } from '@/lib/utils';
 import smsService from './smsService';
-import emailClientService from './emailClientService';
+import emailService from './emailService';
 
 interface EmployeeAccountData {
   email: string;
@@ -160,12 +160,19 @@ class EmployeeAccountService {
     }
 
     try {
-      const emailResult = await emailClientService.sendWelcomeEmailToEmployee({
-        nom: `${employeeData.prenom} ${employeeData.nom}`,
-        email: employeeData.email,
-        password: accountResult.account?.password || '',
-        role: 'employe',
-        partenaireNom: employeeData.partenaireNom || 'Votre entreprise'
+      const subject = `Bienvenue sur ZaLaMa - ${employeeData.partenaireNom || 'Votre entreprise'}`;
+      const html = `
+        <h2>Bonjour ${employeeData.prenom} ${employeeData.nom},</h2>
+        <p>Votre compte ZaLaMa employé a été créé avec succès.</p>
+        <p><strong>Email :</strong> ${employeeData.email}</p>
+        <p><strong>Mot de passe :</strong> ${accountResult.account?.password || ''}</p>
+        <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
+      `;
+      
+      const emailResult = await emailService.sendEmail({
+        to: [employeeData.email],
+        subject: subject,
+        html: html
       });
       
       return {

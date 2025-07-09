@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
-import { Eye, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, Edit, Trash2, CreditCard } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, Edit, Trash2, CreditCard, Shield } from 'lucide-react';
 
 interface ListeDemandesProps {
   requests: UISalaryAdvanceRequest[];
@@ -53,6 +53,27 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getPaymentStatusIcon = (numeroReception: string | null) => {
+    if (numeroReception) {
+      return <Shield className="w-4 h-4 text-[var(--zalama-success)]" />;
+    }
+    return <Clock className="w-4 h-4 text-[var(--zalama-warning)]" />;
+  };
+
+  const getPaymentStatusColor = (numeroReception: string | null) => {
+    if (numeroReception) {
+      return 'bg-green-100 text-green-800';
+    }
+    return 'bg-yellow-100 text-yellow-800';
+  };
+
+  const getPaymentStatusText = (numeroReception: string | null) => {
+    if (numeroReception) {
+      return 'Payé';
+    }
+    return 'En attente';
   };
 
   const formatCurrency = (amount: number) => {
@@ -122,6 +143,17 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
                           {request.statut}
                         </span>
                       </div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`px-2 py-1 text-xs rounded-full ${getPaymentStatusColor(request.numero_reception)}`}>
+                          {getPaymentStatusIcon(request.numero_reception)}
+                          <span className="ml-1">{getPaymentStatusText(request.numero_reception)}</span>
+                        </span>
+                        {request.numero_reception && (
+                          <span className="text-xs text-[var(--zalama-text-secondary)]">
+                            N° {request.numero_reception.slice(0, 8)}...
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-[var(--zalama-text-secondary)]">
                         {request.partenaireNom || 'Partenaire inconnu'} • {formatDate(request.dateCreation)}
                       </p>
@@ -166,7 +198,7 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
                         </>
                       )}
                       
-                      {request.statut === 'Validé' && onPay && (
+                      {request.statut === 'Validé' && !request.numero_reception && onPay && (
                         <button
                           onClick={() => onPay(request)}
                           className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"

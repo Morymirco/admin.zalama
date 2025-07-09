@@ -49,6 +49,7 @@ export default function DemandesPage() {
     approveRequest,
     rejectRequest,
     deleteRequest,
+    refreshRequests,
     refreshTransactions
   } = useSupabaseSalaryAdvance(10);
 
@@ -316,46 +317,46 @@ export default function DemandesPage() {
           <div className="p-4 md:p-6 lg:p-8">
             {activeTab === 'demandes' ? (
               <div className="space-y-6 lg:space-y-8">
-                {/* En-tête avec recherche et filtres */}
+      {/* En-tête avec recherche et filtres */}
                 <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                   <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--zalama-text-secondary)]" />
-                      <input
-                        type="text"
-                        placeholder="Rechercher une demande..."
-                        value={searchTerm}
-                        onChange={handleSearch}
+            <input
+              type="text"
+              placeholder="Rechercher une demande..."
+              value={searchTerm}
+              onChange={handleSearch}
                         className="pl-10 pr-4 py-2 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20 w-full lg:w-96"
-                      />
-                    </div>
-                    
+            />
+        </div>
+        
                     <div className="flex items-center gap-2 flex-wrap">
                       <Filter className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => handleStatusFilterChange(e.target.value)}
+            <select
+              value={statusFilter}
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
                         className="px-3 py-2 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20 min-w-[140px]"
-                      >
-                        {safeStatuses.map((status) => (
-                          <option key={status} value={status}>
-                            {status === 'toutes' ? 'Tous les statuts' : status}
-                          </option>
-                        ))}
-                      </select>
-                      
-                      <select
-                        value={partnerFilter}
-                        onChange={(e) => handlePartnerFilterChange(e.target.value)}
+            >
+              {safeStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === 'toutes' ? 'Tous les statuts' : status}
+                </option>
+              ))}
+            </select>
+            
+            <select
+              value={partnerFilter}
+              onChange={(e) => handlePartnerFilterChange(e.target.value)}
                         className="px-3 py-2 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20 min-w-[160px]"
-                      >
-                        {safePartners.map((partner) => (
-                          <option key={partner} value={partner}>
-                            {partner === 'toutes' ? 'Tous les partenaires' : partner}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+            >
+              {safePartners.map((partner) => (
+                <option key={partner} value={partner}>
+                  {partner === 'toutes' ? 'Tous les partenaires' : partner}
+                </option>
+              ))}
+            </select>
+          </div>
                   </div>
                   
                   <div className="flex items-center gap-2 flex-wrap">
@@ -367,48 +368,49 @@ export default function DemandesPage() {
                       <span className="hidden sm:inline">Vérifier paiements</span>
                       <span className="sm:hidden">Vérifier</span>
                     </button>
-                    
-                    <button
-                      onClick={handleAddRequest}
+          
+          <button
+            onClick={handleAddRequest}
                       className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors text-sm"
-                    >
+          >
                       <Plus className="w-4 h-4" />
                       <span className="hidden sm:inline">Nouvelle demande</span>
                       <span className="sm:hidden">Nouvelle</span>
-                    </button>
-                  </div>
-                </div>
+          </button>
+        </div>
+      </div>
 
                 {/* Statistiques */}
                 <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
-                  <StatistiquesDemandes 
-                    requestStats={stats}
-                    isLoading={statsLoading}
-                  />
+          <StatistiquesDemandes 
+            requestStats={stats}
+            isLoading={statsLoading}
+          />
                 </div>
-
+          
                 {/* Résumé */}
                 <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
-                  <ResumeDemandes 
-                    requests={requests}
-                    isLoading={isLoading}
-                  />
+          <ResumeDemandes 
+            requests={requests}
+            isLoading={isLoading}
+          />
                 </div>
-
-                {/* Liste des demandes */}
+          
+          {/* Liste des demandes */}
                 <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
-                  <ListeDemandes 
-                    requests={safeFilteredRequests}
-                    isLoading={isLoading}
-                    onView={handleViewRequest}
-                    onPay={handlePayRequest}
-                    onApprove={handleApproveRequest}
-                    onReject={handleRejectRequest}
-                    onDelete={handleDeleteRequest}
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
+          <ListeDemandes 
+            requests={safeFilteredRequests}
+            isLoading={isLoading}
+            onView={handleViewRequest}
+            onPay={handlePayRequest}
+            onApprove={handleApproveRequest}
+            onReject={handleRejectRequest}
+            onDelete={handleDeleteRequest}
+                    onRefresh={refreshRequests}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
                 </div>
               </div>
             ) : (
@@ -426,18 +428,18 @@ export default function DemandesPage() {
                   </div>
                 </div>
 
-                {/* Liste des transactions */}
+          {/* Liste des transactions */}
                 <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
-                  <ListeTransactions 
-                    transactions={transactions || []}
-                    isLoading={transactionsLoading}
-                    onView={(transaction) => {
-                      // TODO: Implement view functionality
-                      console.log('View transaction:', transaction);
-                    }}
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
+          <ListeTransactions 
+            transactions={transactions || []}
+            isLoading={transactionsLoading}
+            onView={(transaction) => {
+              // TODO: Implement view functionality
+              console.log('View transaction:', transaction);
+            }}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
                     onRefresh={refreshTransactions}
                   />
                 </div>

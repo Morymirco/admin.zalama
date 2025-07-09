@@ -1,8 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
-import { Eye, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, Edit, Trash2, CreditCard, Shield } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, Edit, Trash2, CreditCard, Shield, RefreshCw, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ListeDemandesProps {
   requests: UISalaryAdvanceRequest[];
@@ -12,6 +13,7 @@ interface ListeDemandesProps {
   onReject: (request: UISalaryAdvanceRequest) => void;
   onDelete: (request: UISalaryAdvanceRequest) => void;
   onPay?: (request: UISalaryAdvanceRequest) => void;
+  onRefresh?: () => void;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -25,10 +27,48 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
   onReject,
   onDelete,
   onPay,
+  onRefresh,
   currentPage,
   totalPages,
   onPageChange
 }) => {
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+
+  const handleSyncPaymentStatus = async (request: UISalaryAdvanceRequest) => {
+    setSyncingId(request.id);
+    try {
+      console.log('🔄 Synchronisation du statut de paiement pour:', request.id);
+      
+      const response = await fetch('/api/payments/sync-payment-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: request.id })
+      });
+      
+      const data = await response.json();
+      console.log('📊 Réponse de synchronisation:', data);
+      
+      if (response.ok) {
+        toast.success(
+          `Synchronisation terminée: ${data.updated} demande(s) mise(s) à jour`,
+          { duration: 4000 }
+        );
+        
+        // Rafraîchir la liste si la fonction onRefresh est disponible
+        if (onRefresh) {
+          console.log('🔄 Rafraîchissement de la liste des demandes...');
+          onRefresh();
+        }
+      } else {
+        toast.error(data.error || 'Erreur lors de la synchronisation');
+      }
+    } catch (e) {
+      console.error('❌ Erreur lors de la synchronisation:', e);
+      toast.error('Erreur réseau lors de la synchronisation');
+    } finally {
+      setSyncingId(null);
+    }
+  };
   const getStatusIcon = (statut: string) => {
     switch (statut) {
       case 'En attente':
@@ -178,6 +218,22 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                      
+                      {/* Bouton de synchronisation pour les demandes validées sans numero_reception */}
+                      {request.statut === 'Validé' && !request.numero_reception && (
+                        <button
+                          onClick={() => handleSyncPaymentStatus(request)}
+                          disabled={syncingId === request.id}
+                          className="p-2 text-[var(--zalama-blue)] hover:text-[var(--zalama-blue-dark)] hover:bg-[var(--zalama-blue-light)] rounded-lg transition-colors disabled:opacity-50"
+                          title="Synchroniser le statut de paiement"
+                        >
+                          {syncingId === request.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                       
                       {request.statut === 'En attente' && (
                         <>

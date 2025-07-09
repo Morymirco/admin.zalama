@@ -1,8 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UITransaction } from '@/types/salaryAdvanceRequest';
-import { Eye, CheckCircle, XCircle, Clock, DollarSign, CreditCard, Smartphone, Banknote, FileText } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Clock, DollarSign, CreditCard, Smartphone, Banknote, FileText, RefreshCw, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ListeTransactionsProps {
   transactions: UITransaction[];
@@ -21,6 +22,40 @@ const ListeTransactions: React.FC<ListeTransactionsProps> = ({
   totalPages,
   onPageChange
 }) => {
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
+  const handleVerifyStatus = async (transaction: UITransaction) => {
+    setVerifyingId(transaction.id);
+    try {
+      console.log('🔍 Vérification du statut pour:', transaction.numero_transaction);
+      
+      const response = await fetch('/api/payments/lengo-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pay_id: transaction.numero_transaction })
+      });
+      
+      const data = await response.json();
+      console.log('📊 Réponse de vérification:', data);
+      
+      if (response.ok) {
+        const status = data.lengo_status || data.status || 'Inconnu';
+        const dbStatus = data.db_status || 'Non mis à jour';
+        
+        toast.success(
+          `Statut vérifié: ${status}${dbStatus !== status ? ` (DB: ${dbStatus})` : ''}`,
+          { duration: 4000 }
+        );
+      } else {
+        toast.error(data.error || 'Erreur lors de la vérification du statut');
+      }
+    } catch (e) {
+      console.error('❌ Erreur lors de la vérification:', e);
+      toast.error('Erreur réseau lors de la vérification du statut');
+    } finally {
+      setVerifyingId(null);
+    }
+  };
   const getStatusIcon = (statut: string) => {
     switch (statut) {
       case 'EFFECTUEE':
@@ -156,6 +191,18 @@ const ListeTransactions: React.FC<ListeTransactionsProps> = ({
                     </div>
                     
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleVerifyStatus(transaction)}
+                        disabled={verifyingId === transaction.id}
+                        className="p-2 text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-blue)] hover:bg-[var(--zalama-bg)] rounded-lg transition-colors disabled:opacity-50"
+                        title="Vérifier le statut actuel"
+                      >
+                        {verifyingId === transaction.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                      </button>
                       <button
                         onClick={() => onView(transaction)}
                         className="p-2 text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg)] rounded-lg transition-colors"

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CreditCard, RefreshCw, Loader2, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { CreditCard, RefreshCw, Loader2, CheckCircle, XCircle, Clock, AlertCircle, Eye } from 'lucide-react';
 import { Transaction, useTransactions } from '@/hooks/useTransactions';
 import { toast } from 'sonner';
 
@@ -85,20 +85,36 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
   const handleVerifyStatus = async (transaction: Transaction) => {
     setVerifyingId(transaction.id);
     try {
+      console.log('🔍 Vérification du statut pour:', transaction.numero_transaction);
+      
       const response = await fetch('/api/payments/lengo-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pay_id: transaction.numero_transaction })
       });
+      
       const data = await response.json();
+      console.log('📊 Réponse de vérification:', data);
+      
       if (response.ok) {
-        toast.success(`Statut: ${data.lengo_status || data.status || 'Inconnu'}`);
-        await refreshTransactions();
+        const status = data.lengo_status || data.status || 'Inconnu';
+        const dbStatus = data.db_status || 'Non mis à jour';
+        
+        toast.success(
+          `Statut vérifié: ${status}${dbStatus !== status ? ` (DB: ${dbStatus})` : ''}`,
+          { duration: 4000 }
+        );
+        
+        // Rafraîchir la liste si le statut a changé
+        if (data.db_status && data.db_status !== transaction.statut) {
+          await refreshTransactions();
+        }
       } else {
-        toast.error(data.error || 'Erreur lors de la vérification');
+        toast.error(data.error || 'Erreur lors de la vérification du statut');
       }
     } catch (e) {
-      toast.error('Erreur réseau lors de la vérification');
+      console.error('❌ Erreur lors de la vérification:', e);
+      toast.error('Erreur réseau lors de la vérification du statut');
     } finally {
       setVerifyingId(null);
     }
@@ -202,15 +218,15 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
                     <Button
                       size="icon"
                       variant="outline"
-                      className="ml-2 border-[var(--zalama-border)]"
+                      className="ml-2 border-[var(--zalama-border)] hover:bg-[var(--zalama-blue)] hover:text-white hover:border-[var(--zalama-blue)] transition-colors"
                       onClick={e => { e.stopPropagation(); handleVerifyStatus(transaction); }}
                       disabled={verifyingId === transaction.id}
-                      title="Vérifier le statut"
+                      title="Vérifier le statut actuel"
                     >
                       {verifyingId === transaction.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <RefreshCw className="w-4 h-4" />
+                        <Eye className="w-4 h-4" />
                       )}
                     </Button>
                   </div>

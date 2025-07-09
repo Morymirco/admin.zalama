@@ -98,20 +98,19 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
       const data = await response.json();
       console.log('📊 Réponse de vérification:', data);
       
-      if (response.ok) {
-        const status = data.lengo_status || data.status || 'Inconnu';
-        const dbStatus = data.db_status || 'Non mis à jour';
-        
-        toast.success(
-          `Statut vérifié: ${status}${dbStatus !== status ? ` (DB: ${dbStatus})` : ''}`,
-          { duration: 4000 }
-        );
-        
-        // Rafraîchir la liste si le statut a changé
-        if (data.db_status && data.db_status !== transaction.statut) {
+              if (response.ok) {
+          const status = data.lengo_status || data.status || 'Inconnu';
+          const dbStatus = data.db_status || 'Non mis à jour';
+          
+          toast.success(
+            `Statut vérifié: ${status}${dbStatus !== status ? ` (DB: ${dbStatus})` : ''}`,
+            { duration: 4000 }
+          );
+          
+          // Toujours rafraîchir la liste après une vérification réussie
+          console.log('🔄 Rafraîchissement de la liste des transactions...');
           await refreshTransactions();
-        }
-      } else {
+        } else {
         toast.error(data.error || 'Erreur lors de la vérification du statut');
       }
     } catch (e) {

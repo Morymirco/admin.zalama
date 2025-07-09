@@ -48,7 +48,8 @@ export default function DemandesPage() {
     createRequest,
     approveRequest,
     rejectRequest,
-    deleteRequest
+    deleteRequest,
+    refreshTransactions
   } = useSupabaseSalaryAdvance(10);
 
   // Utilisation des hooks pour les employés et partenaires
@@ -437,6 +438,7 @@ export default function DemandesPage() {
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={handlePageChange}
+                    onRefresh={refreshTransactions}
                   />
                 </div>
 

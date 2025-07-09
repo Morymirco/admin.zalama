@@ -12,6 +12,7 @@ interface ListeTransactionsProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  onRefresh?: () => void;
 }
 
 const ListeTransactions: React.FC<ListeTransactionsProps> = ({
@@ -20,7 +21,8 @@ const ListeTransactions: React.FC<ListeTransactionsProps> = ({
   onView,
   currentPage,
   totalPages,
-  onPageChange
+  onPageChange,
+  onRefresh
 }) => {
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
@@ -46,6 +48,12 @@ const ListeTransactions: React.FC<ListeTransactionsProps> = ({
           `Statut vérifié: ${status}${dbStatus !== status ? ` (DB: ${dbStatus})` : ''}`,
           { duration: 4000 }
         );
+        
+        // Rafraîchir la liste si la fonction onRefresh est disponible
+        if (onRefresh) {
+          console.log('🔄 Rafraîchissement de la liste des transactions...');
+          onRefresh();
+        }
       } else {
         toast.error(data.error || 'Erreur lors de la vérification du statut');
       }

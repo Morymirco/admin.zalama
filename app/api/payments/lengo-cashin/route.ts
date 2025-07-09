@@ -30,6 +30,35 @@ function normalizePhone(phone: string): string {
   return p;
 }
 
+// Fonction pour mapper le type_account LengoPay vers l'enum methode_paiement
+function mapTypeAccountToMethodePaiement(typeAccount: string): string {
+  if (!typeAccount) return 'MOBILE_MONEY';
+  const type = typeAccount.trim().toLowerCase();
+  
+  // Mapping des types de compte LengoPay vers nos méthodes de paiement
+  if (type.includes('om') || type.includes('orange')) return 'MOBILE_MONEY';
+  if (type.includes('mtn') || type.includes('mobile')) return 'MOBILE_MONEY';
+  if (type.includes('virement') || type.includes('bank')) return 'VIREMENT_BANCAIRE';
+  if (type.includes('cheque')) return 'CHEQUE';
+  if (type.includes('cash') || type.includes('especes')) return 'ESPECES';
+  
+  // Par défaut, considérer comme mobile money
+  return 'MOBILE_MONEY';
+}
+
+// Fonction pour mapper le statut LengoPay vers l'enum transaction_statut
+function mapLengoStatusToTransactionStatut(lengoStatus: string): string {
+  if (!lengoStatus) return 'ANNULEE';
+  const status = lengoStatus.trim().toUpperCase();
+  
+  // Si le statut est SUCCESS, la transaction est EFFECTUEE
+  if (status === 'SUCCESS') return 'EFFECTUEE';
+  
+  // Pour tous les autres statuts (PENDING, FAILED, etc.), on considère comme ANNULEE
+  // La transaction sera mise à jour plus tard quand le statut changera
+  return 'ANNULEE';
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Début de la route lengo-cashin');
@@ -97,18 +126,26 @@ export async function POST(request: NextRequest) {
 
     // Insérer la transaction dans la table transactions
     console.log('💾 Insertion de la transaction dans la base de données...');
+    const mappedMethodePaiement = mapTypeAccountToMethodePaiement(lengoParams.type_account);
+    const mappedStatut = mapLengoStatusToTransactionStatut(lengoResult.status);
+    
+    console.log('🔄 Mapping des données:', { 
+      methode_paiement: { original: lengoParams.type_account, mapped: mappedMethodePaiement },
+      statut: { original: lengoResult.status, mapped: mappedStatut }
+    });
+    
     const transactionData = {
       montant: parseFloat(amount),
       numero_transaction: lengoResult.pay_id,
-      methode_paiement: lengoParams.type_account,
+      methode_paiement: mappedMethodePaiement,
       numero_compte: phone,
       description: description,
       entreprise_id: partnerId || null,
       demande_avance_id: requestId || null,
       employe_id: employeId || null,
-      statut: 'EN_ATTENTE',
+      statut: mappedStatut,
       date_creation: new Date().toISOString(),
-      date_transaction: null,
+      date_transaction: lengoResult.status === 'Success' ? new Date().toISOString() : null,
     };
     
     console.log('📊 Données de transaction à insérer:', transactionData);

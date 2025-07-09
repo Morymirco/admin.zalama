@@ -45,10 +45,29 @@ export async function POST(request: NextRequest) {
     console.log('🌐 Appel de l\'API Lengo Pay pour vérifier le statut...');
     const statusResult = await lengoPayStatus(statusParams);
     console.log('✅ Réponse statut Lengo Pay reçue:', statusResult);
+    console.log('🔍 Type de statusResult:', typeof statusResult);
+    console.log('🔍 Clés de statusResult:', Object.keys(statusResult || {}));
 
-    if (!statusResult.status) {
-      console.error('❌ Erreur Lengo Pay:', statusResult);
-      return NextResponse.json({ success: false, error: statusResult.message || 'Erreur Lengo Pay' }, { status: 502 });
+    if (!statusResult || !statusResult.status) {
+      console.error('❌ Erreur Lengo Pay ou réponse vide:', statusResult);
+      
+      // Retourner une réponse avec le statut actuel de la base de données
+      const { data: currentTransaction } = await supabase
+        .from('transactions')
+        .select('statut, updated_at')
+        .eq('numero_transaction', pay_id)
+        .single();
+      
+      console.log('📋 Statut actuel en base:', currentTransaction);
+      
+      return NextResponse.json({ 
+        success: true,
+        pay_id: pay_id,
+        lengo_status: 'UNKNOWN',
+        db_status: currentTransaction?.statut || 'EN_ATTENTE',
+        transaction: currentTransaction,
+        message: 'Statut non disponible depuis Lengo Pay, utilisation du statut en base'
+      });
     }
 
     // Mettre à jour le statut dans la base de données si nécessaire

@@ -103,6 +103,8 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
         const statusResult = await statusResponse.json();
         console.log('📊 Statut du paiement vérifié:', statusResult);
         
+        console.log('🔍 Statut reçu:', statusResult.db_status);
+        
         if (statusResult.db_status === 'EFFECTUEE') {
           setPaymentStatus('success');
           toast.success('✅ Paiement confirmé avec succès!');
@@ -125,8 +127,14 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
           // Envoyer les notifications d'échec
           await sendNotifications('failed', payId, statusResult);
           
-        } else {
+        } else if (statusResult.db_status === 'EN_ATTENTE' || statusResult.lengo_status === 'UNKNOWN') {
+          console.log('⏳ Statut en attente, nouvelle tentative dans 3 secondes...');
           // Statut en attente, réessayer après un délai
+          setTimeout(() => checkPaymentStatusAndNotify(payId, currentRetryCount + 1), 1000);
+          return;
+        } else {
+          console.log('❓ Statut inconnu:', statusResult.db_status, 'Nouvelle tentative...');
+          // Statut inconnu, réessayer après un délai
           setTimeout(() => checkPaymentStatusAndNotify(payId, currentRetryCount + 1), 3000);
           return;
         }
@@ -250,7 +258,7 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
         // Vérifier automatiquement le statut et envoyer les notifications
         setTimeout(() => {
           checkPaymentStatusAndNotify(result.pay_id);
-        }, 2000); // Commencer la vérification après 2 secondes
+        }, 5000); // Commencer la vérification après 5 secondes pour laisser le temps au paiement
         
         // Ne pas fermer le modal immédiatement, attendre le résultat
         // onClose();

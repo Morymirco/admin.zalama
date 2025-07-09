@@ -133,6 +133,18 @@ export async function POST(request: NextRequest) {
       console.log('  - Employé ID:', result.employee.id);
       console.log('  - User ID:', result.employee.user_id);
       console.log('  - Compte créé:', result.accountResults.employe.success);
+      
+      // Afficher les identifiants si disponibles
+      if (result.accountResults.employe.password) {
+        console.log('🔐 IDENTIFIANTS FINAUX EMPLOYÉ:');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`👤 Nom: ${result.employee.prenom} ${result.employee.nom}`);
+        console.log(`📧 Email: ${result.employee.email}`);
+        console.log(`🔑 Mot de passe: ${result.accountResults.employe.password}`);
+        console.log(`📱 Téléphone: ${result.employee.telephone || 'Non fourni'}`);
+        console.log(`🌐 URL de connexion: https://admin.zalama.com`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      }
 
       return NextResponse.json({
         success: true,

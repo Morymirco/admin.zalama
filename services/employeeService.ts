@@ -144,6 +144,16 @@ class EmployeeService {
         // Générer un mot de passe sécurisé
         password = generatePassword();
         
+        // Afficher les identifiants dans la console
+        console.log('🔐 IDENTIFIANTS EMPLOYÉ CRÉÉ:');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`👤 Nom: ${employeeData.prenom} ${employeeData.nom}`);
+        console.log(`📧 Email: ${employeeData.email}`);
+        console.log(`🔑 Mot de passe: ${password}`);
+        console.log(`📱 Téléphone: ${employeeData.telephone || 'Non fourni'}`);
+        console.log(`🌐 URL de connexion: https://admin.zalama.com`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
         // Créer le compte dans Supabase Auth
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: employeeData.email,
@@ -291,7 +301,20 @@ class EmployeeService {
           message: adminSMSResult.success ? 'SMS admin envoyé' : '',
           error: adminSMSResult.error || adminSMSResult.message || ''
         };
-        console.log('📱 SMS admin:', smsResults.admin.success ? '✅ Envoyé' : `❌ ${smsResults.admin.error}`);
+        
+        // Afficher un message plus informatif selon le type d'erreur
+        if (smsResults.admin.success) {
+          console.log('📱 SMS admin: ✅ Envoyé');
+        } else {
+          const errorMsg = smsResults.admin.error;
+          if (errorMsg.includes('solde insuffisant')) {
+            console.log('📱 SMS admin: ⚠️ Solde insuffisant - SMS non envoyé');
+          } else if (errorMsg.includes('Solde SMS insuffisant')) {
+            console.log('📱 SMS admin: ⚠️ Solde SMS insuffisant - SMS non envoyé');
+          } else {
+            console.log(`📱 SMS admin: ❌ ${smsResults.admin.error}`);
+          }
+        }
       } catch (smsError) {
         smsResults.admin = {
           success: false,

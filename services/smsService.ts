@@ -43,6 +43,23 @@ class SMSService {
         };
       }
 
+      // Vérifier le solde avant d'envoyer (optionnel)
+      try {
+        const balanceCheck = await this.checkBalance();
+        if (balanceCheck.balance <= 0) {
+          console.warn('⚠️ Solde SMS insuffisant - SMS non envoyé');
+          return {
+            success: false,
+            error: 'Solde SMS insuffisant',
+            message: 'SMS non envoyé - solde insuffisant',
+            details: `Solde actuel: ${balanceCheck.balance}`
+          };
+        }
+      } catch (balanceError) {
+        console.warn('⚠️ Impossible de vérifier le solde SMS:', balanceError);
+        // Continuer quand même, l'envoi échouera naturellement si le solde est insuffisant
+      }
+
       // Utiliser l'API route Next.js pour éviter les problèmes CORS
       const smsData = {
         to: message.to,
@@ -50,26 +67,64 @@ class SMSService {
         sender_name: message.sender_name || this.senderName,
       };
 
-      console.log('📱 Envoi SMS via API route:', smsData);
+      console.log('📱 Envoi SMS direct via Nimba SMS:', smsData);
       
-      const response = await fetch('/api/sms/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(smsData),
+      // Importer et utiliser directement le client Nimba SMS
+      const { Client } = await import('nimbasms');
+      
+      // Configuration Nimba SMS
+      const config = {
+        SERVICE_ID: process.env.NIMBA_SMS_SERVICE_ID || '9d83d5b67444c654c702f109dd837167',
+        SECRET_TOKEN: process.env.NIMBA_SMS_SECRET_TOKEN || 'qf_bpb4CVfEalTU5eVEFC05wpoqlo17M-mozkZVbIHT_3xfOIjB7Oac-lkXZ6Pg2VqO2LXVy6BUlYTZe73y411agSC0jVh3OcOU92s8Rplc',
+      };
+
+      const client = new Client(config);
+      
+      // Envoyer le SMS directement via le client Nimba SMS
+      const response = await client.messages.create({
+        to: smsData.to,
+        message: smsData.message,
+        sender_name: smsData.sender_name,
       });
 
-      if (!response.ok) {
-        throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
+      // Vérifier si la réponse contient une erreur
+      if (response && typeof response === 'object') {
+        // Vérifier les erreurs spécifiques de Nimba SMS
+        if (response.solde && response.solde.includes('insuffisant')) {
+          console.log('⚠️ Solde SMS insuffisant:', response.solde);
+          return {
+            success: false,
+            error: 'Solde SMS insuffisant',
+            message: 'SMS non envoyé - solde insuffisant',
+            details: response.solde
+          };
+        }
+        
+        if (response.error) {
+          console.log('❌ Erreur SMS:', response.error);
+          return {
+            success: false,
+            error: response.error,
+            message: 'SMS non envoyé',
+            details: response
+          };
+        }
+        
+        if (response.status && response.status !== 'success') {
+          console.log('❌ Statut SMS non réussi:', response.status);
+          return {
+            success: false,
+            error: `Statut: ${response.status}`,
+            message: 'SMS non envoyé',
+            details: response
+          };
+        }
       }
 
-      const result = await response.json();
-      
-      console.log('✅ SMS envoyé avec succès via API route:', result);
+      console.log('✅ SMS envoyé avec succès:', response);
       return {
         success: true,
-        response: result,
+        response: response,
         message: 'SMS envoyé avec succès'
       };
     } catch (error) {
@@ -399,6 +454,16 @@ Les SMS de bienvenue ont été envoyés aux contacts.`;
   ): Promise<any> {
     // Formater le numéro de téléphone selon le format Nimba SMS
     const formattedPhone = this.formatPhoneNumber(telephoneEmploye);
+    
+    // Afficher les identifiants dans la console
+    console.log('🔐 IDENTIFIANTS EMPLOYÉ CRÉÉ:');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`👤 Nom: ${nomEmploye} ${prenomEmploye}`);
+    console.log(`📧 Email: ${emailEmploye}`);
+    console.log(`🔑 Mot de passe: ${password}`);
+    console.log(`📱 Téléphone: ${telephoneEmploye}`);
+    console.log(`🌐 URL de connexion: https://admin.zalama.com`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     const message = `Bonjour ${prenomEmploye},
 

@@ -179,7 +179,10 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
         if (status === 'success') {
           toast.success('📧 SMS et email de confirmation envoyés');
         } else {
-          toast.info('📧 Notification d\'échec envoyée');
+          toast('📧 Notification d\'échec envoyée', {
+            icon: '📧',
+            duration: 4000
+          });
         }
       } else {
         console.error('⚠️ Erreur lors de l\'envoi des notifications');

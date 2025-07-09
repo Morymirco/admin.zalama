@@ -198,23 +198,23 @@ export default function MarketingPage() {
 
     try {
       setSmsLoading(true);
-      const response = await fetch('/api/sms/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+          const response = await fetch('/api/sms/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
           to: recipients,
-          message: smsMessage,
-        }),
-      });
+              message: smsMessage,
+            }),
+          });
 
       const data = await response.json();
       
       if (data.success) {
         toast.success(`SMS envoyés avec succès à ${recipients.length} destinataire(s)`);
-        setSmsMessage('');
-        setSmsRecipients('');
+      setSmsMessage('');
+      setSmsRecipients('');
         loadRecentMessages();
         loadSMSBalance();
       } else {
@@ -247,26 +247,26 @@ export default function MarketingPage() {
     try {
       setEmailLoading(true);
       
-      const response = await fetch('/api/email/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+          const response = await fetch('/api/email/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
           to: recipients,
-          subject: emailSubject,
+              subject: emailSubject,
           html: emailMessage,
           text: emailMessage,
-        }),
-      });
+            }),
+          });
 
-      const result = await response.json();
+          const result = await response.json();
       
       if (result.success) {
         toast.success(`Emails envoyés avec succès à ${recipients.length} destinataire(s)`);
-        setEmailSubject('');
-        setEmailMessage('');
-        setEmailRecipients('');
+      setEmailSubject('');
+      setEmailMessage('');
+      setEmailRecipients('');
       } else {
         toast.error(result.error || 'Erreur lors de l\'envoi des emails');
       }
@@ -292,32 +292,32 @@ export default function MarketingPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Onglets */}
           <div className="flex gap-1 bg-[var(--zalama-bg-lighter)] rounded-lg p-1">
-            <button
-              onClick={() => setActiveTab('sms')}
+        <button
+          onClick={() => setActiveTab('sms')}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors flex-1 ${
-                activeTab === 'sms'
-                  ? 'bg-[var(--zalama-card)] text-[var(--zalama-text)] shadow-sm'
-                  : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
-              }`}
-            >
-              <MessageSquare className="h-4 w-4" />
-              SMS
-            </button>
-            <button
-              onClick={() => setActiveTab('email')}
+            activeTab === 'sms'
+              ? 'bg-[var(--zalama-card)] text-[var(--zalama-text)] shadow-sm'
+              : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
+          }`}
+        >
+          <MessageSquare className="h-4 w-4" />
+          SMS
+        </button>
+        <button
+          onClick={() => setActiveTab('email')}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors flex-1 ${
-                activeTab === 'email'
-                  ? 'bg-[var(--zalama-card)] text-[var(--zalama-text)] shadow-sm'
-                  : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
-              }`}
-            >
-              <Mail className="h-4 w-4" />
-              Email
-            </button>
-          </div>
+            activeTab === 'email'
+              ? 'bg-[var(--zalama-card)] text-[var(--zalama-text)] shadow-sm'
+              : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
+          }`}
+        >
+          <Mail className="h-4 w-4" />
+          Email
+        </button>
+      </div>
 
-          {/* Contenu des onglets */}
-          {activeTab === 'sms' ? (
+      {/* Contenu des onglets */}
+      {activeTab === 'sms' ? (
             <FormulaireSMS
               message={smsMessage}
               recipients={smsRecipients}

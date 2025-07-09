@@ -98,10 +98,28 @@ export async function POST(request: NextRequest) {
       // Ne pas retourner d'erreur car le statut LengoPay est valide
     } else {
       console.log('✅ Transaction mise à jour avec succès:', updatedTransaction);
+      console.log('🔍 Détails de la transaction:', {
+        demande_avance_id: updatedTransaction?.demande_avance_id,
+        dbStatus,
+        pay_id
+      });
       
       // Si la transaction est liée à une demande d'avance et que le paiement est réussi
       if (updatedTransaction?.demande_avance_id && dbStatus === 'EFFECTUEE') {
         console.log('🔄 Mise à jour du statut de la demande d\'avance:', updatedTransaction.demande_avance_id);
+        
+        // Vérifier d'abord l'état actuel de la demande
+        const { data: currentDemand, error: fetchError } = await supabase
+          .from('salary_advance_requests')
+          .select('id, statut, numero_reception')
+          .eq('id', updatedTransaction.demande_avance_id)
+          .single();
+
+        if (fetchError) {
+          console.error('⚠️ Erreur lors de la récupération de la demande:', fetchError);
+        } else {
+          console.log('📋 État actuel de la demande:', currentDemand);
+        }
         
         const { error: demandUpdateError } = await supabase
           .from('salary_advance_requests')
@@ -117,6 +135,12 @@ export async function POST(request: NextRequest) {
         } else {
           console.log('✅ Statut de la demande d\'avance mis à jour avec succès');
         }
+      } else {
+        console.log('⚠️ Pas de mise à jour de la demande d\'avance:', {
+          hasDemandeId: !!updatedTransaction?.demande_avance_id,
+          dbStatus,
+          isEffectuee: dbStatus === 'EFFECTUEE'
+        });
       }
     }
 

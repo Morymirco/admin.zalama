@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, DollarSign, CreditCard, Phone, FileText, AlertCircle } from 'lucide-react';
+import { X, DollarSign, CreditCard, Phone, FileText, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
 import { toast } from 'react-hot-toast';
 
@@ -21,6 +21,9 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
   onPaymentSuccess
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed' | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [description, setDescription] = useState('');
 
@@ -35,6 +38,11 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
       } else {
         setPhoneNumber('');
       }
+      
+      // Réinitialiser le statut de paiement
+      setPaymentStatus(null);
+      setIsCheckingStatus(false);
+      setRetryCount(0);
     }
   }, [request, isOpen]);
 
@@ -62,6 +70,123 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
     }
     
     return false;
+  };
+
+  const checkPaymentStatusAndNotify = async (payId: string, currentRetryCount = 0) => {
+    setIsCheckingStatus(true);
+    setPaymentStatus('pending');
+    setRetryCount(currentRetryCount);
+    
+    // Limiter le nombre de tentatives à 10 (30 secondes max)
+    if (currentRetryCount >= 10) {
+      setPaymentStatus('failed');
+      setIsCheckingStatus(false);
+      toast.error('❌ Timeout: Le paiement prend trop de temps. Vérifiez manuellement.');
+      return;
+    }
+    
+    try {
+      console.log('🔍 Vérification du statut du paiement:', payId);
+      
+      // Vérifier le statut du paiement
+      const statusResponse = await fetch('/api/payments/lengo-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pay_id: payId
+        })
+      });
+      
+      if (statusResponse.ok) {
+        const statusResult = await statusResponse.json();
+        console.log('📊 Statut du paiement vérifié:', statusResult);
+        
+        if (statusResult.db_status === 'EFFECTUEE') {
+          setPaymentStatus('success');
+          toast.success('✅ Paiement confirmé avec succès!');
+          
+          // Envoyer les notifications
+          await sendNotifications('success', payId, statusResult);
+          
+          // Fermer automatiquement le modal après 3 secondes
+          setTimeout(() => {
+            onClose();
+            if (onPaymentSuccess) {
+              onPaymentSuccess();
+            }
+          }, 3000);
+          
+        } else if (statusResult.db_status === 'ANNULEE') {
+          setPaymentStatus('failed');
+          toast.error('❌ Le paiement a échoué');
+          
+          // Envoyer les notifications d'échec
+          await sendNotifications('failed', payId, statusResult);
+          
+        } else {
+          // Statut en attente, réessayer après un délai
+          setTimeout(() => checkPaymentStatusAndNotify(payId, currentRetryCount + 1), 3000);
+          return;
+        }
+      } else {
+        console.error('❌ Erreur lors de la vérification du statut');
+        setPaymentStatus('failed');
+        toast.error('Erreur lors de la vérification du statut');
+      }
+    } catch (error) {
+      console.error('💥 Erreur lors de la vérification du statut:', error);
+      setPaymentStatus('failed');
+      toast.error('Erreur lors de la vérification du statut');
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
+  const sendNotifications = async (status: 'success' | 'failed', payId: string, statusResult: any) => {
+    try {
+      console.log('📧 Envoi des notifications pour le statut:', status);
+      
+      const notificationData = {
+        type: 'payment_status',
+        status: status,
+        payId: payId,
+        requestId: request?.id,
+        employeId: request?.employe_id,
+        employeNom: request?.employeNom,
+        employeEmail: request?.employe?.email,
+        employeTelephone: phoneNumber,
+        montant: request?.montant_total,
+        description: description,
+        lengoStatus: statusResult.lengo_status,
+        dbStatus: statusResult.db_status
+      };
+
+      // Envoyer les notifications via l'API
+      const notificationResponse = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(notificationData)
+      });
+
+      if (notificationResponse.ok) {
+        const notificationResult = await notificationResponse.json();
+        console.log('✅ Notifications envoyées:', notificationResult);
+        
+        if (status === 'success') {
+          toast.success('📧 SMS et email de confirmation envoyés');
+        } else {
+          toast.info('📧 Notification d\'échec envoyée');
+        }
+      } else {
+        console.error('⚠️ Erreur lors de l\'envoi des notifications');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'envoi des notifications:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,39 +244,16 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
       if (result.success) {
         toast.success(`Paiement initié avec succès! ID: ${result.pay_id}`);
         
-        // Vérifier le statut du paiement après un délai
-        setTimeout(async () => {
-          try {
-            const statusResponse = await fetch('/api/payments/lengo-status', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                pay_id: result.pay_id
-              })
-            });
-            
-            if (statusResponse.ok) {
-              const statusResult = await statusResponse.json();
-              console.log('🔍 Statut du paiement vérifié:', statusResult);
-              
-              if (statusResult.db_status === 'PAYE') {
-                toast.success('Paiement confirmé avec succès!');
-              } else if (statusResult.db_status === 'ECHOUE') {
-                toast.error('Le paiement a échoué');
-              }
-            }
-          } catch (error) {
-            console.error('Erreur lors de la vérification du statut:', error);
-          }
-        }, 5000); // Vérifier après 5 secondes
+        // Vérifier automatiquement le statut et envoyer les notifications
+        setTimeout(() => {
+          checkPaymentStatusAndNotify(result.pay_id);
+        }, 2000); // Commencer la vérification après 2 secondes
         
-        onClose();
-        // Appeler le callback de succès si fourni
-        if (onPaymentSuccess) {
-          onPaymentSuccess();
-        }
+        // Ne pas fermer le modal immédiatement, attendre le résultat
+        // onClose();
+        // if (onPaymentSuccess) {
+        //   onPaymentSuccess();
+        // }
       } else {
         console.error('❌ Erreur de paiement:', result.error);
         toast.error(`Erreur de paiement: ${result.error}`);
@@ -301,40 +403,95 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Statut de vérification */}
+              {isCheckingStatus && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium">Vérification du statut... (Tentative {retryCount + 1}/10)</p>
+                      <p>Vérification automatique du paiement en cours</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Résultat du statut */}
+              {paymentStatus === 'success' && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-green-800">
+                      <p className="font-medium">✅ Paiement confirmé!</p>
+                      <p>Le paiement a été traité avec succès. SMS et email de confirmation envoyés.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {paymentStatus === 'failed' && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-red-800">
+                      <p className="font-medium">❌ Paiement échoué</p>
+                      <p>Le paiement n'a pas pu être traité. Veuillez réessayer.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </form>
           )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center gap-3 p-4 border-t border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] flex-shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2 text-[var(--zalama-text)] bg-[var(--zalama-bg-lighter)] hover:bg-[var(--zalama-bg)] rounded-lg transition-colors"
-            disabled={isProcessing}
-            aria-label="Annuler le paiement"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            form="payment-form"
-            disabled={isProcessing}
-            className="flex-1 px-4 py-2 bg-[var(--zalama-success)] hover:bg-[var(--zalama-success-accent)] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            aria-label={`Payer ${formatCurrency(request.montant_total)}`}
-          >
-            {isProcessing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Traitement...
-              </>
-            ) : (
-              <>
-                <DollarSign className="w-4 h-4" />
-                Payer {formatCurrency(request.montant_total)}
-              </>
-            )}
-          </button>
+          {paymentStatus === null ? (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 text-[var(--zalama-text)] bg-[var(--zalama-bg-lighter)] hover:bg-[var(--zalama-bg)] rounded-lg transition-colors"
+                disabled={isProcessing || isCheckingStatus}
+                aria-label="Annuler le paiement"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                form="payment-form"
+                disabled={isProcessing || isCheckingStatus}
+                className="flex-1 px-4 py-2 bg-[var(--zalama-success)] hover:bg-[var(--zalama-success-accent)] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                aria-label={`Payer ${formatCurrency(request.montant_total)}`}
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Traitement...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign className="w-4 h-4" />
+                    Payer {formatCurrency(request.montant_total)}
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (onPaymentSuccess && paymentStatus === 'success') {
+                  onPaymentSuccess();
+                }
+              }}
+              className="w-full px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
+            >
+              Fermer
+            </button>
+          )}
         </div>
       </div>
     </div>

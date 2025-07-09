@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
         console.log('✅ Statut vérifié:', statusResult);
         
         // Si le paiement est déjà réussi, mettre à jour la demande d'avance
-        if (statusResult.db_status === 'PAYE' && requestId) {
+        if (statusResult.db_status === 'EFFECTUEE' && requestId) {
           console.log('🔄 Mise à jour du statut de la demande d\'avance (paiement réussi):', requestId);
           
           const { error: updateError } = await supabase

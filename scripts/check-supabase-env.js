@@ -24,9 +24,7 @@ const requiredVars = [
 
 // Variables optionnelles
 const optionalVars = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
+
   'RESEND_API_KEY',
   'SMS_API_KEY',
   'NEXT_PUBLIC_USE_SUPABASE'

@@ -14,13 +14,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 # Récupérez-la dans votre dashboard Supabase : Settings → API → service_role secret
 SUPABASE_SERVICE_ROLE_KEY=votre_cle_service_role_ici
 
-# Configuration Firebase (pour la migration progressive)
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBSnHZeHH0DMRxe8_ldsS9Mh1gwNp0fa-k
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=zalamagn-1f057.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=zalamagn-1f057
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=zalamagn-1f057.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=753763623478
-NEXT_PUBLIC_FIREBASE_APP_ID=1:753763623478:web:a11f093c649593b2d02e97
+
 
 # Configuration Email (Resend)
 RESEND_API_KEY=votre_cle_api_resend_ici
@@ -32,8 +26,7 @@ SMS_API_SECRET=votre_secret_api_sms_ici
 # Configuration de l'application
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Configuration pour basculer entre Firebase et Supabase
-NEXT_PUBLIC_USE_SUPABASE=true
+
 `;
 
 const envPath = path.join(__dirname, '..', '.env.local');

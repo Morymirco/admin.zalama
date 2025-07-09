@@ -212,25 +212,116 @@ export interface LengoPayCallback {
 
 // Cette fonction sera appelée par la route callback
 export async function handleLengoPayCallback(callbackData: LengoPayCallback, supabase: any) {
-  // Met à jour la transaction dans la table transactions
-  // On suppose que pay_id = numero_transaction
+  console.log('🔄 Début du traitement du callback Lengo Pay:', callbackData);
+  
   const { pay_id, status, amount, message, account } = callbackData;
-  const statut = status === 'SUCCESS' ? 'EFFECTUEE' : 'ECHEC';
-
-  const { data, error } = await supabase
-    .from('transactions')
-    .update({
-      statut,
-      montant: amount,
-      numero_reception: account,
-      message_callback: message,
-      date_transaction: new Date().toISOString(),
-    })
-    .eq('numero_transaction', pay_id)
-    .select();
-
-  if (error) {
-    throw new Error('Erreur lors de la mise à jour de la transaction: ' + error.message);
+  
+  // Mapper le statut Lengo Pay vers notre statut
+  let statut;
+  switch (status.toUpperCase()) {
+    case 'SUCCESS':
+    case 'SUCCEEDED':
+      statut = 'EFFECTUEE';
+      break;
+    case 'FAILED':
+    case 'FAILURE':
+      statut = 'ECHEC';
+      break;
+    case 'PENDING':
+    case 'INITIATED':
+      statut = 'EN_ATTENTE';
+      break;
+    default:
+      statut = 'EN_ATTENTE';
+      console.warn('⚠️ Statut inconnu de Lengo Pay:', status);
   }
-  return data;
+  
+  console.log('📊 Mise à jour de la transaction:', {
+    pay_id,
+    statut_lengo: status,
+    statut_mappé: statut,
+    amount,
+    account
+  });
+
+  // Mettre à jour la transaction dans la table transactions
+  const updateData = {
+    statut,
+    montant: amount,
+    numero_reception: account,
+    message_callback: message,
+    date_transaction: new Date().toISOString(),
+    date_modification: new Date().toISOString()
+  };
+
+  console.log('💾 Données de mise à jour:', updateData);
+
+  const { data: transactionData, error: transactionError } = await supabase
+    .from('transactions')
+    .update(updateData)
+    .eq('numero_transaction', pay_id)
+    .select()
+    .single();
+
+  if (transactionError) {
+    console.error('❌ Erreur lors de la mise à jour de la transaction:', transactionError);
+    throw new Error('Erreur lors de la mise à jour de la transaction: ' + transactionError.message);
+  }
+
+  console.log('✅ Transaction mise à jour avec succès:', transactionData);
+
+  // Si le paiement est réussi et qu'il y a une demande d'avance associée, la mettre à jour
+  if (statut === 'EFFECTUEE' && transactionData.demande_avance_id) {
+    console.log('🔄 Mise à jour de la demande d\'avance associée:', transactionData.demande_avance_id);
+    
+    const { error: demandeError } = await supabase
+      .from('salary_advance_requests')
+      .update({ 
+        statut: 'Validé',
+        date_validation: new Date().toISOString(),
+        numero_reception: pay_id,
+        date_modification: new Date().toISOString()
+      })
+      .eq('id', transactionData.demande_avance_id);
+
+    if (demandeError) {
+      console.error('⚠️ Erreur lors de la mise à jour de la demande d\'avance:', demandeError);
+      // Ne pas faire échouer le callback pour cette erreur
+    } else {
+      console.log('✅ Demande d\'avance mise à jour avec succès');
+    }
+  }
+
+  // Si le paiement est réussi et qu'il y a un employé associé, envoyer une notification
+  if (statut === 'EFFECTUEE' && transactionData.employe_id) {
+    console.log('📱 Envoi de notification SMS à l\'employé:', transactionData.employe_id);
+    
+    try {
+      // Récupérer les informations de l'employé
+      const { data: employeData } = await supabase
+        .from('employees')
+        .select('nom, prenom, telephone')
+        .eq('id', transactionData.employe_id)
+        .single();
+
+      if (employeData && employeData.telephone) {
+        const message = `Félicitations ${employeData.prenom} ! Votre avance de salaire de ${amount} GNF a été traitée avec succès. Transaction: ${pay_id}`;
+        
+        // Importer le service SMS
+        const smsService = (await import('./smsService')).default;
+        await smsService.sendSMS({
+          to: [employeData.telephone],
+          message: message
+        });
+        
+        console.log('✅ SMS de confirmation envoyé à l\'employé');
+      }
+    } catch (smsError) {
+      console.error('⚠️ Erreur lors de l\'envoi du SMS de confirmation:', smsError);
+      // Ne pas faire échouer le callback pour cette erreur
+    }
+  }
+
+  console.log('🎉 Callback Lengo Pay traité avec succès');
+  return transactionData;
 } 

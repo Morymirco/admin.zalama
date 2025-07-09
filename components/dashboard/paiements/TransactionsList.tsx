@@ -16,6 +16,7 @@ const getStatusIcon = (status: string) => {
     case 'EFFECTUEE':
       return <CheckCircle className="w-4 h-4 text-green-600" />;
     case 'ECHOUE':
+    case 'ANNULEE':
       return <XCircle className="w-4 h-4 text-red-600" />;
     case 'EN_ATTENTE':
       return <Clock className="w-4 h-4 text-yellow-600" />;
@@ -30,7 +31,8 @@ const getStatusBadge = (status: string) => {
     case 'EFFECTUEE':
       return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Payé</Badge>;
     case 'ECHOUE':
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Échoué</Badge>;
+    case 'ANNULEE':
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Annulé</Badge>;
     case 'EN_ATTENTE':
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En attente</Badge>;
     default:

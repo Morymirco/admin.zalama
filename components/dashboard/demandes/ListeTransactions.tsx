@@ -58,14 +58,16 @@ const ListeTransactions: React.FC<ListeTransactionsProps> = ({
   };
   const getStatusIcon = (statut: string) => {
     switch (statut) {
+      case 'PAYE':
       case 'EFFECTUEE':
         return <CheckCircle className="w-4 h-4 text-[var(--zalama-success)]" />;
       case 'EN_COURS':
+      case 'EN_ATTENTE':
         return <Clock className="w-4 h-4 text-[var(--zalama-warning)]" />;
       case 'ECHEC':
-        return <XCircle className="w-4 h-4 text-[var(--zalama-danger)]" />;
+      case 'ECHOUE':
       case 'ANNULEE':
-        return <XCircle className="w-4 h-4 text-[var(--zalama-text-secondary)]" />;
+        return <XCircle className="w-4 h-4 text-[var(--zalama-danger)]" />;
       default:
         return <Eye className="w-4 h-4 text-[var(--zalama-text-secondary)]" />;
     }
@@ -73,14 +75,16 @@ const ListeTransactions: React.FC<ListeTransactionsProps> = ({
 
   const getStatusColor = (statut: string) => {
     switch (statut) {
+      case 'PAYE':
       case 'EFFECTUEE':
         return 'bg-green-100 text-green-800';
       case 'EN_COURS':
+      case 'EN_ATTENTE':
         return 'bg-yellow-100 text-yellow-800';
       case 'ECHEC':
-        return 'bg-red-100 text-red-800';
+      case 'ECHOUE':
       case 'ANNULEE':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

@@ -57,23 +57,29 @@ export async function POST(request: NextRequest) {
     let dbStatus = 'EN_ATTENTE';
     let dateTransaction = null;
     
-    // Mapper les statuts LengoPay vers nos statuts
+    // Mapper les statuts LengoPay vers nos statuts (enum transaction_statut)
     switch (statusResult.status.toUpperCase()) {
       case 'SUCCESS':
-        dbStatus = 'PAYE';
+        dbStatus = 'EFFECTUEE';
         dateTransaction = statusResult.date ? new Date(statusResult.date).toISOString() : new Date().toISOString();
         break;
       case 'FAILED':
       case 'CANCELLED':
-        dbStatus = 'ECHOUE';
+        dbStatus = 'ANNULEE';
         break;
       case 'PENDING':
       case 'INITIATED':
-        dbStatus = 'EN_ATTENTE';
+        dbStatus = 'ANNULEE'; // Pour les transactions en attente, on utilise ANNULEE par défaut
         break;
       default:
-        dbStatus = 'EN_ATTENTE';
+        dbStatus = 'ANNULEE';
     }
+
+    console.log('🔄 Mapping des statuts:', {
+      lengo_status: statusResult.status,
+      mapped_db_status: dbStatus,
+      date_transaction: dateTransaction
+    });
 
     // Mettre à jour la transaction dans la base de données
     const { data: updatedTransaction, error: updateError } = await supabase
@@ -94,7 +100,7 @@ export async function POST(request: NextRequest) {
       console.log('✅ Transaction mise à jour avec succès:', updatedTransaction);
       
       // Si la transaction est liée à une demande d'avance et que le paiement est réussi
-      if (updatedTransaction?.demande_avance_id && dbStatus === 'PAYE') {
+      if (updatedTransaction?.demande_avance_id && dbStatus === 'EFFECTUEE') {
         console.log('🔄 Mise à jour du statut de la demande d\'avance:', updatedTransaction.demande_avance_id);
         
         const { error: demandUpdateError } = await supabase

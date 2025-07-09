@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cleanEmployeeData, validateEmployeeData, generatePassword } from '@/lib/utils';
 import { createClient } from '@supabase/supabase-js';
+import employeeService from '@/services/employeeService';
 
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc4NzI1OCwiZXhwIjoyMDY2MzYzMjU4fQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8';
@@ -121,174 +122,103 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // NOUVELLE LOGIQUE: Créer directement avec la logique corrigée
-    console.log('🔄 Création de l\'employé avec la logique corrigée...');
-
-    let userId: string | null = null;
-    let password: string | null = null;
-
-    // Si email fourni, créer le compte Auth d'abord
-    if (cleanedData.email) {
-      try {
-        console.log('🔐 Création du compte Auth...');
-        
-        // Générer un mot de passe sécurisé
-        password = generatePassword();
-        
-        // Créer le compte dans Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: cleanedData.email,
-          password: password,
-          email_confirm: true,
-          user_metadata: {
-            display_name: `${cleanedData.prenom} ${cleanedData.nom}`,
-            role: 'user',
-            partenaire_id: cleanedData.partner_id
-          }
-        });
-
-        if (authError) {
-          console.error('❌ Erreur création compte Auth:', authError);
-          throw new Error(`Erreur création compte Auth: ${authError.message}`);
-        }
-
-        userId = authData.user.id;
-        console.log('✅ Compte Auth créé:', userId);
-        
-        // Créer l'entrée dans admin_users
-        console.log('🔐 Création de l\'entrée admin_users...');
-        const accountData = {
-          id: authData.user.id,
-          email: cleanedData.email,
-          display_name: `${cleanedData.prenom} ${cleanedData.nom}`,
-          role: 'user',
-          partenaire_id: cleanedData.partner_id,
-          active: true
-        };
-
-        const { error: adminError } = await supabase
-          .from('admin_users')
-          .insert([accountData]);
-
-        if (adminError) {
-          console.error('❌ Erreur création admin_users:', adminError);
-          // Supprimer le compte Auth créé en cas d'erreur
-          await supabase.auth.admin.deleteUser(authData.user.id);
-          throw new Error(`Erreur création admin_users: ${adminError.message}`);
-        }
-
-        console.log('✅ Entrée admin_users créée');
-        
-      } catch (authError) {
-        console.error('❌ Erreur lors de la création du compte Auth:', authError);
-        // Continuer sans compte Auth si erreur
-        userId = null;
-        password = null;
-      }
-    }
-
-    // Préparer les données pour l'insertion
-    const dbData = {
-      ...cleanedData,
-      actif: cleanedData.actif ?? true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    // Utiliser le service employeeService corrigé
+    console.log('🔄 Création de l\'employé avec employeeService...');
     
-    // Ajouter le user_id si le compte Auth a été créé
-    if (userId) {
-      dbData.user_id = userId;
-      console.log('✅ user_id défini pour l\'employé:', userId);
-    } else {
-      console.warn('⚠️ Aucun user_id défini - pas de compte Auth créé');
-    }
-
-    // Insérer l'employé dans la base de données
-    const { data: employee, error: insertError } = await supabase
-      .from('employees')
-      .insert([dbData])
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('❌ Erreur lors de la création de l\'employé:', insertError);
+    try {
+      const result = await employeeService.create(cleanedData);
       
-      // Si l'employé n'a pas pu être créé et qu'un compte Auth a été créé, le supprimer
-      if (userId) {
-        try {
-          console.log('🧹 Nettoyage des comptes créés suite à l\'échec...');
-          await supabase.auth.admin.deleteUser(userId);
-          await supabase.from('admin_users').delete().eq('id', userId);
-          console.log('✅ Comptes Auth et admin_users supprimés');
-        } catch (deleteError) {
-          console.error('⚠️ Erreur lors de la suppression des comptes:', deleteError);
+      console.log('✅ Employé créé avec succès via employeeService');
+      console.log('📊 Résultats:');
+      console.log('  - Employé ID:', result.employee.id);
+      console.log('  - User ID:', result.employee.user_id);
+      console.log('  - Compte créé:', result.accountResults.employe.success);
+
+      return NextResponse.json({
+        success: true,
+        employee: result.employee,
+        smsResults: result.smsResults,
+        emailResults: result.emailResults,
+        accountResults: result.accountResults,
+        message: 'Employé créé avec succès'
+      }, { status: 201 });
+
+    } catch (serviceError) {
+      console.error('❌ Erreur employeeService.create:', serviceError);
+      
+      // Gérer les erreurs spécifiques
+      if (serviceError instanceof Error) {
+        const errorMessage = serviceError.message;
+        
+        // Email déjà existant
+        if (errorMessage.includes('already been registered') || errorMessage.includes('email_exists')) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'Un compte avec cet email existe déjà. Veuillez utiliser un email différent ou réinitialiser le mot de passe du compte existant.',
+              code: 'EMAIL_EXISTS'
+            },
+            { status: 409 }
+          );
+        }
+        
+        // Email obligatoire
+        if (errorMessage.includes('Email obligatoire')) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'Email obligatoire pour créer un employé avec un compte de connexion',
+              code: 'EMAIL_REQUIRED'
+            },
+            { status: 400 }
+          );
+        }
+        
+        // Erreur de création de compte
+        if (errorMessage.includes('Impossible de créer le compte de connexion')) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'Impossible de créer le compte de connexion. Veuillez réessayer.',
+              code: 'AUTH_ERROR'
+            },
+            { status: 500 }
+          );
+        }
+        
+        // Erreur de création d'employé
+        if (errorMessage.includes('user_id manquant')) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'Erreur lors de la création du compte. Veuillez réessayer.',
+              code: 'USER_ID_ERROR'
+            },
+            { status: 500 }
+          );
         }
       }
       
-      throw insertError;
+      // Erreur générique
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Erreur lors de la création de l\'employé. Veuillez réessayer.',
+          code: 'GENERAL_ERROR'
+        },
+        { status: 500 }
+      );
     }
-
-    console.log('✅ Employé créé avec succès:', employee.id);
-    console.log('📊 Vérification finale:');
-    console.log('  - Employé ID:', employee.id);
-    console.log('  - User ID:', employee.user_id || 'NULL');
-    console.log('  - Email:', employee.email);
-
-    // Vérification critique que l'employé a bien un user_id si un compte Auth a été créé
-    if (userId && !employee.user_id) {
-      console.error('❌ ERREUR CRITIQUE: user_id manquant après création!');
-      console.error('   - Compte Auth créé:', userId);
-      console.error('   - Employé créé mais sans user_id');
-      
-      // Nettoyer et échouer
-      try {
-        await supabase.auth.admin.deleteUser(userId);
-        await supabase.from('admin_users').delete().eq('id', userId);
-        await supabase.from('employees').delete().eq('id', employee.id);
-      } catch (cleanupError) {
-        console.error('⚠️ Erreur lors du nettoyage:', cleanupError);
-      }
-      
-      throw new Error('Erreur critique: user_id manquant après création de l\'employé');
-    }
-
-    console.log('🎉 Processus de création terminé avec succès!');
-
-    return NextResponse.json({
-      success: true,
-      employee: employee,
-      smsResults: {
-        employe: { success: false, message: '', error: '' },
-        admin: { success: false, message: '', error: '' }
-      },
-      emailResults: {
-        employe: { success: false, message: '', error: '' }
-      },
-      accountResults: {
-        employe: { 
-          success: !!userId, 
-          password: password || undefined, 
-          error: userId ? '' : 'Aucun email fourni ou erreur création compte'
-        }
-      },
-      message: 'Employé créé avec succès'
-    }, { status: 201 });
 
   } catch (error) {
-    console.error('Erreur lors de la création de l\'employé:', error);
-    
-    // Détecter les erreurs spécifiques
-    if (error instanceof Error) {
-      if (error.message.includes('duplicate') || error.message.includes('already exists')) {
-        return NextResponse.json(
-          { success: false, error: 'Un employé avec ces informations existe déjà' },
-          { status: 409 }
-        );
-      }
-    }
+    console.error('Erreur générale lors de la création de l\'employé:', error);
     
     return NextResponse.json(
-      { success: false, error: 'Erreur lors de la création de l\'employé' },
+      { 
+        success: false, 
+        error: 'Erreur interne du serveur',
+        code: 'INTERNAL_ERROR'
+      },
       { status: 500 }
     );
   }

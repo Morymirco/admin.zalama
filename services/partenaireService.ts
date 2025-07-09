@@ -597,51 +597,27 @@ export const employeService = {
 
       // Vérifier que l'email est fourni pour créer un compte Auth
       if (!employeData.email) {
-        console.log('⚠️ Aucun email fourni, création sans compte Auth');
-        // Créer l'employé sans compte Auth
-        const employe = await employeeService.create(employeData);
-        
-        // Mettre à jour les statistiques du partenaire
-        await partenaireService.updatePartnerStats(employeData.partner_id || '');
-
-        return {
-          employe: employe,
-          account: {
-            success: false,
-            error: 'Aucun email fourni pour créer un compte de connexion'
-          },
-          sms: undefined
-        };
+        throw new Error('Email obligatoire pour créer un employé avec un compte de connexion');
       }
 
-      // Utiliser employeeSyncService pour créer l'employé avec compte Auth
-      const syncResult = await employeeSyncService.createEmployeeWithAuth(employeData);
+      // Utiliser le service employeeService corrigé
+      const result = await employeeService.create(employeData);
 
-      if (!syncResult.success) {
-        throw new Error(syncResult.error || 'Erreur lors de la création de l\'employé avec compte Auth');
-      }
-
-      // Récupérer l'employé créé
-      const employe = await this.getById(syncResult.employeeId);
-      if (!employe) {
-        throw new Error('Employé créé mais non trouvé');
-      }
-
-      console.log('✅ Employé créé avec succès et compte Auth:', employe);
+      console.log('✅ Employé créé avec succès via employeeService:', result.employee);
 
       // Mettre à jour les statistiques du partenaire
       await partenaireService.updatePartnerStats(employeData.partner_id || '');
 
       return {
-        employe: employe,
+        employe: result.employee,
         account: {
-          success: true,
-          password: syncResult.password,
-          error: undefined
+          success: result.accountResults.employe.success,
+          password: result.accountResults.employe.password,
+          error: result.accountResults.employe.error
         },
         sms: {
-          success: true,
-          error: undefined
+          success: result.smsResults.employe.success,
+          error: result.smsResults.employe.error
         }
       };
     } catch (error) {

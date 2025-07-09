@@ -110,18 +110,24 @@ const employeeAccountService = {
         return { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' };
       }
 
-      // Vérifier aussi dans Supabase Auth si possible
+      // Vérifier dans Supabase Auth de manière plus robuste
       if (supabaseServiceKey) {
         try {
-          const { data: authUsers, error: authCheckError } = await supabase.auth.admin.listUsers();
+          // Essayer de récupérer l'utilisateur directement par email
+          const { data: existingAuthUser, error: authCheckError } = await supabase.auth.admin.getUserByEmail(employeeData.email);
           
-          if (!authCheckError && authUsers.users) {
-            const existingAuthUser = authUsers.users.find(user => user.email === employeeData.email);
-            if (existingAuthUser) {
-              console.log('❌ Email déjà existant dans Supabase Auth:', employeeData.email);
-              return { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' };
-            }
+          if (!authCheckError && existingAuthUser.user) {
+            console.log('❌ Email déjà existant dans Supabase Auth:', employeeData.email);
+            return { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' };
           }
+          
+          // Si l'erreur n'est pas "user not found", c'est un vrai problème
+          if (authCheckError && !authCheckError.message.includes('User not found')) {
+            console.error('❌ Erreur lors de la vérification dans Supabase Auth:', authCheckError);
+            return { success: false, error: 'Erreur lors de la vérification de l\'email dans Auth' };
+          }
+          
+          console.log('✅ Email disponible dans Supabase Auth:', employeeData.email);
         } catch (authCheckError) {
           console.log('⚠️ Impossible de vérifier dans Supabase Auth:', authCheckError);
           // Continuer même si on ne peut pas vérifier dans Auth
@@ -165,16 +171,18 @@ const employeeAccountService = {
       });
 
       if (authError) {
-        console.error('Erreur lors de la création du compte auth:', authError);
+        console.error('❌ Erreur lors de la création du compte auth:', authError);
         
         // Détecter spécifiquement les erreurs d'email en double
         if (authError.message.includes('already been registered') || 
             authError.message.includes('already exists') ||
-            authError.message.includes('duplicate')) {
+            authError.message.includes('duplicate') ||
+            authError.message.includes('email_exists')) {
+          console.log('❌ Email déjà existant dans Supabase Auth:', employeeData.email);
           return { success: false, error: 'Un utilisateur avec cette adresse email existe déjà' };
         }
         
-        return { success: false, error: authError.message };
+        return { success: false, error: `Erreur création compte Auth: ${authError.message}` };
       }
 
       // Créer l'enregistrement dans admin_users
@@ -321,6 +329,24 @@ export async function POST(request: NextRequest) {
         smsResults.employe.error = `Erreur SMS employé: ${error}`;
         emailResults.employe.error = `Erreur email employé: ${error}`;
       }
+    }
+
+    // Si la création a échoué à cause d'un email existant, retourner une erreur 409
+    if (!results.success && results.error && results.error.includes('existe déjà')) {
+      return NextResponse.json({
+        success: false,
+        error: results.error,
+        code: 'EMAIL_EXISTS'
+      }, { status: 409 });
+    }
+
+    // Si la création a échoué pour une autre raison, retourner une erreur 500
+    if (!results.success) {
+      return NextResponse.json({
+        success: false,
+        error: results.error || 'Erreur lors de la création du compte',
+        code: 'ACCOUNT_CREATION_ERROR'
+      }, { status: 500 });
     }
 
     return NextResponse.json({

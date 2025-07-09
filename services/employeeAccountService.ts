@@ -31,19 +31,13 @@ class EmployeeAccountService {
   // Créer un compte employé avec mot de passe généré
   async createEmployeeAccount(employeeData: any): Promise<{ success: boolean; account?: any; error?: string }> {
     try {
-      // Appeler l'API route pour créer le compte
-      const response = await fetch('/api/auth/create-employee-accounts', {
+      // Utiliser l'API /api/employees corrigée
+      const response = await fetch('/api/employees', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          employeeData: {
-            ...employeeData,
-            id: employeeData.id,
-            partner_id: employeeData.partner_id
-          }
-        }),
+        body: JSON.stringify(employeeData),
       });
 
       const result = await response.json();
@@ -62,15 +56,20 @@ class EmployeeAccountService {
         return { success: false, error: errorMessage };
       }
 
-      console.log('✅ Compte employé créé avec succès:', result.account?.email);
+      console.log('✅ Compte employé créé avec succès:', result.employee?.email);
       
-      // L'API retourne { success: true, account: {...}, employee: {...} }
-      // Nous devons retourner les données dans le format attendu par le service
+      // L'API retourne { success: true, employee: {...}, accountResults: {...} }
       return { 
         success: true, 
         account: {
-          ...result.account,
-          employee: result.employee // Inclure les données de l'employé
+          id: result.employee.user_id,
+          email: result.employee.email,
+          display_name: `${result.employee.prenom} ${result.employee.nom}`,
+          role: 'user',
+          partenaire_id: result.employee.partner_id,
+          active: true,
+          password: result.accountResults.employe.password,
+          employee: result.employee
         }
       };
 

@@ -64,29 +64,47 @@ export default function PartenaireDetailPage() {
 
   const handleAddEmployee = async (employeeData: any) => {
     try {
-      // Utiliser le service avec notifications SMS/email
-      const result = await employeeAccountService.createEmployeeAccountWithNotifications(employeeData);
-      
-      // Ajouter l'employé à la liste locale
-      if (result.account.success) {
-        await createEmploye(employeeData);
-        // Rafraîchir les données après ajout
-        setTimeout(() => loadPartenaireDetail(partnerId), 500);
+      // Utiliser le service employeeService corrigé via l'API
+      const response = await fetch('/api/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(employeeData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Gérer les erreurs spécifiques
+        if (result.code === 'EMAIL_EXISTS') {
+          throw new Error('Un employé avec cet email existe déjà. Veuillez utiliser un email différent.');
+        } else if (result.code === 'EMAIL_REQUIRED') {
+          throw new Error('Email obligatoire pour créer un employé avec un compte de connexion');
+        } else {
+          throw new Error(result.error || 'Erreur lors de la création de l\'employé');
+        }
       }
+
+      // Rafraîchir les données après ajout
+      setTimeout(() => loadPartenaireDetail(partnerId), 500);
       
       // Retourner les résultats pour affichage dans le modal
-      // L'API retourne { success: true, account: {...}, employee: {...} }
-      const employeData = result.account.account?.employee || result.account.account || {
-        ...employeeData,
-        id: result.account.account?.id || 'temp-id',
-        email: employeeData.email
-      };
-      
       return {
-        employe: employeData,
-        account: result.account,
-        sms: result.sms,
-        email: result.email
+        employe: result.employee,
+        account: {
+          success: result.accountResults.employe.success,
+          password: result.accountResults.employe.password,
+          error: result.accountResults.employe.error
+        },
+        sms: {
+          success: result.smsResults.employe.success,
+          error: result.smsResults.employe.error
+        },
+        email: {
+          success: result.emailResults.employe.success,
+          error: result.emailResults.employe.error
+        }
       };
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'employé:', error);

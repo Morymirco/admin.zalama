@@ -129,80 +129,82 @@ class EmployeeService {
     try {
       console.log('🚀 Création de l\'employé:', `${employeeData.prenom} ${employeeData.nom}`);
       
+      // Vérification obligatoire de l'email
+      if (!employeeData.email) {
+        throw new Error('Email obligatoire pour créer un employé avec un compte de connexion');
+      }
+
       let userId: string | null = null;
       let password: string | null = null;
 
-      // Si email fourni, créer le compte Auth d'abord
-      if (employeeData.email) {
-        try {
-          console.log('🔐 Création du compte Auth...');
-          
-          // Générer un mot de passe sécurisé
-          password = generatePassword();
-          
-          // Créer le compte dans Supabase Auth
-          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email: employeeData.email,
-            password: password,
-            email_confirm: true,
-            user_metadata: {
-              display_name: `${employeeData.prenom} ${employeeData.nom}`,
-              role: 'user',
-              partenaire_id: employeeData.partner_id
-            }
-          });
-
-          if (authError) {
-            console.error('❌ Erreur création compte Auth:', authError);
-            throw new Error(`Erreur création compte Auth: ${authError.message}`);
-          }
-
-          userId = authData.user.id;
-          console.log('✅ Compte Auth créé:', userId);
-          
-          // Créer l'entrée dans admin_users
-          console.log('🔐 Création de l\'entrée admin_users...');
-          const accountData = {
-            id: authData.user.id,
-            email: employeeData.email,
+      // Créer le compte Auth obligatoirement
+      try {
+        console.log('🔐 Création du compte Auth...');
+        
+        // Générer un mot de passe sécurisé
+        password = generatePassword();
+        
+        // Créer le compte dans Supabase Auth
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: employeeData.email,
+          password: password,
+          email_confirm: true,
+          user_metadata: {
             display_name: `${employeeData.prenom} ${employeeData.nom}`,
             role: 'user',
-            partenaire_id: employeeData.partner_id,
-            active: true
-          };
-
-          const { error: adminError } = await supabase
-            .from('admin_users')
-            .insert([accountData]);
-
-          if (adminError) {
-            console.error('❌ Erreur création admin_users:', adminError);
-            // Supprimer le compte Auth créé en cas d'erreur
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-            throw new Error(`Erreur création admin_users: ${adminError.message}`);
+            partenaire_id: employeeData.partner_id
           }
+        });
 
-          console.log('✅ Entrée admin_users créée');
-          
-        } catch (authError) {
-          console.error('❌ Erreur lors de la création du compte Auth:', authError);
-          // Continuer sans compte Auth si erreur
-          userId = null;
-          password = null;
+        if (authError) {
+          console.error('❌ Erreur création compte Auth:', authError);
+          throw new Error(`Erreur création compte Auth: ${authError.message}`);
         }
+
+        userId = authData.user.id;
+        console.log('✅ Compte Auth créé:', userId);
+        
+        // Créer l'entrée dans admin_users
+        console.log('🔐 Création de l\'entrée admin_users...');
+        const accountData = {
+          id: authData.user.id,
+          email: employeeData.email,
+          display_name: `${employeeData.prenom} ${employeeData.nom}`,
+          role: 'user',
+          partenaire_id: employeeData.partner_id,
+          active: true
+        };
+
+        const { error: adminError } = await supabase
+          .from('admin_users')
+          .insert([accountData]);
+
+        if (adminError) {
+          console.error('❌ Erreur création admin_users:', adminError);
+          // Supprimer le compte Auth créé en cas d'erreur
+          await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+          throw new Error(`Erreur création admin_users: ${adminError.message}`);
+        }
+
+        console.log('✅ Entrée admin_users créée');
+        
+      } catch (authError) {
+        console.error('❌ Erreur lors de la création du compte Auth:', authError);
+        // Ne pas continuer si la création du compte Auth échoue
+        throw new Error(`Impossible de créer le compte de connexion: ${authError instanceof Error ? authError.message : 'Erreur inconnue'}`);
       }
 
       // Préparer les données pour l'insertion
       const dbData = convertToDB(employeeData);
       dbData.actif = employeeData.actif ?? true;
       
-      // GARANTIR que user_id est défini si un compte Auth a été créé
-      if (userId) {
-        dbData.user_id = userId;
-        console.log('✅ user_id défini pour l\'employé:', userId);
-      } else {
-        console.warn('⚠️ Aucun user_id défini - pas de compte Auth créé');
+      // GARANTIR que user_id est défini (maintenant obligatoire)
+      if (!userId) {
+        throw new Error('user_id manquant - la création du compte Auth a échoué');
       }
+      
+      dbData.user_id = userId;
+      console.log('✅ user_id défini pour l\'employé:', userId);
 
       // Insérer l'employé dans la base de données
       const { data, error } = await supabase
@@ -235,8 +237,8 @@ class EmployeeService {
       console.log('  - User ID:', data.user_id || 'NULL');
       console.log('  - Email:', data.email);
 
-      // Vérification critique que l'employé a bien un user_id si un compte Auth a été créé
-      if (userId && !data.user_id) {
+      // Vérification critique que l'employé a bien un user_id (maintenant obligatoire)
+      if (!data.user_id) {
         console.error('❌ ERREUR CRITIQUE: user_id manquant après création!');
         console.error('   - Compte Auth créé:', userId);
         console.error('   - Employé créé mais sans user_id');
@@ -267,9 +269,9 @@ class EmployeeService {
       // Résultats des comptes créés
       const accountResults = {
         employe: { 
-          success: !!userId, 
+          success: true, 
           password: password || undefined, 
-          error: userId ? '' : 'Aucun email fourni ou erreur création compte'
+          error: ''
         }
       };
 
@@ -302,8 +304,8 @@ class EmployeeService {
       console.log('✅ Création employé terminée');
       console.log('📊 Résultats finaux:');
       console.log('  - Employé:', data.id);
-      console.log('  - User ID:', data.user_id || 'Non créé');
-      console.log('  - Compte employé:', accountResults.employe.success ? '✅' : '❌');
+      console.log('  - User ID:', data.user_id);
+      console.log('  - Compte employé: ✅ Créé avec succès');
 
       return {
         employee: convertFromDB(data),

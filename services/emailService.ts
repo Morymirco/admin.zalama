@@ -300,6 +300,16 @@ class EmailService {
    * Envoyer un email de bienvenue pour un employé
    */
   async sendWelcomeEmailToEmployee(data: WelcomeEmailData): Promise<any> {
+    // Afficher les identifiants dans la console
+    console.log('📧 ENVOI EMAIL EMPLOYÉ:');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`👤 Nom: ${data.nom}`);
+    console.log(`📧 Email: ${data.email}`);
+    console.log(`🔑 Mot de passe: ${data.password}`);
+    console.log(`🏢 Partenaire: ${data.partenaireNom || 'Aucun partenaire'}`);
+    console.log(`🌐 URL de connexion: https://admin.zalama.com`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     const subject = `Bienvenue sur ZaLaMa - ${data.partenaireNom || 'Votre entreprise'}`;
     
     const html = `

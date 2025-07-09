@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { generatePassword, validateEmail } from '@/lib/utils';
 import smsService from './smsService';
-import emailClientService from './emailClientService';
+import emailService from './emailService';
 import { Employe } from '@/types/partenaire';
 import { Employee } from '@/types/employee';
 
@@ -322,6 +322,42 @@ class EmployeeService {
           error: `Erreur SMS admin: ${smsError}`
         };
         console.log('❌ Erreur SMS admin:', smsError);
+      }
+
+      // Envoyer un email de bienvenue à l'employé
+      try {
+        console.log('📧 Envoi email de bienvenue à l\'employé...');
+        
+        const partenaireNom = employeeData.partner_id ? 
+          (await supabase.from('partners').select('nom').eq('id', employeeData.partner_id).single()).data?.nom || 'Partenaire inconnu' : 
+          'Aucun partenaire';
+        
+        const emailResult = await emailService.sendWelcomeEmailToEmployee({
+          nom: `${employeeData.prenom} ${employeeData.nom}`,
+          email: employeeData.email!,
+          password: password!,
+          role: 'employe',
+          partenaireNom: partenaireNom
+        });
+        
+        emailResults.employe = {
+          success: emailResult.success,
+          message: emailResult.success ? 'Email de bienvenue envoyé' : '',
+          error: emailResult.error || ''
+        };
+        
+        if (emailResults.employe.success) {
+          console.log('📧 Email employé: ✅ Envoyé');
+        } else {
+          console.log(`📧 Email employé: ❌ ${emailResults.employe.error}`);
+        }
+      } catch (emailError) {
+        emailResults.employe = {
+          success: false,
+          message: '',
+          error: `Erreur email employé: ${emailError}`
+        };
+        console.log('❌ Erreur email employé:', emailError);
       }
 
       console.log('✅ Création employé terminée');

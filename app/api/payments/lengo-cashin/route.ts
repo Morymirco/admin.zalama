@@ -83,9 +83,16 @@ export async function POST(request: NextRequest) {
     const lengoResult = await lengoPayCashin(lengoParams);
     console.log('✅ Réponse Lengo Pay reçue:', lengoResult);
 
-    if (lengoResult.status !== 'Success' || !lengoResult.pay_id) {
-      console.error('❌ Erreur Lengo Pay:', lengoResult);
-      return NextResponse.json({ success: false, error: lengoResult.message || 'Erreur Lengo Pay' }, { status: 502 });
+    // Vérifier si la requête a été reçue avec succès
+    if (!lengoResult.pay_id) {
+      console.error('❌ Erreur Lengo Pay - Pas de pay_id:', lengoResult);
+      return NextResponse.json({ success: false, error: lengoResult.message || 'Erreur Lengo Pay - Pas de pay_id' }, { status: 502 });
+    }
+
+    // Si le statut n'est pas "Success" mais qu'on a un pay_id, c'est probablement "Request received successfully"
+    if (lengoResult.status !== 'Success') {
+      console.log('⚠️ Statut Lengo Pay différent de Success:', lengoResult.status);
+      console.log('ℹ️ Mais pay_id reçu, on continue avec la création de la transaction');
     }
 
     // Insérer la transaction dans la table transactions
@@ -169,7 +176,9 @@ export async function POST(request: NextRequest) {
       success: true,
       pay_id: lengoResult.pay_id,
       transaction: data,
-      message: lengoResult.message
+      message: lengoResult.message || 'Transaction créée avec succès',
+      status: lengoResult.status,
+      note: lengoResult.status !== 'Success' ? 'Paiement en cours de traitement' : 'Paiement traité avec succès'
     });
   } catch (error) {
     console.error('💥 Erreur générale dans la route lengo-cashin:', error);

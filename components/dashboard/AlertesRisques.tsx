@@ -55,7 +55,7 @@ export default function AlertesRisques() {
             <div className="flex justify-center pt-2">
               <button
                 onClick={() => router.push('/dashboard/avis')}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--zalama-blue)] hover:text-[var(--zalama-blue-accent)] transition-colors rounded-lg hover:bg-[var(--zalama-bg-lighter)]"
+                className="bg-blue-500 gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg hover:bg-[var(--zalama-bg-lighter)]"
               >
                 Voir tout
               </button>

@@ -106,6 +106,21 @@ class PartnerService {
     }
   }
 
+  // obtenir le nombre d'employés actifs 
+  async getNombreEmployesActifs(): Promise<Number> {
+    try {
+      const { data, error } = await supabase.from('employees')
+        .select('*')
+        .eq('actif', true);
+
+      if (error) throw error;
+      return data?.length || 0;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du nombre d\'employés actifs:', error);
+      throw error;
+    }
+  }
+
   // Obtenir les nouveaux partenaires du mois
   async getNewThisMonth(): Promise<Partner[]> {
     try {

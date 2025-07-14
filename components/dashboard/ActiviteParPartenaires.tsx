@@ -1,12 +1,45 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
 import { partnerService } from '@/services/partnerService';
+import { Partner } from '@/types/employee';
+import { supabase } from '@/lib/supabase';
 
 export default function ActiviteParPartenaires() {
   // Utiliser notre hook pour récupérer tous les partenaires
   const { data: partenaires, loading, error } = useSupabaseCollection(partnerService);
+  const [totalEmployesActifs, setTotalEmployesActifs] = useState<number>(0);
+  const [loadingEmployes, setLoadingEmployes] = useState(true);
+  const [employes, setEmployes] = useState<any[]>([]);
+
+  // Charger le nombre d'employés actifs et la liste des employés
+  useEffect(() => {
+    async function loadEmployesActifs() {
+      try {
+        setLoadingEmployes(true);
+        const nombre = await partnerService.getNombreEmployesActifs();
+        setTotalEmployesActifs(nombre as number);
+        
+        // Charger aussi la liste des employés actifs pour les calculs
+        const { data: employeesData } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('actif', true);
+        setEmployes(employeesData || []);
+      } catch (error) {
+        console.error('Erreur lors du chargement des employés actifs:', error);
+        setTotalEmployesActifs(0);
+        setEmployes([]);
+      } finally {
+        setLoadingEmployes(false);
+      }
+    }
+    
+    if (!loading) {
+      loadEmployesActifs();
+    }
+  }, [loading]);
 
   // Calculer les statistiques à partir des données des partenaires
   const stats = useMemo(() => {
@@ -14,10 +47,12 @@ export default function ActiviteParPartenaires() {
       return {
         totalPartenaires: 0,
         totalEmployes: 0,
+        totalEmployesActifs: 0,
         nouveauxPartenaires: 0,
         employesParEntreprise: [] as Array<{
           nom: string;
-          count: number;
+          employesActifs: number;
+          nombreDeclare: number;
           pourcentage: number;
         }>
       };
@@ -28,53 +63,42 @@ export default function ActiviteParPartenaires() {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
     // Compter les nouveaux partenaires du mois
-    const nouveauxPartenaires = partenaires.filter(p => {
+    const nouveauxPartenaires = (partenaires as Partner[]).filter(p => {
       if (!p.created_at) return false;
       const dateCreation = new Date(p.created_at);
       return dateCreation >= firstDayOfMonth;
     }).length;
 
-    // Calculer le nombre total d'employés et préparer les données du graphique
-    const employesParEntreprise = partenaires
-      .filter(p => p.nombre_employes && p.nombre_employes > 0) // Ne garder que les partenaires avec des employés
-      .sort((a, b) => (b.nombre_employes || 0) - (a.nombre_employes || 0)) // Trier par nombre d'employés décroissant
-      .slice(0, 5) // Prendre les 5 premiers
-      .map(p => ({
+    // Calculer les données pour les 3 dernières entreprises créées
+    const last3Partenaires = (partenaires as Partner[])
+      .slice(0, 3); // Prendre les 3 premiers (déjà triés par date de création décroissante)
+    
+    const employesParEntreprise = last3Partenaires.map(p => {
+      // Compter les employés actifs pour ce partenaire
+      const employesActifs = (employes as any[]).filter((e: any) => e.partner_id === p.id).length;
+      const nombreDeclare = p.nombre_employes || 0;
+      
+      return {
         nom: p.nom,
-        count: p.nombre_employes || 0,
-        pourcentage: 0 // Sera calculé après
-      }));
+        employesActifs,
+        nombreDeclare,
+        pourcentage: nombreDeclare > 0 ? Math.round((employesActifs / nombreDeclare) * 100) : 0
+      };
+    });
       
     // Calculer le total des employés pour tous les partenaires
-    const totalEmployes = partenaires.reduce((sum, p) => sum + (p.nombre_employes || 0), 0);
-    
-    // Calculer le pourcentage de chaque entreprise par rapport au total des entreprises affichées
-    const totalEmployesAffiches = employesParEntreprise.reduce((sum, p) => sum + p.count, 0);
-    
-    // Mettre à jour les pourcentages
-    employesParEntreprise.forEach(p => {
-      p.pourcentage = totalEmployesAffiches > 0 
-        ? Math.round((p.count / totalEmployesAffiches) * 100) 
-        : 0;
-    });
-    
-    // Ajuster le dernier pourcentage pour que la somme fasse exactement 100%
-    if (employesParEntreprise.length > 0) {
-      const sum = employesParEntreprise.reduce((s, p) => s + p.pourcentage, 0);
-      if (sum !== 100) {
-        employesParEntreprise[employesParEntreprise.length - 1].pourcentage += 100 - sum;
-      }
-    }
+    const totalEmployes = (partenaires as Partner[]).reduce((sum, p) => sum + (p.nombre_employes || 0), 0);
 
     return {
       totalPartenaires: partenaires.length,
       totalEmployes,
+      totalEmployesActifs,
       nouveauxPartenaires,
       employesParEntreprise
     };
-  }, [partenaires, loading]);
+  }, [partenaires, loading, totalEmployesActifs, employes]);
 
-  if (loading) {
+  if (loading || loadingEmployes) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--zalama-primary)]"></div>
@@ -96,9 +120,9 @@ export default function ActiviteParPartenaires() {
         
         <div className="flex flex-col p-6 bg-white dark:bg-[var(--zalama-bg-light)] rounded-lg border border-gray-200 dark:border-[#2c5282] shadow-sm dark:shadow-md">
           <div className="text-3xl font-bold text-gray-900 dark:text-white">
-            {stats.totalEmployes.toLocaleString()}
+            {stats.totalEmployesActifs} / {stats.totalEmployes.toLocaleString()}
           </div>
-          <div className="text-sm text-gray-600 dark:text-blue-200">Total Employés</div>
+          <div className="text-sm text-gray-600 dark:text-blue-200">Employés actifs</div>
         </div>
 
         <div className="flex flex-col p-6 bg-white dark:bg-[var(--zalama-bg-light)] rounded-lg border border-gray-200 dark:border-[#2c5282] shadow-sm dark:shadow-md">
@@ -129,7 +153,7 @@ export default function ActiviteParPartenaires() {
                         {entreprise.nom}
                       </span>
                       <span className="text-sm font-medium text-[var(--zalama-text-secondary)] whitespace-nowrap">
-                        {entreprise.count} <span className="opacity-75">({entreprise.pourcentage}%)</span>
+                        {entreprise.employesActifs} / {entreprise.nombreDeclare} <span className="opacity-75">({entreprise.pourcentage}%)</span>
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">

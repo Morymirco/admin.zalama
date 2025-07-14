@@ -1,12 +1,22 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CreditCard, Wallet, LineChart, BarChart, CheckCircle, XCircle, Clock, Activity } from 'lucide-react';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
 import serviceService from '@/services/serviceService';
 import { transactionService } from '@/services/transactionService';
 
 export default function ActiviteParService() {
+  const [nbDemandesAvance, setNbDemandesAvance] = useState<number>(0);
+
+  useEffect(() => {
+    async function fetchNbDemandes() {
+      const nb = await serviceService.getNombreDemandesAvanceSalaire();
+      setNbDemandesAvance(nb);
+    }
+    fetchNbDemandes();
+  }, []);
+  
   // Utiliser nos hooks pour récupérer les services et transactions
   const { data: services, loading: loadingServices } = useSupabaseCollection(serviceService);
   const { data: transactions, loading: loadingTransactions } = useSupabaseCollection(transactionService);
@@ -142,8 +152,17 @@ export default function ActiviteParService() {
     <div>
       <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Activité par service</h2>
       
+      {/* Affichage du nombre de demandes d'avance sur salaire */}
+      <div className="my-4">
+        <div className="bg-[var(--zalama-bg-light)] rounded-lg p-3 border border-[var(--zalama-border)] flex items-center gap-3">
+          <span className="text-base font-bold text-[var(--zalama-text)]">{nbDemandesAvance}</span>
+          <span className="text-xs text-[var(--zalama-text-secondary)]">demandes d'avance sur salaire</span>
+        </div>
+      </div>
       {/* Grille des services */}
+      <h2 className="text-xl font-semibold mb-4 text-[var(--zalama-blue)]">Nos services</h2>
       <div className="grid grid-cols-2 gap-3 mb-4">
+        
         {stats.servicesActivity.map((service, index) => {
           const colorClasses = getColorClass(service.color);
           const percentage = totalActivities > 0 ? (service.count / totalActivities) * 100 : 0;
@@ -156,7 +175,7 @@ export default function ActiviteParService() {
                   {getServiceIcon(service.icon)}
                 </div>
               </div>
-              <div className="text-xl font-bold text-[var(--zalama-text)]">{service.count}</div>
+              {/* <div className="text-xl font-bold text-[var(--zalama-text)]">{service.count}</div> */}
               <div className="w-full bg-[var(--zalama-bg)] h-1.5 rounded-full mt-2 overflow-hidden">
                 <div className={`${colorClasses.bar} h-full`} style={{ width: `${percentage}%` }}></div>
               </div>

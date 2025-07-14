@@ -74,8 +74,8 @@ class TransactionService {
       }, {} as Record<string, number>);
       
       // Calculer les transactions de ce mois
-  const now = new Date();
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       
       const transactionsCeMois = transactions.filter(transaction => {
         if (!transaction.date_transaction) return false;

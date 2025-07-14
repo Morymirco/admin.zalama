@@ -121,6 +121,8 @@ class PartnerService {
     }
   }
 
+  
+
   // Obtenir les nouveaux partenaires du mois
   async getNewThisMonth(): Promise<Partner[]> {
     try {

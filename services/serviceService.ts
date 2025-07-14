@@ -19,8 +19,8 @@ const convertFromDB = (dbService: any): Service => {
     duree: dbService.duree || '',
     disponible: dbService.disponible ?? true,
     image_url: dbService.image_url,
-    date_creation: dbService.date_creation ? new Date(dbService.date_creation) : undefined,
-    createdAt: dbService.created_at ? { toDate: () => new Date(dbService.created_at) } as any : undefined
+    date_creation: dbService.date_creation ? new Date(dbService.date_creation) : new Date(),
+    createdAt: dbService.created_at ? { toDate: () => new Date(dbService.created_at) } as any : new Date()
   };
 };
 
@@ -241,6 +241,21 @@ class ServiceService {
       throw error;
     }
   }
+
+ // Obtenir le nombre de demandes d'avance sur salaire
+    async getNombreDemandesAvanceSalaire(): Promise<number> {
+      try {
+        const { count, error } = await supabase
+          .from('salary_advance_requests')
+          .select('id', { count: 'exact' });
+
+        if (error) throw error;
+        return count ?? 0;
+      } catch (error) {
+        console.error("Erreur lors de la récupération du nombre de demandes d'avance sur salaire:", error);
+        return 0;
+      }
+    }
 
   // Obtenir les nouveaux services de ce mois
   async getNewThisMonth(): Promise<Service[]> {

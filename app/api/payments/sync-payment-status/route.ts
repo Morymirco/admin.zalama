@@ -2,17 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
 
-// Utiliser la clé de service si disponible, sinon la clé anonyme
-const supabaseKey = supabaseServiceKey || supabaseAnonKey;
-
-if (!supabaseKey) {
-  throw new Error('Aucune clé Supabase disponible');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Utiliser seulement la clé anonyme pour éviter les problèmes de permissions
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function POST(request: NextRequest) {
   try {
@@ -131,7 +124,7 @@ export async function POST(request: NextRequest) {
       updated: updatedCount,
       total_transactions: transactions.length,
       errors: errors.length > 0 ? errors : undefined,
-      note: !supabaseServiceKey ? 'Utilisation de la clé anonyme - certaines opérations peuvent être limitées' : undefined
+      note: 'Utilisation de la clé anonyme - certaines opérations peuvent être limitées'
     });
     
   } catch (error) {

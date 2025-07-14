@@ -7,7 +7,7 @@ import employeeService from '@/services/employeeService';
 import { partnerService } from '@/services/partnerService';
 import serviceService from '@/services/serviceService';
 import { transactionService } from '@/services/transactionService';
-import { Employee, Partner, Service, FinancialTransaction } from '@/types/employee';
+import { Employee, Partner, Service, Transaction } from '@/types/employee';
 
 interface EmployeeStats {
   totalEmployees: number;
@@ -42,7 +42,7 @@ export default function StatistiquesGenerales() {
   const { data: employees, loading: loadingEmployees, error: errorEmployees } = useSupabaseCollection<Employee>(employeeService);
   const { data: partners, loading: loadingPartners, error: errorPartners } = useSupabaseCollection<Partner>(partnerService);
   const { data: services, loading: loadingServices, error: errorServices } = useSupabaseCollection<Service>(serviceService);
-  const { data: transactions, loading: loadingTransactions, error: errorTransactions } = useSupabaseCollection<FinancialTransaction>(transactionService);
+  const { data: transactions, loading: loadingTransactions, error: errorTransactions } = useSupabaseCollection<Transaction>(transactionService);
 
   // Logs de débogage
   useEffect(() => {
@@ -172,15 +172,15 @@ export default function StatistiquesGenerales() {
     const availableServices = services?.filter((service: Service) => service.disponible).length || 0;
 
     // Statistiques des transactions (optimisé)
-    const montantTotal = transactions?.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0) || 0;
+    const montantTotal = transactions?.reduce((sum: number, transaction: Transaction) => sum + (transaction.montant || 0), 0) || 0;
     
-    const transactionsCeMois = transactions?.filter((transaction: FinancialTransaction) => {
-      if (!transaction.date_transaction) return false;
-      const transactionDate = new Date(transaction.date_transaction);
+    const transactionsCeMois = transactions?.filter((transaction: Transaction) => {
+      if (!transaction.created_at) return false;
+      const transactionDate = new Date(transaction.created_at);
       return transactionDate >= firstDayOfMonth;
     }) || [];
     
-    const montantCeMois = transactionsCeMois.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0);
+    const montantCeMois = transactionsCeMois.reduce((sum: number, transaction: Transaction) => sum + (transaction.montant || 0), 0);
     
     const result = {
       employees: {

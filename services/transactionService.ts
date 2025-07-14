@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { FinancialTransaction } from '@/types/employee';
+import { FinancialTransaction, Transaction } from '@/types/employee';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -8,36 +8,34 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Fonction utilitaire pour convertir les données de la DB vers l'interface
-const convertFromDB = (dbTransaction: any): FinancialTransaction => {
+const convertFromDB = (dbTransaction: any): Transaction => {
   return {
     id: dbTransaction.id,
+    numero_transaction: dbTransaction.numero_transaction,
     montant: dbTransaction.montant,
-    type: dbTransaction.type,
+    methode_paiement: dbTransaction.methode_paiement,
     description: dbTransaction.description,
-    partenaire_id: dbTransaction.partenaire_id,
-    utilisateur_id: dbTransaction.utilisateur_id,
-    service_id: dbTransaction.service_id,
+    employe_id: dbTransaction.employe_id,
+    entreprise_id: dbTransaction.entreprise_id,
     statut: dbTransaction.statut,
     date_transaction: dbTransaction.date_transaction,
-    date_validation: dbTransaction.date_validation,
-    reference: dbTransaction.reference,
     created_at: dbTransaction.created_at,
     updated_at: dbTransaction.updated_at,
-    transaction_id: dbTransaction.transaction_id
+    message_callback: dbTransaction.message_callback
   };
 };
 
 class TransactionService {
   // Récupérer toutes les transactions
-  async getAll(): Promise<FinancialTransaction[]> {
+  async getAll(): Promise<Transaction[]> {
     try {
       const { data, error } = await supabase
-        .from('financial_transactions')
+        .from('transactions')
         .select('*')
-        .order('date_transaction', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(convertFromDB);
+      return (data || []).map(convertFromDB) as Transaction[];
     } catch (error) {
       console.error('Erreur lors de la récupération des transactions:', error);
       throw error;
@@ -55,23 +53,23 @@ class TransactionService {
   }> {
     try {
       const { data, error } = await supabase
-        .from('financial_transactions')
+        .from('transactions')
         .select('*');
 
       if (error) throw error;
 
       const transactions = (data || []).map(convertFromDB);
-      
+      console.log("transactions Jeanostone : ", transactions);
       const total = transactions.length;
       const montantTotal = transactions.reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
       
       const parType = transactions.reduce((acc, transaction) => {
-        acc[transaction.type] = (acc[transaction.type] || 0) + 1;
+        acc[transaction.methode_paiement || ''] = (acc[transaction.methode_paiement || ''] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
       
       const parStatut = transactions.reduce((acc, transaction) => {
-        acc[transaction.statut] = (acc[transaction.statut] || 0) + 1;
+        acc[transaction.statut || ''] = (acc[transaction.statut || ''] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
       
@@ -102,16 +100,16 @@ class TransactionService {
   }
 
   // Obtenir les transactions du mois
-  async getThisMonth(): Promise<FinancialTransaction[]> {
+  async getThisMonth(): Promise<Transaction[]> {
     try {
       const now = new Date();
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       
       const { data, error } = await supabase
-        .from('financial_transactions')
+        .from('transactions')
         .select('*')
-        .gte('date_transaction', firstDayOfMonth)
-        .order('date_transaction', { ascending: false });
+        .gte('created_at', firstDayOfMonth)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return (data || []).map(convertFromDB);

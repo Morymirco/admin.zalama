@@ -62,6 +62,27 @@ export interface Service {
   updated_at?: string;
 }
 
+
+export interface Transaction {
+  id: string;
+  demande_avance_id?: string;
+  employe_id?: string;
+  entreprise_id?: string;
+  montant: number;
+  numero_transaction: string;
+  methode_paiement: string;
+  numero_compte?: string;
+  numero_reception?: string;
+  date_transaction?: string;
+  recu_url?: string;
+  date_creation?: string;
+  statut?: string;
+  created_at?: string;
+  updated_at?: string;
+  description?: string;
+  message_callback?: string;
+}
+
 export interface FinancialTransaction {
   id: string;
   montant: number;

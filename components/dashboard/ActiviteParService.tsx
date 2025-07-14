@@ -8,6 +8,7 @@ import { transactionService } from '@/services/transactionService';
 
 export default function ActiviteParService() {
   const [nbDemandesAvance, setNbDemandesAvance] = useState<number>(0);
+  const [statsDemandes, setStatsDemandes] = useState({ approuvees: 0, rejetees: 0, enCours: 0 });
 
   useEffect(() => {
     async function fetchNbDemandes() {
@@ -15,6 +16,14 @@ export default function ActiviteParService() {
       setNbDemandesAvance(nb);
     }
     fetchNbDemandes();
+  }, []);
+
+  useEffect(() => {
+    async function fetchStatsDemandes() {
+      const stats = await serviceService.getStatsDemandesAvanceSalaire();
+      setStatsDemandes(stats);
+    }
+    fetchStatsDemandes();
   }, []);
   
   // Utiliser nos hooks pour récupérer les services et transactions
@@ -186,38 +195,36 @@ export default function ActiviteParService() {
       
       {/* Statut des demandes */}
       <div className="bg-[var(--zalama-bg-light)] rounded-lg p-3 border border-[var(--zalama-border)]">
-        <div className="text-sm font-medium mb-3 text-[var(--zalama-text)]">Statut des transactions</div>
+        <div className="text-sm font-medium mb-3 text-[var(--zalama-text)]">Statut des demandes d'avance</div>
         <div className="grid grid-cols-3 gap-2">
-          {/* Approuvés */}
+          {/* Approuvées */}
           <div className="flex items-center gap-2">
             <div className="bg-[var(--zalama-success-light)] p-1 rounded-full">
               <CheckCircle className="h-4 w-4 text-[var(--zalama-success)]" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--zalama-text)]">{stats.demandeStats.approuvees}</div>
-              <div className="text-xs text-[var(--zalama-text-secondary)]">Validés</div>
+              <div className="text-base font-bold text-[var(--zalama-text)]">{statsDemandes.approuvees}</div>
+              <div className="text-xs text-[var(--zalama-text-secondary)]">Validées</div>
             </div>
           </div>
-          
-          {/* Rejetés */}
+          {/* Rejetées */}
           <div className="flex items-center gap-2">
             <div className="bg-[var(--zalama-danger-light)] p-1 rounded-full">
               <XCircle className="h-4 w-4 text-[var(--zalama-danger)]" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--zalama-text)]">{stats.demandeStats.rejetees}</div>
-              <div className="text-xs text-[var(--zalama-text-secondary)]">Rejetés</div>
+              <div className="text-base font-bold text-[var(--zalama-text)]">{statsDemandes.rejetees}</div>
+              <div className="text-xs text-[var(--zalama-text-secondary)]">Rejetées</div>
             </div>
           </div>
-          
-          {/* En Cours */}
+          {/* En cours */}
           <div className="flex items-center gap-2">
             <div className="bg-[var(--zalama-warning-light)] p-1 rounded-full">
               <Clock className="h-4 w-4 text-[var(--zalama-warning)]" />
             </div>
             <div>
-              <div className="text-base font-bold text-[var(--zalama-text)]">{stats.demandeStats.enCours}</div>
-              <div className="text-xs text-[var(--zalama-text-secondary)]">En Attente</div>
+              <div className="text-base font-bold text-[var(--zalama-text)]">{statsDemandes.enCours}</div>
+              <div className="text-xs text-[var(--zalama-text-secondary)]">En attente</div>
             </div>
           </div>
         </div>

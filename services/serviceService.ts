@@ -277,6 +277,30 @@ class ServiceService {
       throw error;
     }
   }
+
+  async getStatsDemandesAvanceSalaire(): Promise<{
+    approuvees: number;
+    rejetees: number;
+    enCours: number;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select('statut');
+
+      if (error) throw error;
+
+      // Statuts à adapter selon ta base (ex: 'Validé', 'Effectué', 'Rejeté', 'En attente')
+      const approuvees = (data || []).filter(d => d.statut === 'Validé' || d.statut === 'Effectué').length;
+      const rejetees = (data || []).filter(d => d.statut === 'Rejeté').length;
+      const enCours = (data || []).filter(d => d.statut === 'En attente').length;
+
+      return { approuvees, rejetees, enCours };
+    } catch (error) {
+      console.error("Erreur lors de la récupération des stats d'avance sur salaire:", error);
+      return { approuvees: 0, rejetees: 0, enCours: 0 };
+    }
+  }
 }
 
 const serviceService = new ServiceService();

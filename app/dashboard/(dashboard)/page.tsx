@@ -60,7 +60,7 @@ export default function DashboardPage() {
         
         {/* Troisième rangée - Composants très lourds */}
         <Suspense fallback={<DashboardSkeleton className="lg:col-span-2" />}>
-          <div className="lg:col-span-2 bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
+          <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
             <DonneesEmployes />
           </div>
         </Suspense>
@@ -72,11 +72,11 @@ export default function DashboardPage() {
         </Suspense>
         
         {/* Quatrième rangée - Composants graphiques lourds */}
-        <Suspense fallback={<DashboardSkeleton />}>
+        {/* <Suspense fallback={<DashboardSkeleton />}>
           <div className="bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
             <GraphiquesVisualisations />
           </div>
-        </Suspense>
+        </Suspense> */}
         
        {/*  <Suspense fallback={<DashboardSkeleton className="lg:col-span-2" />}>
           <div className="lg:col-span-2 bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
-import { X, DollarSign, CreditCard, Phone, FileText, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
+import { AlertCircle, CheckCircle, CreditCard, DollarSign, FileText, Phone, X, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 interface ModalePaiementDemandeProps {
@@ -165,7 +165,7 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
         employeNom: request?.employeNom,
         employeEmail: request?.employe?.email,
         employeTelephone: phoneNumber,
-        montant: request?.montant_total,
+        montant: request?.montant_demande,
         description: description,
         lengoStatus: statusResult.lengo_status,
         dbStatus: statusResult.db_status
@@ -224,9 +224,16 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
     setIsProcessing(true);
 
     try {
+      // Calculer le montant à payer en déduisant les frais de 6.5%
+      const montantDemande = request.montant_demande;
+      const fraisService = Math.round(montantDemande * 0.065); // 6.5% des frais
+      const montantAPayer = montantDemande - fraisService;
+
       console.log('🚀 Début du paiement pour la demande:', request.id);
       console.log('📋 Données de paiement:', {
-        amount: request.montant_total,
+        montantDemande: montantDemande,
+        fraisService: fraisService,
+        montantAPayer: montantAPayer,
         phone: phoneNumber,
         description: description,
         partnerId: request.partenaire_id,
@@ -239,7 +246,7 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: request.montant_total,
+          amount: montantAPayer, // On paie le montant moins les frais
           phone: phoneNumber,
           description: description,
           partnerId: request.partenaire_id,
@@ -338,9 +345,21 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                     <span className="font-medium text-[var(--zalama-text)]">{request.partenaireNom}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[var(--zalama-text-secondary)]">Montant total:</span>
+                    <span className="text-[var(--zalama-text-secondary)]">Montant demandé:</span>
                     <span className="font-semibold text-[var(--zalama-success)]">
-                      {formatCurrency(request.montant_total)}
+                      {formatCurrency(request.montant_demande)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--zalama-text-secondary)]">Frais de service (6.5%):</span>
+                    <span className="font-medium text-[var(--zalama-text-secondary)]">
+                      -{formatCurrency(Math.round(request.montant_demande * 0.065))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-[var(--zalama-border)] pt-1 mt-1">
+                    <span className="text-[var(--zalama-text-secondary)] font-medium">Montant à payer:</span>
+                    <span className="font-bold text-[var(--zalama-blue)] text-base">
+                      {formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}
                     </span>
                   </div>
                 </div>
@@ -474,7 +493,7 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                 form="payment-form"
                 disabled={isProcessing || isCheckingStatus}
                 className="flex-1 px-4 py-2 bg-[var(--zalama-success)] hover:bg-[var(--zalama-success-accent)] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                aria-label={`Payer ${formatCurrency(request.montant_total)}`}
+                aria-label={`Payer ${formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}`}
               >
                 {isProcessing ? (
                   <>
@@ -484,7 +503,7 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                 ) : (
                   <>
                     <DollarSign className="w-4 h-4" />
-                    Payer {formatCurrency(request.montant_total)}
+                    Payer {formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}
                   </>
                 )}
               </button>

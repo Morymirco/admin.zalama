@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 // Utilisation de CSS standard pour les polices au lieu de next/font/google
-import "./globals.css";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import { NotificationProvider } from "@/contexts/NotificationContext";
-import { Toaster } from "react-hot-toast";
 import SupabaseAuthProvider from "@/components/auth/SupabaseAuthProvider";
+import { NotificationProvider } from "@/contexts/NotificationContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { Toaster } from "react-hot-toast";
+import "./globals.css";
 
 // Nous utiliserons des polices système au lieu des polices Google pour éviter les problèmes avec Turbopack
 

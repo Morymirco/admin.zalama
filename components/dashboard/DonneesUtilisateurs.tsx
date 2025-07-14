@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
 import employeeService from '@/services/employeeService';
 import { partnerService } from '@/services/partnerService';
+import { Employee } from '@/types/employee';
 
 // Chargement dynamique du composant de carte pour éviter les problèmes de rendu côté serveur
 const GuineaMap = dynamic(() => import('./GuineaMap'), {
@@ -53,7 +54,7 @@ export default function DonneesEmployes() {
           const totalEmployees = employees.length;
           
           // Statistiques par genre
-          const genres = employees.reduce((acc, emp) => {
+          const genres = (employees as Employee[]).reduce((acc, emp) => {
             acc[emp.genre] = (acc[emp.genre] || 0) + 1;
             return acc;
           }, {} as Record<string, number>);
@@ -64,7 +65,7 @@ export default function DonneesEmployes() {
           }, {} as Record<string, number>);
           
           // Statistiques par type de contrat
-          const contrats = employees.reduce((acc, emp) => {
+          const contrats = (employees as Employee[]).reduce((acc, emp) => {
             acc[emp.type_contrat] = (acc[emp.type_contrat] || 0) + 1;
             return acc;
           }, {} as Record<string, number>);
@@ -75,7 +76,7 @@ export default function DonneesEmployes() {
           }, {} as Record<string, number>);
           
           // Salaire moyen
-          const salaires = employees
+          const salaires = (employees as Employee[])
             .filter(emp => emp.salaire_net && emp.salaire_net > 0)
             .map(emp => emp.salaire_net!);
           
@@ -90,7 +91,7 @@ export default function DonneesEmployes() {
           // Préparer les données pour le graphique circulaire
           const genresData = Object.entries(genres).map(([genre, count], index) => ({
             name: genre.charAt(0).toUpperCase() + genre.slice(1),
-            value: count,
+            value: count as number,
             color: COLORS[index % COLORS.length]
           }));
           
@@ -162,7 +163,7 @@ export default function DonneesEmployes() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 mt-2">
+          {/* <div className="flex items-center gap-2 mt-2">
             <div className="text-2xl font-bold text-[var(--zalama-text)]">{salaireMoyen.toLocaleString('fr-FR', { style: 'currency', currency: 'GNF' })}</div>
             <div className="text-sm text-[var(--zalama-text-secondary)]">salaire moyen</div>
             </div>
@@ -170,7 +171,7 @@ export default function DonneesEmployes() {
           <div className="flex items-center gap-2">
             <div className="text-2xl font-bold text-[var(--zalama-text)]">{employees.length}</div>
             <div className="text-sm text-[var(--zalama-text-secondary)]">employés total</div>
-          </div>
+          </div> */}
         </div>
       </div>
   );

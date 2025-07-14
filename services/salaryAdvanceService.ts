@@ -1,13 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
-import { 
-  SalaryAdvanceRequest, 
-  Transaction, 
-  SalaryAdvanceRequestFormData, 
-  TransactionFormData,
-  TransactionStatus,
-  TransactionStatut
+import {
+    SalaryAdvanceRequest,
+    SalaryAdvanceRequestFormData,
+    Transaction,
+    TransactionFormData,
+    TransactionStatus,
+    TransactionStatut
 } from '@/types/salaryAdvanceRequest';
-import { notificationService } from './notificationService';
+import { createClient } from '@supabase/supabase-js';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -76,8 +75,10 @@ class SalaryAdvanceService {
         .select(`
           *,
           employe:employees(nom, prenom, email, telephone, poste, salaire_net),
-          partenaire:partners(nom, type, secteur, email, telephone)
+          partenaire:partners(nom, type, secteur, email, telephone),
+          transactions:transactions(id, numero_transaction, statut, montant, date_transaction, methode_paiement)
         `)
+        .order('created_at', { ascending: false })
         .order('date_creation', { ascending: false });
 
       if (error) throw error;
@@ -96,7 +97,8 @@ class SalaryAdvanceService {
         .select(`
           *,
           employe:employees(nom, prenom, email, telephone, poste, salaire_net),
-          partenaire:partners(nom, type, secteur, email, telephone)
+          partenaire:partners(nom, type, secteur, email, telephone),
+          transactions:transactions(id, numero_transaction, statut, montant, date_transaction, methode_paiement)
         `)
         .eq('id', id)
         .single();
@@ -105,6 +107,27 @@ class SalaryAdvanceService {
       return data ? convertSalaryAdvanceFromDB(data) : null;
     } catch (error) {
       console.error('Erreur lors de la récupération de la demande:', error);
+      throw error;
+    }
+  }
+
+  // Récupérer les demandes avec tri personnalisé
+  async getAllWithSort(sortBy: 'date_creation' | 'created_at' | 'montant_demande' | 'statut' = 'date_creation', sortOrder: 'asc' | 'desc' = 'desc'): Promise<SalaryAdvanceRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employe:employees(nom, prenom, email, telephone, poste, salaire_net),
+          partenaire:partners(nom, type, secteur, email, telephone),
+          transactions:transactions(id, numero_transaction, statut, montant, date_transaction, methode_paiement)
+        `)
+        .order(sortBy, { ascending: sortOrder === 'asc' });
+
+      if (error) throw error;
+      return (data || []).map(convertSalaryAdvanceFromDB);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des demandes:', error);
       throw error;
     }
   }

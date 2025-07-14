@@ -41,7 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # Optimisations de développement
-.env.local
+
 dev.config.json
 .next/cache/
 node_modules/.cache/

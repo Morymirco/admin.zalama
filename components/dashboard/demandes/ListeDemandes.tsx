@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import { canBePaid, getPaymentStatusFromTransactions, hasSuccessfulPayment } from '@/lib/utils';
 import { UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
-import { Eye, CheckCircle, XCircle, Clock, DollarSign, MoreHorizontal, Edit, Trash2, CreditCard, Shield, RefreshCw, Loader2 } from 'lucide-react';
+import { CheckCircle, Clock, CreditCard, DollarSign, Eye, Loader2, RefreshCw, Shield, Trash2, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 
 interface ListeDemandesProps {
@@ -17,6 +18,9 @@ interface ListeDemandesProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
 const ListeDemandes: React.FC<ListeDemandesProps> = ({
@@ -30,45 +34,80 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
   onRefresh,
   currentPage,
   totalPages,
-  onPageChange
+  onPageChange,
+  sortBy = 'date_creation',
+  sortOrder = 'desc',
+  onSortChange
 }) => {
   const [syncingId, setSyncingId] = useState<string | null>(null);
+
+  // Fonction pour obtenir l'icône et la couleur du statut de paiement
+  const getPaymentStatusDisplay = (request: UISalaryAdvanceRequest) => {
+    const paymentStatus = getPaymentStatusFromTransactions(request);
+    
+    let icon, color;
+    switch (paymentStatus.statusCode) {
+      case 'PAID':
+        icon = <Shield className="w-4 h-4 text-[var(--zalama-success)]" />;
+        color = 'bg-green-100 text-green-800';
+        break;
+      case 'CANCELLED':
+        icon = <XCircle className="w-4 h-4 text-[var(--zalama-danger)]" />;
+        color = 'bg-red-100 text-red-800';
+        break;
+      case 'FAILED':
+        icon = <XCircle className="w-4 h-4 text-[var(--zalama-danger)]" />;
+        color = 'bg-red-100 text-red-800';
+        break;
+      case 'PROCESSING':
+        icon = <Clock className="w-4 h-4 text-[var(--zalama-warning)]" />;
+        color = 'bg-yellow-100 text-yellow-800';
+        break;
+      default:
+        icon = <Clock className="w-4 h-4 text-[var(--zalama-text-secondary)]" />;
+        color = 'bg-gray-100 text-gray-800';
+    }
+    
+    return { icon, color, status: paymentStatus.status, transactionId: paymentStatus.transactionId };
+  };
 
   const handleSyncPaymentStatus = async (request: UISalaryAdvanceRequest) => {
     setSyncingId(request.id);
     try {
-      console.log('🔄 Synchronisation du statut de paiement pour:', request.id);
+      console.log('🔄 Synchronisation du statut de paiement pour la demande:', request.id);
       
       const response = await fetch('/api/payments/sync-payment-status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: request.id })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestId: request.id
+        }),
       });
-      
-      const data = await response.json();
-      console.log('📊 Réponse de synchronisation:', data);
+
+      const result = await response.json();
       
       if (response.ok) {
-        toast.success(
-          `Synchronisation terminée: ${data.updated} demande(s) mise(s) à jour`,
-          { duration: 4000 }
-        );
+        console.log('✅ Synchronisation réussie:', result);
+        toast.success(`Synchronisation réussie: ${result.updatedCount} mise(s) à jour`);
         
-        // Rafraîchir la liste si la fonction onRefresh est disponible
+        // Rafraîchir les données
         if (onRefresh) {
-          console.log('🔄 Rafraîchissement de la liste des demandes...');
           onRefresh();
         }
       } else {
-        toast.error(data.error || 'Erreur lors de la synchronisation');
+        console.error('❌ Erreur synchronisation:', result);
+        toast.error(result.error || 'Erreur lors de la synchronisation');
       }
-    } catch (e) {
-      console.error('❌ Erreur lors de la synchronisation:', e);
+    } catch (error) {
+      console.error('💥 Erreur lors de la synchronisation:', error);
       toast.error('Erreur réseau lors de la synchronisation');
     } finally {
       setSyncingId(null);
     }
   };
+
   const getStatusIcon = (statut: string) => {
     switch (statut) {
       case 'En attente':
@@ -95,27 +134,6 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
     }
   };
 
-  const getPaymentStatusIcon = (numeroReception: string | null) => {
-    if (numeroReception) {
-      return <Shield className="w-4 h-4 text-[var(--zalama-success)]" />;
-    }
-    return <Clock className="w-4 h-4 text-[var(--zalama-warning)]" />;
-  };
-
-  const getPaymentStatusColor = (numeroReception: string | null) => {
-    if (numeroReception) {
-      return 'bg-green-100 text-green-800';
-    }
-    return 'bg-yellow-100 text-yellow-800';
-  };
-
-  const getPaymentStatusText = (numeroReception: string | null) => {
-    if (numeroReception) {
-      return 'Payé';
-    }
-    return 'En attente';
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
@@ -131,6 +149,20 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
       month: '2-digit',
       year: 'numeric'
     });
+  };
+
+  // Fonction pour gérer le changement de tri
+  const handleSortChange = (newSortBy: string) => {
+    if (onSortChange) {
+      const newSortOrder = sortBy === newSortBy && sortOrder === 'desc' ? 'asc' : 'desc';
+      onSortChange(newSortBy, newSortOrder);
+    }
+  };
+
+  // Fonction pour obtenir l'icône de tri
+  const getSortIcon = (field: string) => {
+    if (sortBy !== field) return <span className="text-[var(--zalama-text-secondary)]">↕</span>;
+    return sortOrder === 'desc' ? <span className="text-[var(--zalama-blue)]">↓</span> : <span className="text-[var(--zalama-blue)]">↑</span>;
   };
 
   if (isLoading) {
@@ -157,8 +189,31 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
           <h3 className="text-lg font-semibold text-[var(--zalama-text)]">
             Liste des demandes
           </h3>
-          <div className="text-sm text-[var(--zalama-text-secondary)]">
-            {requests.length} demande(s)
+          <div className="flex items-center gap-4">
+            {/* Sélecteur de tri */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--zalama-text-secondary)]">Trier par:</span>
+              <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [field, order] = e.target.value.split('-');
+                  if (onSortChange) {
+                    onSortChange(field, order as 'asc' | 'desc');
+                  }
+                }}
+                className="text-sm bg-[var(--zalama-bg)] border border-[var(--zalama-border)] rounded-lg px-2 py-1 text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]/20"
+              >
+                <option value="date_creation-desc">Date (récentes)</option>
+                <option value="date_creation-asc">Date (anciennes)</option>
+                <option value="montant_demande-desc">Montant (élevé)</option>
+                <option value="montant_demande-asc">Montant (faible)</option>
+                <option value="statut-asc">Statut (A-Z)</option>
+                <option value="statut-desc">Statut (Z-A)</option>
+              </select>
+            </div>
+            <div className="text-sm text-[var(--zalama-text-secondary)]">
+              {requests.length} demande(s)
+            </div>
           </div>
         </div>
 
@@ -184,15 +239,22 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-1 text-xs rounded-full ${getPaymentStatusColor(request.numero_reception)}`}>
-                          {getPaymentStatusIcon(request.numero_reception)}
-                          <span className="ml-1">{getPaymentStatusText(request.numero_reception)}</span>
-                        </span>
-                        {request.numero_reception && (
-                          <span className="text-xs text-[var(--zalama-text-secondary)]">
-                            N° {request.numero_reception.slice(0, 8)}...
-                          </span>
-                        )}
+                        {(() => {
+                          const paymentDisplay = getPaymentStatusDisplay(request);
+                          return (
+                            <>
+                              <span className={`px-2 py-1 text-xs rounded-full ${paymentDisplay.color}`}>
+                                {paymentDisplay.icon}
+                                <span className="ml-1">{paymentDisplay.status}</span>
+                              </span>
+                              {paymentDisplay.transactionId && (
+                                <span className="text-xs text-[var(--zalama-text-secondary)]">
+                                  N° {paymentDisplay.transactionId.slice(0, 8)}...
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                       <p className="text-xs text-[var(--zalama-text-secondary)]">
                         {request.partenaireNom || 'Partenaire inconnu'} • {formatDate(request.dateCreation)}
@@ -219,8 +281,8 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
                         <Eye className="w-4 h-4" />
                       </button>
                       
-                      {/* Bouton de synchronisation pour les demandes validées sans numero_reception */}
-                      {request.statut === 'Validé' && !request.numero_reception && (
+                      {/* Bouton de synchronisation pour les demandes validées sans paiement réussi */}
+                      {request.statut === 'Validé' && !hasSuccessfulPayment(request) && (
                         <button
                           onClick={() => handleSyncPaymentStatus(request)}
                           disabled={syncingId === request.id}
@@ -254,7 +316,8 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
                         </>
                       )}
                       
-                      {request.statut === 'Validé' && !request.numero_reception && onPay && (
+                      {/* Bouton Payer : affiché seulement si la demande peut être payée */}
+                      {canBePaid(request) && onPay && (
                         <button
                           onClick={() => onPay(request)}
                           className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"

@@ -1,27 +1,27 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
-import { Search, Plus, Filter, RefreshCw, FileText } from 'lucide-react';
+import { FileText, Filter, Plus, RefreshCw, Search } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 // Importation des composants
 import {
-  StatistiquesDemandes,
-  ResumeDemandes,
-  ListeDemandes,
-  ModaleAjoutDemande,
-  ModaleApprobationDemande,
-  ModaleRejetDemande,
-  ModaleSuppressionDemande,
-  ModaleDetailDemande,
-  ModalePaiementDemande,
-  ListeTransactions
+    ListeDemandes,
+    ListeTransactions,
+    ModaleAjoutDemande,
+    ModaleApprobationDemande,
+    ModaleDetailDemande,
+    ModalePaiementDemande,
+    ModaleRejetDemande,
+    ModaleSuppressionDemande,
+    ResumeDemandes,
+    StatistiquesDemandes
 } from '@/components/dashboard/demandes';
 
 // Importation du hook Supabase
-import { useSupabaseSalaryAdvance } from '@/hooks/useSupabaseSalaryAdvance';
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { useSupabasePartners } from '@/hooks/useSupabasePartners';
+import { useSupabaseSalaryAdvance } from '@/hooks/useSupabaseSalaryAdvance';
 import { SalaryAdvanceRequestFormData, UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
 
 export default function DemandesPage() {
@@ -41,10 +41,14 @@ export default function DemandesPage() {
     totalPages,
     statuses,
     partners,
+    sortBy,
+    sortOrder,
     setSearchTerm,
     setStatusFilter,
     setPartnerFilter,
     setCurrentPage,
+    setSortBy,
+    setSortOrder,
     createRequest,
     approveRequest,
     rejectRequest,
@@ -398,7 +402,7 @@ export default function DemandesPage() {
           
           {/* Liste des demandes */}
                 <div className="bg-[var(--zalama-bg-light)] rounded-xl shadow-sm p-4 md:p-6 border border-[var(--zalama-border)]">
-          <ListeDemandes 
+                    <ListeDemandes 
             requests={safeFilteredRequests}
             isLoading={isLoading}
             onView={handleViewRequest}
@@ -406,10 +410,16 @@ export default function DemandesPage() {
             onApprove={handleApproveRequest}
             onReject={handleRejectRequest}
             onDelete={handleDeleteRequest}
-                    onRefresh={refreshRequests}
+            onRefresh={refreshRequests}
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={(newSortBy, newSortOrder) => {
+              setSortBy(newSortBy);
+              setSortOrder(newSortOrder);
+            }}
           />
                 </div>
               </div>

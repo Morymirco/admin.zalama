@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -383,4 +383,108 @@ export function validatePartnerData(partnerData: any): {
     errors,
     warnings
   };
+}
+
+/**
+ * Vérifie si une demande d'avance a un paiement réussi basé sur les transactions
+ * @param request - La demande d'avance avec ses transactions
+ * @returns true si une transaction avec statut 'EFFECTUEE' existe
+ */
+export function hasSuccessfulPayment(request: { transactions?: Array<{ statut: string }> }): boolean {
+  return request.transactions && request.transactions.some(tx => tx.statut === 'EFFECTUEE');
+}
+
+/**
+ * Obtient le statut de paiement basé sur les transactions
+ * @param request - La demande d'avance avec ses transactions
+ * @returns Objet contenant le statut et les informations de paiement
+ */
+export function getPaymentStatusFromTransactions(request: { 
+  transactions?: Array<{ 
+    statut: string; 
+    numero_transaction?: string; 
+    date_transaction?: string;
+    montant?: number;
+  }> 
+}) {
+  if (!request.transactions || request.transactions.length === 0) {
+    return {
+      hasPayment: false,
+      status: 'En attente',
+      statusCode: 'PENDING',
+      message: 'Aucune transaction trouvée'
+    };
+  }
+
+  // Vérifier d'abord les transactions EFFECTUEE (payées)
+  const successfulTx = request.transactions.find(tx => tx.statut === 'EFFECTUEE');
+  if (successfulTx) {
+    return {
+      hasPayment: true,
+      status: 'Payé',
+      statusCode: 'PAID',
+      transactionId: successfulTx.numero_transaction,
+      dateTransaction: successfulTx.date_transaction,
+      amount: successfulTx.montant,
+      message: 'Paiement effectué avec succès'
+    };
+  }
+
+  // Vérifier les transactions ANNULEE (annulées)
+  const cancelledTx = request.transactions.find(tx => tx.statut === 'ANNULEE');
+  if (cancelledTx) {
+    return {
+      hasPayment: false,
+      status: 'Annulé',
+      statusCode: 'CANCELLED',
+      transactionId: cancelledTx.numero_transaction,
+      dateTransaction: cancelledTx.date_transaction,
+      message: 'Transaction annulée'
+    };
+  }
+
+  // Vérifier les autres statuts d'échec
+  const failedTx = request.transactions.find(tx => tx.statut === 'ECHEC');
+  if (failedTx) {
+    return {
+      hasPayment: false,
+      status: 'Échoué',
+      statusCode: 'FAILED',
+      transactionId: failedTx.numero_transaction,
+      dateTransaction: failedTx.date_transaction,
+      message: 'Paiement échoué'
+    };
+  }
+
+  // Vérifier les transactions en cours
+  const pendingTx = request.transactions.find(tx => tx.statut === 'EN_COURS' || tx.statut === 'EN_ATTENTE');
+  if (pendingTx) {
+    return {
+      hasPayment: false,
+      status: 'En cours',
+      statusCode: 'PROCESSING',
+      transactionId: pendingTx.numero_transaction,
+      dateTransaction: pendingTx.date_transaction,
+      message: 'Paiement en cours de traitement'
+    };
+  }
+
+  return {
+    hasPayment: false,
+    status: 'Inconnu',
+    statusCode: 'UNKNOWN',
+    message: 'Statut de paiement inconnu'
+  };
+}
+
+/**
+ * Vérifie si une demande peut être payée
+ * @param request - La demande d'avance
+ * @returns true si la demande peut être payée
+ */
+export function canBePaid(request: { 
+  statut: string; 
+  transactions?: Array<{ statut: string }> 
+}): boolean {
+  return request.statut === 'Validé' && !hasSuccessfulPayment(request);
 }

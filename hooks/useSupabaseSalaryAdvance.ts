@@ -1,16 +1,15 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  SalaryAdvanceRequest, 
-  Transaction, 
-  SalaryAdvanceRequestFormData, 
-  TransactionFormData,
-  UISalaryAdvanceRequest,
-  UITransaction,
-  TransactionStatus,
-  TransactionStatut
-} from '@/types/salaryAdvanceRequest';
 import salaryAdvanceService from '@/services/salaryAdvanceService';
-import { supabase } from '@/lib/supabase';
+import {
+    SalaryAdvanceRequest,
+    SalaryAdvanceRequestFormData,
+    Transaction,
+    TransactionFormData,
+    TransactionStatus,
+    TransactionStatut,
+    UISalaryAdvanceRequest,
+    UITransaction
+} from '@/types/salaryAdvanceRequest';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface UseSupabaseSalaryAdvanceReturn {
   // Demandes
@@ -45,11 +44,17 @@ interface UseSupabaseSalaryAdvanceReturn {
   statuses: string[];
   partners: string[];
   
+  // Tri
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  
   // Actions pour les demandes
   setSearchTerm: (term: string) => void;
   setStatusFilter: (status: string) => void;
   setPartnerFilter: (partner: string) => void;
   setCurrentPage: (page: number) => void;
+  setSortBy: (sortBy: string) => void;
+  setSortOrder: (sortOrder: 'asc' | 'desc') => void;
   refreshRequests: () => Promise<void>;
   createRequest: (requestData: SalaryAdvanceRequestFormData) => Promise<SalaryAdvanceRequest>;
   updateRequest: (id: string, requestData: Partial<SalaryAdvanceRequest>) => Promise<SalaryAdvanceRequest>;
@@ -163,6 +168,10 @@ export const useSupabaseSalaryAdvance = (itemsPerPage: number = 10): UseSupabase
   const [statusFilter, setStatusFilter] = useState('toutes');
   const [partnerFilter, setPartnerFilter] = useState('toutes');
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // États pour le tri
+  const [sortBy, setSortBy] = useState('date_creation');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Calculer le nombre total de pages
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
@@ -182,7 +191,7 @@ export const useSupabaseSalaryAdvance = (itemsPerPage: number = 10): UseSupabase
   const fetchRequests = useCallback(async () => {
     try {
       setIsLoading(true);
-      const requestsData = await salaryAdvanceService.getAll();
+      const requestsData = await salaryAdvanceService.getAllWithSort(sortBy as any, sortOrder);
       const uiRequests = requestsData.map(convertToUIRequest);
       setRequests(uiRequests);
       setFilteredRequests(uiRequests);
@@ -192,7 +201,7 @@ export const useSupabaseSalaryAdvance = (itemsPerPage: number = 10): UseSupabase
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [sortBy, sortOrder]);
 
   // Charger toutes les transactions
   const loadTransactions = useCallback(async () => {
@@ -223,7 +232,7 @@ export const useSupabaseSalaryAdvance = (itemsPerPage: number = 10): UseSupabase
     }
   }, []);
 
-  // Charger les données au montage
+  // Charger les données au montage et quand le tri change
   useEffect(() => {
     fetchRequests();
     loadTransactions();
@@ -396,11 +405,17 @@ export const useSupabaseSalaryAdvance = (itemsPerPage: number = 10): UseSupabase
     statuses,
     partners,
     
+    // Tri
+    sortBy,
+    sortOrder,
+    
     // Actions pour les demandes
     setSearchTerm,
     setStatusFilter,
     setPartnerFilter,
     setCurrentPage,
+    setSortBy,
+    setSortOrder,
     refreshRequests,
     createRequest,
     updateRequest,

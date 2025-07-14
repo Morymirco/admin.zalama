@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { smsService } from '@/services/smsService';
-import { emailClientService } from '@/services/emailClientService';
+import smsService from '@/services/smsService';
+import emailService from '@/services/emailService';
 
 // Clé API pour sécuriser l'accès
 const API_KEY = process.env.EXTERNAL_API_KEY || 'zalama_external_key_2024';
@@ -290,7 +290,7 @@ export async function POST(request: NextRequest) {
             name: recipient.name || variables.name || 'Utilisateur'
           });
 
-          const emailResult = await emailClientService.sendEmail({
+          const emailResult = await emailService.sendEmail({
             to: recipient.email,
             subject: emailSubject,
             html: emailHtml,

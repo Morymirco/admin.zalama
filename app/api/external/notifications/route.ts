@@ -67,7 +67,7 @@ const createEmailService = () => {
 };
 
 const smsService = createSMSService();
-const emailClientService = createEmailService();
+const emailService = createEmailService();
 
 // Clé API pour sécuriser l'accès (à configurer dans les variables d'environnement)
 const API_KEY = process.env.EXTERNAL_API_KEY || 'zalama_external_key_2024';
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
 
         // Envoi Email
         if ((body.type === 'email' || body.type === 'both') && recipient.email) {
-          const emailResult = await emailClientService.sendEmail({
+          const emailResult = await emailService.sendEmail({
             to: recipient.email,
             subject: body.message.subject || 'Notification ZaLaMa',
             html: body.message.html || body.message.content,

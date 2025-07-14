@@ -50,16 +50,13 @@ const directSmsService = {
   }
 };
 
-// Import du service email direct
-import emailService from '@/services/emailService';
-
 const directEmailService = {
   async sendEmail(to: string, subject: string, html: string) {
     try {
       console.log('📧 Envoi email direct via emailService:', { to, subject });
       
       const result = await emailService.sendEmail({
-        to: [to],
+        to: to,
         subject: subject,
         html: html
       });

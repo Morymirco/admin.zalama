@@ -564,6 +564,8 @@ class AdvanceNotificationService {
 
   private async getPaymentDetails(paymentId: string): Promise<PaymentInfo & { employe: EmployeeInfo; entreprise: PartnerInfo } | null> {
     try {
+      console.log('🔍 Recherche de la transaction avec numero_transaction:', paymentId);
+      
       const { data, error } = await supabase
         .from('transactions')
         .select(`
@@ -573,16 +575,34 @@ class AdvanceNotificationService {
           statut,
           numero_transaction,
           demande_avance_id,
-          employe:employees(id, nom, prenom, email, telephone, partner_id),
-          entreprise:partners(id, nom, email, telephone)
+          employe_id,
+          entreprise_id,
+          employe:employees!employe_id(id, nom, prenom, email, telephone, partner_id),
+          entreprise:partners!entreprise_id(id, nom, email, telephone)
         `)
-        .eq('id', paymentId)
+        .eq('numero_transaction', paymentId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur Supabase lors de la recherche:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        console.log('⚠️ Aucune transaction trouvée avec numero_transaction:', paymentId);
+        return null;
+      }
+      
+      console.log('✅ Transaction trouvée:', {
+        id: data.id,
+        numero_transaction: data.numero_transaction,
+        statut: data.statut,
+        montant: data.montant
+      });
+      
       return data;
     } catch (error) {
-      console.error('Erreur lors de la récupération des détails du paiement:', error);
+      console.error('❌ Erreur lors de la récupération des détails du paiement:', error);
       return null;
     }
   }

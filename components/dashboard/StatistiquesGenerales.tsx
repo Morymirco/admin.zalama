@@ -172,15 +172,15 @@ export default function StatistiquesGenerales() {
     const availableServices = services?.filter((service: Service) => service.disponible).length || 0;
 
     // Statistiques des transactions (optimisé)
-    const montantTotal = transactions?.reduce((sum: number, transaction: Transaction) => sum + (transaction.montant || 0), 0) || 0;
+    const montantTotal = transactions?.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0) || 0;
     
-    const transactionsCeMois = transactions?.filter((transaction: Transaction) => {
+    const transactionsCeMois = transactions?.filter((transaction: FinancialTransaction) => {
       if (!transaction.created_at) return false;
       const transactionDate = new Date(transaction.created_at);
       return transactionDate >= firstDayOfMonth;
     }) || [];
     
-    const montantCeMois = transactionsCeMois.reduce((sum: number, transaction: Transaction) => sum + (transaction.montant || 0), 0);
+    const montantCeMois = transactionsCeMois.reduce((sum: number, transaction: FinancialTransaction) => sum + (transaction.montant || 0), 0);
     
     const result = {
       employees: {

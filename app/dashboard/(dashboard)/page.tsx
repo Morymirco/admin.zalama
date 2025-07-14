@@ -11,7 +11,7 @@ const ActiviteParService = lazy(() => import('@/components/dashboard/ActivitePar
 const DonneesEmployes = lazy(() => import('@/components/dashboard/DonneesUtilisateurs'));
 const AlertesRisques = lazy(() => import('@/components/dashboard/AlertesRisques'));
 const GraphiquesVisualisations = lazy(() => import('@/components/dashboard/GraphiquesVisualisations'));
-const ObjectifsPerformances = lazy(() => import('@/components/dashboard/ObjectifsPerformances'));
+/* const ObjectifsPerformances = lazy(() => import('@/components/dashboard/ObjectifsPerformances')); */
 
 // Composant Skeleton pour le chargement
 const DashboardSkeleton = ({ className = "" }: { className?: string }) => (
@@ -78,11 +78,11 @@ export default function DashboardPage() {
           </div>
         </Suspense>
         
-        <Suspense fallback={<DashboardSkeleton className="lg:col-span-2" />}>
+       {/*  <Suspense fallback={<DashboardSkeleton className="lg:col-span-2" />}>
           <div className="lg:col-span-2 bg-[var(--zalama-card)] rounded-xl shadow-sm p-5 border border-[var(--zalama-border)]">
             <ObjectifsPerformances />
           </div>
-        </Suspense>
+        </Suspense> */}
       </div>
     </div>
   );

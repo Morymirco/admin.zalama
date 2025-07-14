@@ -29,13 +29,12 @@ export default function PerformanceFinanciere() {
         // Si les transactions sont chargées depuis le hook, nous pouvons les utiliser directement
         if (!loadingTransactions && transactions.length > 0) {
           // Calculer le montant total
-          const montantTotal = transactions.reduce((total, transaction) => total + (transaction.montant || 0), 0);
+          const montantTotal = transactions.filter(t => ['EFFECTUEE'].includes(t.statut)).reduce((total, transaction) => total + (transaction.montant || 0), 0);
           
           // Calculer le montant débloqué (sorties/avances)
           const montantDebloque = transactions
-            .filter(t => ['avance', 'debit', 'sortie'].includes(t.type?.toLowerCase()) && 
-                        ['En attente', 'Validé', 'Effectué'].includes(t.statut))
-            .reduce((total, t) => total + (t.montant || 0), 0);
+            .filter(t => ['EFFECTUEE'].includes(t.statut))
+            .reduce((total, t) => total + (t.montant || 0) * (100 -6.5)/100, 0);
           
           // Calculer le montant récupéré (remboursements/entrées)
           const montantRecupere = transactions
@@ -45,9 +44,8 @@ export default function PerformanceFinanciere() {
           
           // Calculer les revenus générés (frais de service)
           const revenusGeneres = transactions
-            .filter(t => ['frais', 'commission'].includes(t.type?.toLowerCase()) && 
-                        ['En attente', 'Validé', 'Effectué'].includes(t.statut))
-            .reduce((total, t) => total + (t.montant || 0), 0);
+            .filter(t => ['EFFECTUEE'].includes(t.statut))
+            .reduce((total, t) => total + (t.montant || 0) * 6.5/100, 0);
           
           // Calculer le taux de remboursement
           const tauxRemboursement = montantDebloque > 0 ? (montantRecupere / montantDebloque) * 100 : 0;
@@ -56,13 +54,13 @@ export default function PerformanceFinanciere() {
           const now = new Date();
           const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           
-          const transactionsCeMois = transactions.filter(transaction => {
-            if (!transaction.date_transaction) return false;
-            const transactionDate = new Date(transaction.date_transaction);
+          const transactionsCeMois = transactions.filter((transaction: Transaction) => {
+            if (!transaction.created_at) return false;
+            const transactionDate = new Date(transaction.created_at);
             return transactionDate >= firstDayOfMonth;
           });
           
-          const montantCeMois = transactionsCeMois.reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
+          const montantCeMois = transactionsCeMois.filter(t => ['EFFECTUEE'].includes(t.statut)).reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
           
           setStats({
             montantTotal,

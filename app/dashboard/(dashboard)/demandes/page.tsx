@@ -157,12 +157,14 @@ export default function DemandesPage() {
       console.log('  - Salaire disponible:', salaireDisponible);
       console.log('  - Avance disponible:', avanceDisponible);
       
+      const formData = new FormData(form);
       const requestData: SalaryAdvanceRequestFormData = {
         employe_id: employeId,
         partenaire_id: partenaireId,
         montant_demande: montantDemande,
         type_motif: typeMotif,
         motif: motif,
+        numero_reception: formData.get('add-telephone') as string,
         frais_service: fraisService,
         montant_total: montantTotal,
         salaire_disponible: salaireDisponible,

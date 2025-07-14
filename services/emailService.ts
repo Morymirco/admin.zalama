@@ -1,4 +1,3 @@
-import { Resend } from 'resend';
 
 export interface EmailMessage {
   to: string;
@@ -35,36 +34,49 @@ export interface PartnershipApprovalAdminEmailData {
 }
 
 class EmailService {
-  private resend = new Resend(process.env.RESEND_API_KEY || 're_aQWgf3nW_Ht5jAsAUj6BzqspyDqxEcCwB');
-
   async sendEmail(message: EmailMessage): Promise<any> {
     try {
-      console.log('📧 Début envoi email via Resend:', {
+      console.log('📧 Début envoi email via API route:', {
         to: message.to,
-        subject: message.subject,
-        from: 'ZaLaMa <noreply@zalamagn.com>'
+        subject: message.subject
       });
 
-      const result = await this.resend.emails.send({
-        from: 'ZaLaMa <noreply@zalamagn.com>',
-        to: message.to,
-        subject: message.subject,
-        html: message.html,
-        text: message.text
+      // Utiliser l'API route Next.js pour éviter les problèmes CORS
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: message.to,
+          subject: message.subject,
+          html: message.html,
+          text: message.text
+        })
       });
 
-      console.log('✅ Email envoyé avec succès via Resend:', {
-        id: result.data?.id,
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Erreur API email:', errorData);
+        return {
+          success: false,
+          error: errorData.error || 'Erreur lors de l\'envoi de l\'email'
+        };
+      }
+
+      const result = await response.json();
+      console.log('✅ Email envoyé avec succès via API:', {
+        id: result.id,
         to: message.to,
         subject: message.subject
       });
 
       return {
         success: true,
-        id: result.data?.id
+        id: result.id
       };
     } catch (error) {
-      console.error('❌ Erreur lors de l\'envoi de l\'email via Resend:', error);
+      console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
       console.error('📋 Détails de l\'erreur:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : 'Unknown error',

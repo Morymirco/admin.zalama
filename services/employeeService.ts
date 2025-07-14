@@ -1,9 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
-import { generatePassword, validateEmail } from '@/lib/utils';
-import smsService from './smsService';
-import emailService from './emailService';
-import { Employe } from '@/types/partenaire';
+import { generatePassword } from '@/lib/utils';
 import { Employee } from '@/types/employee';
+import { createClient } from '@supabase/supabase-js';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -343,7 +340,7 @@ class EmployeeService {
           'Aucun partenaire';
           
         const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom} (${partenaireNom}). Email: ${employeeData.email || 'Non fourni'}. Compte employé: ${userId ? 'Créé' : 'Non créé'}.`;
-        const adminSMSResult = await smsService.sendSMS({
+        const adminSMSResult = await serverSmsService.sendSMS({
           to: ['+224625212115'],
           message: adminMessage
         });
@@ -392,11 +389,17 @@ class EmployeeService {
           <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
         `;
         
-        const emailResult = await emailService.sendEmail({
-          to: [employeeData.email!],
-          subject: subject,
-          html: html
+        const response = await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: [employeeData.email!],
+            subject: subject,
+            html: html
+          })
         });
+
+        const emailResult = await response.json();
         
         emailResults.employe = {
           success: emailResult.success,

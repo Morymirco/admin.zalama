@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     if (checkStatus) {
       console.log('🔍 Vérification du statut des transactions en attente...');
       
-      const pendingTransactions = transactions.filter(t => t.statut === 'EN_ATTENTE');
+      const pendingTransactions = transactions.filter(t => t.statut === 'ANNULEE');
       console.log(`📋 ${pendingTransactions.length} transactions en attente à vérifier`);
       
       for (const transaction of pendingTransactions) {

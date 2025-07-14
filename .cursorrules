@@ -1,0 +1,221 @@
+# Règles Cursor pour ZaLaMa Admin Dashboard
+
+## Architecture Email et SMS
+
+### 🚫 NE JAMAIS FAIRE (Côté Client)
+- N'appelle JAMAIS directement les APIs externes (Resend, Nimba SMS) depuis le navigateur
+- N'importe JAMAIS `emailService` ou `smsService` dans des composants React
+- N'utilise JAMAIS les clés API sensibles côté client
+- N'appelle JAMAIS directement `advanceNotificationService` depuis le navigateur
+
+### ✅ TOUJOURS FAIRE (Architecture Correcte)
+
+#### 1. Pour les Emails
+```typescript
+// ❌ MAUVAIS - Ne pas faire
+import emailService from '@/services/emailService';
+await emailService.sendEmail({...});
+
+// ✅ BON - Utiliser l'API route
+const response = await fetch('/api/email/send', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    to: ['email@example.com'],
+    subject: 'Sujet',
+    html: '<p>Contenu</p>'
+  })
+});
+```
+
+#### 2. Pour les SMS
+```typescript
+// ❌ MAUVAIS - Ne pas faire
+import smsService from '@/services/smsService';
+await smsService.sendSMS({...});
+
+// ✅ BON - Utiliser l'API route
+const response = await fetch('/api/sms/send', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    to: ['+224XXXXXXXXX'],
+    message: 'Message SMS',
+    sender_name: 'ZaLaMa'
+  })
+});
+```
+
+#### 3. Pour les Notifications d'Avance
+```typescript
+// ❌ MAUVAIS - Ne pas faire
+import advanceNotificationService from '@/services/advanceNotificationService';
+await advanceNotificationService.sendApprovalNotification(requestId);
+
+// ✅ BON - Utiliser l'API route
+const response = await fetch('/api/advance/notifications', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    type: 'approval',
+    requestId: requestId
+  })
+});
+```
+
+### 📁 Structure des Services
+
+#### Services Côté Client (Navigateur)
+- `services/emailService.ts` - Appelle `/api/email/send`
+- `services/smsService.ts` - Appelle `/api/sms/send`
+- `services/advanceNotificationService.ts` - Appelle `/api/advance/notifications`
+
+#### Services Côté Serveur (API Routes)
+- `services/serverEmailService.ts` - Appelle directement Resend
+- `services/serverSmsService.ts` - Appelle directement Nimba SMS
+- `services/advanceNotificationService.ts` - Utilise les services serveur
+
+### 🔧 API Routes Requises
+
+#### Email
+```typescript
+// app/api/email/send/route.ts
+import serverEmailService from '@/services/serverEmailService';
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const result = await serverEmailService.sendEmail(body);
+  return NextResponse.json(result);
+}
+```
+
+#### SMS
+```typescript
+// app/api/sms/send/route.ts
+import serverSmsService from '@/services/serverSmsService';
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const result = await serverSmsService.sendSMS(body);
+  return NextResponse.json(result);
+}
+```
+
+#### Notifications d'Avance
+```typescript
+// app/api/advance/notifications/route.ts
+import advanceNotificationService from '@/services/advanceNotificationService';
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const result = await advanceNotificationService.sendApprovalNotification(body.requestId);
+  return NextResponse.json(result);
+}
+```
+
+### 🎯 Règles de Développement
+
+1. **Toujours passer par une API route** pour les emails/SMS
+2. **Utiliser les services côté serveur** dans les API routes
+3. **Ne jamais exposer les clés API** côté client
+4. **Gérer les erreurs gracieusement** - ne pas faire échouer l'application si SMS/email échoue
+5. **Logger les tentatives** d'envoi pour le debugging
+
+### 🔍 Vérification
+
+Avant de commiter, vérifier :
+- [ ] Aucun appel direct aux APIs externes côté client
+- [ ] Toutes les clés API sont dans les variables d'environnement
+- [ ] Les services côté serveur utilisent les clients officiels
+- [ ] Les erreurs sont gérées sans faire échouer l'application
+
+### 📝 Exemples d'Usage
+
+#### Composant React
+```typescript
+const handleSendNotification = async () => {
+  try {
+    const response = await fetch('/api/advance/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'approval',
+        requestId: 'request-id'
+      })
+    });
+    
+    if (response.ok) {
+      toast.success('Notification envoyée');
+    } else {
+      toast.error('Erreur lors de l\'envoi');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    toast.error('Erreur réseau');
+  }
+};
+```
+
+#### Hook Personnalisé
+```typescript
+const useNotifications = () => {
+  const sendEmail = async (data: EmailData) => {
+    const response = await fetch('/api/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return response.json();
+  };
+
+  const sendSMS = async (data: SMSData) => {
+    const response = await fetch('/api/sms/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return response.json();
+  };
+
+  return { sendEmail, sendSMS };
+};
+```
+
+### 🚨 Erreurs Communes à Éviter
+
+1. **CORS Error** : Appel direct à Resend/Nimba SMS depuis le navigateur
+2. **404 Error** : URL d'API incorrecte ou service non configuré
+3. **Auth Error** : Clés API manquantes ou incorrectes
+4. **Network Error** : Problème de connexion réseau
+
+### 💡 Bonnes Pratiques
+
+- Toujours tester les notifications dans un environnement de développement
+- Utiliser des numéros de téléphone de test pour les SMS
+- Logger les succès et échecs pour le monitoring
+- Gérer les timeouts et retry en cas d'échec
+- Valider les données avant envoi (email valide, numéro de téléphone correct)
+
+### 🔄 Gestion des Statuts de Paiement
+
+#### Prioriser lengo_status comme source de vérité
+```typescript
+// ✅ BON - Utiliser lengo_status
+if (statusResult.lengo_status === 'SUCCESS') {
+  // Paiement réussi
+} else if (statusResult.lengo_status === 'PENDING') {
+  // Paiement en cours
+} else if (statusResult.lengo_status === 'FAILED') {
+  // Paiement échoué
+}
+
+// ❌ MAUVAIS - Utiliser db_status
+if (statusResult.db_status === 'EFFECTUEE') {
+  // Peut être désynchronisé
+}
+```
+
+#### Mapping des statuts LengoPay
+- `SUCCESS` → `EFFECTUEE` (DB)
+- `FAILED` / `CANCELLED` → `ANNULEE` (DB)
+- `PENDING` / `INITIATED` → `ANNULEE` (DB) - Ne pas forcer la mise à jour 

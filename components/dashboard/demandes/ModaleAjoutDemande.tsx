@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { X, Plus, DollarSign, User, Building } from 'lucide-react';
 import { SalaryAdvanceRequestFormData } from '@/types/salaryAdvanceRequest';
+import { Building, DollarSign, Phone, Plus, User, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 interface ModaleAjoutDemandeProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ interface ModaleAjoutDemandeProps {
     email?: string;
     salaire_net?: number;
     partner_id?: string;
+    telephone?: string;
   }>;
   partners: Array<{ id: string; nom: string; email?: string }>;
   isLoading: boolean;
@@ -43,6 +44,7 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
     montant_total: 0,
     salaire_disponible: 0,
     avance_disponible: 0,
+    numero_reception: '',
   });
 
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
@@ -60,6 +62,7 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
         montant_total: 0,
         salaire_disponible: 0,
         avance_disponible: 0,
+        numero_reception: '',
       });
       setSelectedEmployee(null);
       setSelectedPartner(null);
@@ -262,6 +265,34 @@ const ModaleAjoutDemande: React.FC<ModaleAjoutDemandeProps> = ({
                 className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
                 placeholder="Décrivez le motif de la demande d'avance sur salaire..."
               />
+            </div>
+
+            {/* Numéro de téléphone pour le paiement */}
+            <div>
+              <label htmlFor="add-telephone" className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
+                <Phone className="w-4 h-4 inline mr-2" />
+                Numéro de téléphone pour le paiement *
+              </label>
+              <input
+                type="tel"
+                id="add-telephone"
+                required
+                value={formData.numero_reception || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  numero_reception: e.target.value
+                }))}
+                className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)]"
+                placeholder="Ex: 612345678 ou 224612345678"
+              />
+              <p className="text-xs text-[var(--zalama-text-secondary)] mt-1">
+                Format: 9 chiffres ou 224 + 9 chiffres. Ce numéro sera utilisé pour le paiement.
+              </p>
+              {selectedEmployee?.telephone && (
+                <p className="text-xs text-[var(--zalama-info)] mt-1">
+                  💡 Numéro de l&apos;employé: {selectedEmployee.telephone}
+                </p>
+              )}
             </div>
 
             {/* Frais de service et montant total */}

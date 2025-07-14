@@ -1,16 +1,18 @@
 "use client";
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LengoBalanceCard } from '@/components/dashboard/paiements/LengoBalanceCard';
+import { TransactionsList } from '@/components/dashboard/paiements/TransactionsList';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { CreditCard, Send, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Transaction, useTransactions } from '@/hooks/useTransactions';
+import { AlertCircle, CreditCard, Filter, Loader2, RefreshCw, Send } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { TransactionsList } from '@/components/dashboard/paiements/TransactionsList';
-import { useTransactions, Transaction } from '@/hooks/useTransactions';
 
 interface PaymentForm {
   amount: string;
@@ -24,6 +26,8 @@ interface PaymentForm {
 interface PaymentResult {
   pay_id: string;
   status: string;
+  lengo_status?: string;
+  db_status?: string;
   amount?: number;
   account?: number;
   date?: string;
@@ -45,6 +49,17 @@ export default function PaiementsPage() {
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // États pour les filtres et onglets
+  const [activeTab, setActiveTab] = useState('transactions');
+  const [filters, setFilters] = useState({
+    status: 'all',
+    method: 'all',
+    dateRange: 'all',
+    search: ''
+  });
+  const [sortBy, setSortBy] = useState('date_creation');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Hook pour gérer les transactions
   const { addTransaction, updateTransaction, refreshTransactions } = useTransactions();
@@ -248,6 +263,32 @@ export default function PaiementsPage() {
     });
   };
 
+  // Fonctions pour gérer les filtres et le tri
+  const handleFilterChange = (filterType: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  const handleSortChange = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      status: 'all',
+      method: 'all',
+      dateRange: 'all',
+      search: ''
+    });
+  };
+
   const handleSyncTransactions = async () => {
     setIsSyncing(true);
     
@@ -293,11 +334,163 @@ export default function PaiementsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6">
+      {/* Carte du solde Lengo Pay */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <LengoBalanceCard />
+        </div>
+        <div className="lg:col-span-2">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)]">
+              <TabsTrigger 
+                value="transactions" 
+                className="data-[state=active]:bg-[var(--zalama-blue)] data-[state=active]:text-white"
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                Transactions
+              </TabsTrigger>
+              <TabsTrigger 
+                value="new-payment" 
+                className="data-[state=active]:bg-[var(--zalama-blue)] data-[state=active]:text-white"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Nouveau Paiement
+              </TabsTrigger>
+              <TabsTrigger 
+                value="info" 
+                className="data-[state=active]:bg-[var(--zalama-blue)] data-[state=active]:text-white"
+              >
+                <AlertCircle className="w-4 h-4 mr-2" />
+                Informations
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="transactions" className="space-y-6">
+              {/* Filtres et tri */}
+              <Card className="border-[var(--zalama-border)] bg-[var(--zalama-bg)]">
+                <CardHeader>
+                  <CardTitle className="text-[var(--zalama-text)] flex items-center gap-2">
+                    <Filter className="w-5 h-5" />
+                    Filtres et Tri
+                  </CardTitle>
+                  <CardDescription className="text-[var(--zalama-text-secondary)]">
+                    Filtrez et triez les transactions selon vos besoins
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Recherche */}
+                    <div className="space-y-2">
+                      <Label className="text-[var(--zalama-text)] text-sm">Recherche</Label>
+                      <Input
+                        placeholder="ID, téléphone, description..."
+                        value={filters.search}
+                        onChange={(e) => handleFilterChange('search', e.target.value)}
+                        className="border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
+                      />
+                    </div>
+
+                    {/* Statut */}
+                    <div className="space-y-2">
+                      <Label className="text-[var(--zalama-text)] text-sm">Statut</Label>
+                      <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+                        <SelectTrigger className="border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[var(--zalama-bg)] border-[var(--zalama-border)]">
+                          <SelectItem value="all">Tous les statuts</SelectItem>
+                          <SelectItem value="EFFECTUEE">Effectuée</SelectItem>
+                          <SelectItem value="ANNULEE">Annulée</SelectItem>
+                          <SelectItem value="EN_ATTENTE">En attente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Méthode de paiement */}
+                    <div className="space-y-2">
+                      <Label className="text-[var(--zalama-text)] text-sm">Méthode</Label>
+                      <Select value={filters.method} onValueChange={(value) => handleFilterChange('method', value)}>
+                        <SelectTrigger className="border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[var(--zalama-bg)] border-[var(--zalama-border)]">
+                          <SelectItem value="all">Toutes les méthodes</SelectItem>
+                          <SelectItem value="MOBILE_MONEY">Mobile Money</SelectItem>
+                          <SelectItem value="VIREMENT_BANCAIRE">Virement bancaire</SelectItem>
+                          <SelectItem value="ESPECES">Espèces</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Tri */}
+                    <div className="space-y-2">
+                      <Label className="text-[var(--zalama-text)] text-sm">Trier par</Label>
+                      <Select value={`${sortBy}-${sortOrder}`} onValueChange={(value) => {
+                        const [field, order] = value.split('-');
+                        setSortBy(field);
+                        setSortOrder(order as 'asc' | 'desc');
+                      }}>
+                        <SelectTrigger className="border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[var(--zalama-bg)] border-[var(--zalama-border)]">
+                          <SelectItem value="date_creation-desc">Date (récentes)</SelectItem>
+                          <SelectItem value="date_creation-asc">Date (anciennes)</SelectItem>
+                          <SelectItem value="montant-desc">Montant (élevé)</SelectItem>
+                          <SelectItem value="montant-asc">Montant (faible)</SelectItem>
+                          <SelectItem value="statut-asc">Statut (A-Z)</SelectItem>
+                          <SelectItem value="statut-desc">Statut (Z-A)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--zalama-border)]">
+                    <Button
+                      onClick={clearFilters}
+                      variant="outline"
+                      size="sm"
+                      className="border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]"
+                    >
+                      Effacer les filtres
+                    </Button>
+                    <Button
+                      onClick={handleSyncTransactions}
+                      disabled={isSyncing}
+                      variant="outline"
+                      size="sm"
+                      className="border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)] flex items-center gap-2"
+                    >
+                      {isSyncing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Synchronisation...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4" />
+                          Synchroniser
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Liste des transactions avec filtres */}
+              <TransactionsList 
+                onTransactionSelect={handleTransactionSelect}
+                filters={filters}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+              />
+            </TabsContent>
+
+            <TabsContent value="new-payment" className="space-y-6">
         <Card className="border-[var(--zalama-border)] bg-[var(--zalama-bg)]">
           <CardHeader>
             <CardTitle className="text-[var(--zalama-text)] flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
+                    <Send className="w-5 h-5" />
               Nouveau Paiement
             </CardTitle>
             <CardDescription className="text-[var(--zalama-text-secondary)]">
@@ -555,9 +748,9 @@ export default function PaiementsPage() {
           </Card>
         )}
 
-        {/* Liste des transactions */}
-        <TransactionsList onTransactionSelect={handleTransactionSelect} />
+            </TabsContent>
 
+            <TabsContent value="info" className="space-y-6">
         <Card className="border-[var(--zalama-border)] bg-[var(--zalama-bg)]">
           <CardHeader>
             <CardTitle className="text-[var(--zalama-text)]">Informations</CardTitle>
@@ -608,6 +801,9 @@ export default function PaiementsPage() {
             </div>
           </CardContent>
         </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

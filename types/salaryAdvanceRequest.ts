@@ -85,7 +85,7 @@ export interface TransactionsStatistiques {
 
 export type TransactionStatus = 'En attente' | 'Validé' | 'Rejeté' | 'Annulé';
 export type PaymentMethod = 'Mobile Money' | 'Virement bancaire' | 'Espèces' | 'Chèque';
-export type TransactionStatut = 'EFFECTUEE' | 'EN_COURS' | 'ECHEC' | 'ANNULEE';
+export type TransactionStatut = 'EFFECTUEE' | 'ANNULEE';
 
 export interface SalaryAdvanceRequest {
   id: string;
@@ -160,6 +160,7 @@ export interface SalaryAdvanceRequestFormData {
   montant_demande: number;
   type_motif: string;
   motif: string;
+  numero_reception?: string;
   frais_service?: number;
   montant_total?: number;
   salaire_disponible?: number;

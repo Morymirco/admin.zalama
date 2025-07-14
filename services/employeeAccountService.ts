@@ -1,6 +1,4 @@
-import { generatePassword, sendSMS } from '@/lib/utils';
-import smsService from './smsService';
-import emailService from './emailService';
+import serverSmsService from './serverSmsService';
 
 interface EmployeeAccountData {
   email: string;
@@ -134,7 +132,7 @@ class EmployeeAccountService {
       
       const smsMessage = `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
       
-      const smsResponse = await smsService.sendSMS({
+      const smsResponse = await serverSmsService.sendSMS({
         to: [formattedPhone],
         message: smsMessage,
         sender_name: 'ZaLaMa'
@@ -169,11 +167,17 @@ class EmployeeAccountService {
         <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
       `;
       
-      const emailResult = await emailService.sendEmail({
-        to: [employeeData.email],
-        subject: subject,
-        html: html
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: [employeeData.email],
+          subject: subject,
+          html: html
+        })
       });
+
+      const emailResult = await response.json();
       
       return {
         success: emailResult.success,

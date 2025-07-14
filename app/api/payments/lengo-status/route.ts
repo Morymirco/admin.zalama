@@ -61,17 +61,18 @@ export async function POST(request: NextRequest) {
         success: true,
         pay_id: pay_id,
         lengo_status: 'UNKNOWN',
-        db_status: currentTransaction?.statut || 'EN_ATTENTE',
+        db_status: currentTransaction?.statut || 'ANNULEE',
         transaction: currentTransaction,
         message: 'Statut non disponible depuis Lengo Pay, utilisation du statut en base'
       });
     }
 
-    // Mettre à jour le statut dans la base de données si nécessaire
+    // Prioriser lengo_status comme source de vérité
     console.log('💾 Mise à jour du statut dans la base de données...');
     
-    let dbStatus = 'EN_ATTENTE';
+    let dbStatus = 'ANNULEE';
     let dateTransaction = null;
+    let shouldUpdateDB = true;
     
     // Mapper les statuts LengoPay vers nos statuts (enum transaction_statut)
     switch (statusResult.status.toUpperCase()) {
@@ -85,7 +86,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'PENDING':
       case 'INITIATED':
-        dbStatus = 'ANNULEE'; // Pour les transactions en attente, on utilise ANNULEE par défaut
+        // Pour les transactions en attente, ne pas forcer la mise à jour si déjà en attente
+        dbStatus = 'ANNULEE'; // On garde ANNULEE pour les transactions en attente
+        shouldUpdateDB = false; // Ne pas forcer la mise à jour si déjà en attente
         break;
       default:
         dbStatus = 'ANNULEE';
@@ -94,20 +97,40 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Mapping des statuts:', {
       lengo_status: statusResult.status,
       mapped_db_status: dbStatus,
-      date_transaction: dateTransaction
+      date_transaction: dateTransaction,
+      should_update_db: shouldUpdateDB
     });
 
-    // Mettre à jour la transaction dans la base de données
-    const { data: updatedTransaction, error: updateError } = await supabase
-      .from('transactions')
-      .update({
-        statut: dbStatus,
-        date_transaction: dateTransaction,
-        updated_at: new Date().toISOString()
-      })
-      .eq('numero_transaction', pay_id)
-      .select()
-      .single();
+    // Mettre à jour la transaction dans la base de données seulement si nécessaire
+    let updatedTransaction = null;
+    let updateError = null;
+    
+    if (shouldUpdateDB) {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({
+          statut: dbStatus,
+          date_transaction: dateTransaction,
+          updated_at: new Date().toISOString()
+        })
+        .eq('numero_transaction', pay_id)
+        .select()
+        .single();
+      
+      updatedTransaction = data;
+      updateError = error;
+    } else {
+      // Récupérer la transaction actuelle sans la modifier
+      const { data, error } = await supabase
+        .from('transactions')
+        .select()
+        .eq('numero_transaction', pay_id)
+        .single();
+      
+      updatedTransaction = data;
+      updateError = error;
+      console.log('⏸️ Transaction en attente - pas de mise à jour forcée');
+    }
 
     if (updateError) {
       console.error('❌ Erreur mise à jour transaction:', updateError);
@@ -121,7 +144,8 @@ export async function POST(request: NextRequest) {
       });
       
       // Si la transaction est liée à une demande d'avance et que le paiement est réussi
-      if (updatedTransaction?.demande_avance_id && dbStatus === 'EFFECTUEE') {
+      // Utiliser lengo_status comme source de vérité pour les notifications
+      if (updatedTransaction?.demande_avance_id && statusResult.status.toUpperCase() === 'SUCCESS') {
         console.log('🔄 Mise à jour du statut de la demande d\'avance:', updatedTransaction.demande_avance_id);
         
         // Vérifier d'abord l'état actuel de la demande
@@ -154,8 +178,8 @@ export async function POST(request: NextRequest) {
       } else {
         console.log('⚠️ Pas de mise à jour de la demande d\'avance:', {
           hasDemandeId: !!updatedTransaction?.demande_avance_id,
-          dbStatus,
-          isEffectuee: dbStatus === 'EFFECTUEE'
+          lengo_status: statusResult.status,
+          isSuccess: statusResult.status.toUpperCase() === 'SUCCESS'
         });
       }
     }

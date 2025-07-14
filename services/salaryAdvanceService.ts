@@ -1,10 +1,10 @@
-import {
-    SalaryAdvanceRequest,
+import { 
+  SalaryAdvanceRequest, 
     SalaryAdvanceRequestFormData,
-    Transaction,
-    TransactionFormData,
-    TransactionStatus,
-    TransactionStatut
+  Transaction, 
+  TransactionFormData,
+  TransactionStatus,
+  TransactionStatut
 } from '@/types/salaryAdvanceRequest';
 import { createClient } from '@supabase/supabase-js';
 
@@ -144,6 +144,7 @@ class SalaryAdvanceService {
         montant_demande: requestData.montant_demande,
         type_motif: requestData.type_motif,
         motif: requestData.motif,
+        numero_reception: requestData.numero_reception,
         frais_service: requestData.frais_service || 0,
         montant_total: requestData.montant_total || (requestData.montant_demande + (requestData.frais_service || 0)),
         salaire_disponible: requestData.salaire_disponible,
@@ -221,6 +222,8 @@ class SalaryAdvanceService {
   // Approuver une demande
   async approve(id: string, motif?: string): Promise<SalaryAdvanceRequest> {
     try {
+      console.log('🔄 Approbation de la demande d\'avance:', id);
+      
       const { data, error } = await supabase
         .from('salary_advance_requests')
         .update({
@@ -237,7 +240,42 @@ class SalaryAdvanceService {
         .single();
 
       if (error) throw error;
-      return convertSalaryAdvanceFromDB(data);
+      
+      const approvedRequest = convertSalaryAdvanceFromDB(data);
+      
+      // Envoyer les notifications automatiquement via API route
+      try {
+        console.log('📧 Envoi des notifications d\'approbation...');
+        const response = await fetch('/api/advance/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'approval',
+            requestId: id
+          })
+        });
+
+        if (response.ok) {
+          const notificationResult = await response.json();
+          if (notificationResult.success) {
+            console.log('✅ Notifications envoyées avec succès');
+            if (notificationResult.details) {
+              console.log('📊 Détails des notifications:');
+              console.log('   SMS:', notificationResult.details.sms?.success ? '✅' : '❌');
+              console.log('   Email:', notificationResult.details.email?.success ? '✅' : '❌');
+            }
+          } else {
+            console.warn('⚠️ Échec de l\'envoi des notifications:', notificationResult.error);
+          }
+        } else {
+          console.warn('⚠️ Erreur API notifications:', response.status);
+        }
+      } catch (notificationError) {
+        console.error('❌ Erreur lors de l\'envoi des notifications:', notificationError);
+        // Ne pas faire échouer l'approbation si les notifications échouent
+      }
+      
+      return approvedRequest;
     } catch (error) {
       console.error('Erreur lors de l\'approbation de la demande:', error);
       throw error;
@@ -247,6 +285,8 @@ class SalaryAdvanceService {
   // Rejeter une demande
   async reject(id: string, motif_rejet: string): Promise<SalaryAdvanceRequest> {
     try {
+      console.log('🔄 Rejet de la demande d\'avance:', id);
+      
       const { data, error } = await supabase
         .from('salary_advance_requests')
         .update({
@@ -264,7 +304,43 @@ class SalaryAdvanceService {
         .single();
 
       if (error) throw error;
-      return convertSalaryAdvanceFromDB(data);
+      
+      const rejectedRequest = convertSalaryAdvanceFromDB(data);
+      
+      // Envoyer les notifications automatiquement via API route
+      try {
+        console.log('📧 Envoi des notifications de rejet...');
+        const response = await fetch('/api/advance/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'rejection',
+            requestId: id,
+            motif_rejet
+          })
+        });
+
+        if (response.ok) {
+          const notificationResult = await response.json();
+          if (notificationResult.success) {
+            console.log('✅ Notifications envoyées avec succès');
+            if (notificationResult.details) {
+              console.log('📊 Détails des notifications:');
+              console.log('   SMS:', notificationResult.details.sms?.success ? '✅' : '❌');
+              console.log('   Email:', notificationResult.details.email?.success ? '✅' : '❌');
+            }
+          } else {
+            console.warn('⚠️ Échec de l\'envoi des notifications:', notificationResult.error);
+          }
+        } else {
+          console.warn('⚠️ Erreur API notifications:', response.status);
+        }
+      } catch (notificationError) {
+        console.error('❌ Erreur lors de l\'envoi des notifications:', notificationError);
+        // Ne pas faire échouer le rejet si les notifications échouent
+      }
+      
+      return rejectedRequest;
     } catch (error) {
       console.error('Erreur lors du rejet de la demande:', error);
       throw error;

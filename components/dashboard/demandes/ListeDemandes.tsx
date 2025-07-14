@@ -1,6 +1,6 @@
 "use client";
 
-import { canBePaid, getPaymentStatusFromTransactions, hasSuccessfulPayment } from '@/lib/utils';
+import { canBePaid, getPaymentStatusFromTransactions, hasCancelledTransactions, hasSuccessfulPayment } from '@/lib/utils';
 import { UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
 import { CheckCircle, Clock, CreditCard, DollarSign, Eye, Loader2, RefreshCw, Shield, Trash2, XCircle } from 'lucide-react';
 import React, { useState } from 'react';
@@ -320,8 +320,12 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
                       {canBePaid(request) && onPay && (
                         <button
                           onClick={() => onPay(request)}
-                          className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Payer"
+                          className={`p-2 rounded-lg transition-colors ${
+                            hasCancelledTransactions(request)
+                              ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'
+                              : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                          }`}
+                          title={hasCancelledTransactions(request) ? 'Essayer le paiement' : 'Payer'}
                         >
                           <CreditCard className="w-4 h-4" />
                         </button>

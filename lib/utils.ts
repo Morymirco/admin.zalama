@@ -457,7 +457,7 @@ export function getPaymentStatusFromTransactions(request: {
   }
 
   // Vérifier les transactions en cours
-  const pendingTx = request.transactions.find(tx => tx.statut === 'EN_COURS' || tx.statut === 'EN_ATTENTE');
+  const pendingTx = request.transactions.find(tx => tx.statut === 'EN_COURS');
   if (pendingTx) {
     return {
       hasPayment: false,
@@ -486,5 +486,42 @@ export function canBePaid(request: {
   statut: string; 
   transactions?: Array<{ statut: string }> 
 }): boolean {
-  return request.statut === 'Validé' && !hasSuccessfulPayment(request);
+  // La demande doit être validée
+  if (request.statut !== 'Validé') {
+    return false;
+  }
+
+  // Si pas de transactions, on peut payer
+  if (!request.transactions || request.transactions.length === 0) {
+    return true;
+  }
+
+  // Si une transaction réussie existe, on ne peut pas payer
+  if (hasSuccessfulPayment(request)) {
+    return false;
+  }
+
+  // Si toutes les transactions sont annulées, on peut réessayer
+  const allCancelled = request.transactions.every(tx => tx.statut === 'ANNULEE');
+  if (allCancelled) {
+    return true;
+  }
+
+  // Si aucune transaction en cours, on peut payer
+  const hasPendingTransaction = request.transactions.some(tx => 
+    tx.statut === 'EN_COURS'
+  );
+  
+  return !hasPendingTransaction;
+}
+
+/**
+ * Vérifie si une demande a des transactions annulées (pour afficher "Essayer le paiement")
+ * @param request - La demande d'avance
+ * @returns true si la demande a des transactions annulées
+ */
+export function hasCancelledTransactions(request: { 
+  transactions?: Array<{ statut: string }> 
+}): boolean {
+  return request.transactions && request.transactions.some(tx => tx.statut === 'ANNULEE');
 }

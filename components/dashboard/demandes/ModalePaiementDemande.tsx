@@ -26,14 +26,25 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [description, setDescription] = useState('');
+  const [existingTransaction, setExistingTransaction] = useState<{
+    id: string;
+    numero_transaction: string;
+    statut: string;
+    date_creation: string;
+    montant: number;
+  } | null>(null);
+  const [isCheckingExisting, setIsCheckingExisting] = useState(false);
 
   // Pré-remplir les champs quand le modal s'ouvre
   React.useEffect(() => {
     if (request && isOpen) {
       setDescription(`Avance sur salaire - ${request.employeNom || 'Employé'} - ${request.type_motif || 'Motif'}`);
       
-      // Pré-remplir le numéro de téléphone de l'employé s'il existe
-      if (request.employe?.telephone) {
+      // Pré-remplir le numéro de téléphone depuis la demande (numero_reception)
+      if (request.numero_reception) {
+        setPhoneNumber(request.numero_reception);
+      } else if (request.employe?.telephone) {
+        // Fallback vers le numéro de l'employé si numero_reception n'existe pas
         setPhoneNumber(request.employe.telephone);
       } else {
         setPhoneNumber('');
@@ -43,8 +54,68 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
       setPaymentStatus(null);
       setIsCheckingStatus(false);
       setRetryCount(0);
+      setExistingTransaction(null);
+      
+      // Vérifier s'il existe déjà une transaction pour cette demande
+      checkExistingTransaction();
     }
   }, [request, isOpen]);
+
+  const checkExistingTransaction = async () => {
+    if (!request?.id) return;
+    
+    setIsCheckingExisting(true);
+    try {
+      const response = await fetch('/api/transactions', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const existingTransactions = data.transactions?.filter((t: {
+          demande_avance_id: string;
+          id: string;
+          numero_transaction: string;
+          statut: string;
+          date_creation: string;
+          montant: number;
+        }) => 
+          t.demande_avance_id === request.id
+        ) || [];
+
+        if (existingTransactions.length > 0) {
+          // Trier par date de création (plus récent en premier)
+          const sortedTransactions = existingTransactions.sort((a: {
+            date_creation: string;
+          }, b: {
+            date_creation: string;
+          }) => 
+            new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime()
+          );
+
+          const latestTransaction = sortedTransactions[0];
+          setExistingTransaction(latestTransaction);
+
+          // Si la transaction est récente (moins de 5 minutes), afficher un avertissement
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          const isRecent = new Date(latestTransaction.date_creation) > fiveMinutesAgo;
+
+          if (isRecent) {
+            toast.error('Une transaction pour cette demande a déjà été initiée récemment');
+          } else if (latestTransaction.statut === 'EFFECTUEE') {
+            toast.error('Cette demande a déjà été payée avec succès');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification des transactions existantes:', error);
+    } finally {
+      setIsCheckingExisting(false);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -103,14 +174,18 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
         const statusResult = await statusResponse.json();
         console.log('📊 Statut du paiement vérifié:', statusResult);
         
-        console.log('🔍 Statut reçu:', statusResult.db_status);
+        console.log('🔍 Statuts reçus:', {
+          lengo_status: statusResult.lengo_status,
+          db_status: statusResult.db_status
+        });
         
-        if (statusResult.db_status === 'EFFECTUEE') {
+        // Prioriser lengo_status comme source de vérité
+        if (statusResult.lengo_status === 'SUCCESS') {
           setPaymentStatus('success');
           toast.success('✅ Paiement confirmé avec succès!');
           
-          // Envoyer les notifications
-          await sendNotifications('success', payId, statusResult);
+          // Envoyer les notifications de succès
+          await sendNotifications('success', payId);
           
           // Fermer automatiquement le modal après 3 secondes
           setTimeout(() => {
@@ -120,20 +195,27 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
             }
           }, 3000);
           
-        } else if (statusResult.db_status === 'ANNULEE') {
+        } else if (statusResult.lengo_status === 'FAILED' || statusResult.lengo_status === 'CANCELLED') {
           setPaymentStatus('failed');
-          toast.error('❌ Le paiement a échoué');
+          toast.error('❌ Le paiement a été annulé ou a échoué');
           
           // Envoyer les notifications d'échec
-          await sendNotifications('failed', payId, statusResult);
+          await sendNotifications('failed', payId);
           
-        } else if (statusResult.db_status === 'EN_ATTENTE' || statusResult.lengo_status === 'UNKNOWN') {
-          console.log('⏳ Statut en attente, nouvelle tentative dans 3 secondes...');
-          // Statut en attente, réessayer après un délai
-          setTimeout(() => checkPaymentStatusAndNotify(payId, currentRetryCount + 1), 1000);
+        } else if (statusResult.lengo_status === 'PENDING' || statusResult.lengo_status === 'INITIATED') {
+          console.log('⏳ Paiement en cours (lengo_status: ' + statusResult.lengo_status + '), nouvelle tentative dans 2 secondes...');
+          // Paiement en cours, réessayer après un délai
+          setTimeout(() => checkPaymentStatusAndNotify(payId, currentRetryCount + 1), 2000);
           return;
+          
+        } else if (statusResult.lengo_status === 'UNKNOWN') {
+          console.log('⏳ Statut inconnu, nouvelle tentative dans 3 secondes...');
+          // Statut inconnu, réessayer après un délai
+          setTimeout(() => checkPaymentStatusAndNotify(payId, currentRetryCount + 1), 3000);
+          return;
+          
         } else {
-          console.log('❓ Statut inconnu:', statusResult.db_status, 'Nouvelle tentative...');
+          console.log('❓ Statut inconnu:', statusResult.lengo_status, 'Nouvelle tentative...');
           // Statut inconnu, réessayer après un délai
           setTimeout(() => checkPaymentStatusAndNotify(payId, currentRetryCount + 1), 3000);
           return;
@@ -152,27 +234,18 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
     }
   };
 
-  const sendNotifications = async (status: 'success' | 'failed', payId: string, statusResult: any) => {
+  const sendNotifications = async (status: 'success' | 'failed', payId: string) => {
     try {
       console.log('📧 Envoi des notifications pour le statut:', status);
       
       const notificationData = {
-        type: 'payment_status',
-        status: status,
-        payId: payId,
-        requestId: request?.id,
-        employeId: request?.employe_id,
-        employeNom: request?.employeNom,
-        employeEmail: request?.employe?.email,
-        employeTelephone: phoneNumber,
-        montant: request?.montant_demande,
-        description: description,
-        lengoStatus: statusResult.lengo_status,
-        dbStatus: statusResult.db_status
+        type: status === 'success' ? 'payment_success' : 'payment_failure',
+        paymentId: payId,
+        errorMessage: status === 'failed' ? 'Paiement échoué lors du traitement' : undefined
       };
 
-      // Envoyer les notifications via l'API
-      const notificationResponse = await fetch('/api/notifications/send', {
+      // Envoyer les notifications via la nouvelle API
+      const notificationResponse = await fetch('/api/advance/notifications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -185,18 +258,54 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
         console.log('✅ Notifications envoyées:', notificationResult);
         
         if (status === 'success') {
-          toast.success('📧 SMS et email de confirmation envoyés');
+          if (notificationResult.sms_sent && notificationResult.email_sent) {
+            toast.success('📧 SMS et email de confirmation envoyés');
+          } else if (notificationResult.sms_sent || notificationResult.email_sent) {
+            toast.success(`📧 ${notificationResult.sms_sent ? 'SMS' : 'Email'} de confirmation envoyé`);
+          } else {
+            toast('📧 Paiement traité mais notifications non envoyées', {
+              icon: '⚠️',
+              duration: 4000
+            });
+          }
         } else {
-          toast('📧 Notification d\'échec envoyée', {
-            icon: '📧',
-            duration: 4000
-          });
+          if (notificationResult.sms_sent || notificationResult.email_sent) {
+            toast('📧 Notification d\'échec envoyée', {
+              icon: '📧',
+              duration: 4000
+            });
+          }
+        }
+        
+        // Afficher les détails des notifications dans la console
+        if (notificationResult.details) {
+          console.log('📊 Détails des notifications:');
+          if (notificationResult.details.sms) {
+            console.log('   SMS:', notificationResult.details.sms.success ? '✅' : '❌', notificationResult.details.sms.error || '');
+          }
+          if (notificationResult.details.email) {
+            console.log('   Email:', notificationResult.details.email.success ? '✅' : '❌', notificationResult.details.email.error || '');
+          }
         }
       } else {
         console.error('⚠️ Erreur lors de l\'envoi des notifications');
+        const errorData = await notificationResponse.json();
+        console.error('Détails de l\'erreur:', errorData);
+        
+        // Afficher un toast d'erreur si les notifications échouent
+        toast('⚠️ Erreur lors de l\'envoi des notifications', {
+          icon: '⚠️',
+          duration: 4000
+        });
       }
     } catch (error) {
       console.error('❌ Erreur lors de l\'envoi des notifications:', error);
+      
+      // Afficher un toast d'erreur en cas d'exception
+      toast('❌ Erreur lors de l\'envoi des notifications', {
+        icon: '❌',
+        duration: 4000
+      });
     }
   };
 
@@ -284,6 +393,11 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
     }
   };
 
+  const hasCancelledTransactions = (request: UISalaryAdvanceRequest | null): boolean => {
+    if (!request || !request.transactions) return false;
+    return request.transactions.some((t: { statut: string }) => t.statut === 'ANNULEE');
+  };
+
   if (!isOpen || !request) return null;
 
   return (
@@ -304,10 +418,13 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-[var(--zalama-text)]">
-                Paiement de l&apos;avance
+                {hasCancelledTransactions(request) ? 'Relancer le paiement' : 'Paiement de l\'avance'}
               </h2>
               <p className="text-sm text-[var(--zalama-text-secondary)]">
                 Demande #{request.id.slice(0, 8)}
+                {hasCancelledTransactions(request) && (
+                  <span className="ml-2 text-orange-600">(Relancement)</span>
+                )}
               </p>
             </div>
           </div>
@@ -384,9 +501,14 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                 <p id="phone-help" className="text-xs text-[var(--zalama-text-secondary)] mt-1">
                   Format: 9 chiffres ou 224 + 9 chiffres
                 </p>
-                {request.employe?.telephone && (
+                {request.numero_reception && (
                   <p className="text-xs text-[var(--zalama-success)] mt-1">
-                    ✅ Numéro pré-rempli depuis les données de l'employé
+                    ✅ Numéro pré-rempli depuis la demande
+                  </p>
+                )}
+                {!request.numero_reception && request.employe?.telephone && (
+                  <p className="text-xs text-[var(--zalama-warning)] mt-1">
+                    ⚠️ Numéro pré-rempli depuis les données de l&apos;employé (vérifiez si à jour)
                   </p>
                 )}
               </div>
@@ -434,6 +556,47 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                 </div>
               </div>
 
+              {/* Message de relancement */}
+              {hasCancelledTransactions(request) && (
+                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-orange-800">
+                      <p className="font-medium">Relancement de paiement:</p>
+                      <p>Une transaction précédente a échoué. Cette nouvelle tentative mettra à jour le statut de la transaction existante.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Information sur la transaction existante */}
+              {existingTransaction && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium">Transaction existante détectée:</p>
+                      <div className="mt-1 space-y-1">
+                        <p>ID: {existingTransaction.numero_transaction}</p>
+                        <p>Statut: {existingTransaction.statut}</p>
+                        <p>Montant: {formatCurrency(existingTransaction.montant)}</p>
+                        <p>Date: {new Date(existingTransaction.date_creation).toLocaleString('fr-FR')}</p>
+                      </div>
+                      {existingTransaction.statut === 'EFFECTUEE' && (
+                        <p className="mt-2 font-medium text-green-700">
+                          ✅ Cette demande a déjà été payée avec succès
+                        </p>
+                      )}
+                      {existingTransaction.statut !== 'EFFECTUEE' && (
+                        <p className="mt-2 font-medium text-orange-700">
+                          ⚠️ Une transaction précédente existe mais n&apos;a pas réussi
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Statut de vérification */}
               {isCheckingStatus && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -466,7 +629,7 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                     <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-red-800">
                       <p className="font-medium">❌ Paiement échoué</p>
-                      <p>Le paiement n'a pas pu être traité. Veuillez réessayer.</p>
+                      <p>Le paiement n&apos;a pas pu être traité. Veuillez réessayer.</p>
                     </div>
                   </div>
                 </div>
@@ -483,7 +646,7 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                 type="button"
                 onClick={onClose}
                 className="flex-1 px-4 py-2 text-[var(--zalama-text)] bg-[var(--zalama-bg-lighter)] hover:bg-[var(--zalama-bg)] rounded-lg transition-colors"
-                disabled={isProcessing || isCheckingStatus}
+                disabled={isProcessing || isCheckingStatus || isCheckingExisting}
                 aria-label="Annuler le paiement"
               >
                 Annuler
@@ -491,19 +654,24 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
               <button
                 type="submit"
                 form="payment-form"
-                disabled={isProcessing || isCheckingStatus}
+                disabled={isProcessing || isCheckingStatus || isCheckingExisting || (existingTransaction?.statut === 'EFFECTUEE')}
                 className="flex-1 px-4 py-2 bg-[var(--zalama-success)] hover:bg-[var(--zalama-success-accent)] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 aria-label={`Payer ${formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}`}
               >
-                {isProcessing ? (
+                {isProcessing || isCheckingExisting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Traitement...
+                    {isCheckingExisting ? 'Vérification...' : 'Traitement...'}
                   </>
                 ) : (
                   <>
                     <DollarSign className="w-4 h-4" />
-                    Payer {formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}
+                    {existingTransaction?.statut === 'EFFECTUEE' 
+                      ? 'Déjà payé' 
+                      : hasCancelledTransactions(request)
+                      ? `Relancer ${formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}`
+                      : `Payer ${formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}`
+                    }
                   </>
                 )}
               </button>

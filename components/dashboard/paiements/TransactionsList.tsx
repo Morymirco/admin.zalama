@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CreditCard, RefreshCw, Loader2, CheckCircle, XCircle, Clock, AlertCircle, Eye } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Transaction, useTransactions } from '@/hooks/useTransactions';
+import { AlertCircle, CheckCircle, Clock, CreditCard, Eye, Loader2, RefreshCw, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 
 interface TransactionsListProps {
   onTransactionSelect?: (transaction: Transaction) => void;
+  filters?: {
+    status: string;
+    method: string;
+    dateRange: string;
+    search: string;
+  };
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 const getStatusIcon = (status: string) => {
@@ -59,7 +67,12 @@ const formatDate = (dateString: string) => {
   });
 };
 
-export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactionSelect }) => {
+export const TransactionsList: React.FC<TransactionsListProps> = ({ 
+  onTransactionSelect, 
+  filters = { status: 'all', method: 'all', dateRange: 'all', search: '' },
+  sortBy = 'date_creation',
+  sortOrder = 'desc'
+}) => {
   const { 
     transactions, 
     loading, 
@@ -68,6 +81,62 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
   } = useTransactions();
 
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
+  // Fonction pour filtrer et trier les transactions
+  const getFilteredAndSortedTransactions = () => {
+    let filtered = [...transactions];
+
+    // Filtre par recherche
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(transaction => 
+        transaction.numero_transaction.toLowerCase().includes(searchLower) ||
+        transaction.numero_compte.toLowerCase().includes(searchLower) ||
+        transaction.description.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Filtre par statut
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(transaction => transaction.statut === filters.status);
+    }
+
+    // Filtre par méthode de paiement
+    if (filters.method !== 'all') {
+      filtered = filtered.filter(transaction => transaction.methode_paiement === filters.method);
+    }
+
+    // Tri
+    filtered.sort((a, b) => {
+      let aValue: string | number | Date, bValue: string | number | Date;
+
+      switch (sortBy) {
+        case 'montant':
+          aValue = a.montant;
+          bValue = b.montant;
+          break;
+        case 'statut':
+          aValue = a.statut;
+          bValue = b.statut;
+          break;
+        case 'date_creation':
+        default:
+          aValue = new Date(a.date_creation);
+          bValue = new Date(b.date_creation);
+          break;
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredTransactions = getFilteredAndSortedTransactions();
 
   const handleRefresh = async () => {
     try {
@@ -121,7 +190,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
     }
   };
 
-  if (loading && transactions.length === 0) {
+  if (loading && filteredTransactions.length === 0) {
     return (
       <Card className="border-[var(--zalama-border)] bg-[var(--zalama-bg)]">
         <CardHeader>
@@ -166,7 +235,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
           <div>
             <CardTitle className="text-[var(--zalama-text)] flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
-              Transactions ({transactions.length})
+              Transactions ({filteredTransactions.length})
             </CardTitle>
             <CardDescription className="text-[var(--zalama-text-secondary)]">
               Historique des paiements effectués
@@ -188,15 +257,19 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
         </div>
       </CardHeader>
       <CardContent>
-        {transactions.length === 0 ? (
+        {filteredTransactions.length === 0 ? (
           <div className="text-center py-8 text-[var(--zalama-text-secondary)]">
             <CreditCard className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>Aucune transaction trouvée</p>
-            <p className="text-sm">Les transactions apparaîtront ici après effectuation de paiements</p>
+            <p className="text-sm">
+              {filters.search || filters.status !== 'all' || filters.method !== 'all' 
+                ? 'Aucune transaction ne correspond aux filtres appliqués' 
+                : 'Les transactions apparaîtront ici après effectuation de paiements'}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {transactions.slice(0, 10).map((transaction) => (
+            {filteredTransactions.map((transaction) => (
               <div
                 key={transaction.id}
                 onClick={() => handleTransactionClick(transaction)}
@@ -251,10 +324,10 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({ onTransactio
               </div>
             ))}
             
-            {transactions.length > 10 && (
+            {filteredTransactions.length !== transactions.length && (
               <div className="text-center pt-4">
                 <p className="text-sm text-[var(--zalama-text-secondary)]">
-                  Affichage des 10 dernières transactions sur {transactions.length} au total
+                  Affichage de {filteredTransactions.length} transaction(s) filtrée(s) sur {transactions.length} au total
                 </p>
               </div>
             )}

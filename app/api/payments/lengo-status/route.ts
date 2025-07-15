@@ -1,15 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { lengoPayStatus, LengoPayStatusParams } from '@/services/lengoPayService';
+import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
 
-if (!supabaseServiceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Utiliser la clé anonyme pour éviter les problèmes de permissions
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const LENGO_SITE_ID = process.env.LENGO_SITE_ID;
 
 export async function POST(request: NextRequest) {
@@ -64,17 +61,18 @@ export async function POST(request: NextRequest) {
         success: true,
         pay_id: pay_id,
         lengo_status: 'UNKNOWN',
-        db_status: currentTransaction?.statut || 'EN_ATTENTE',
+        db_status: currentTransaction?.statut || 'ANNULEE',
         transaction: currentTransaction,
         message: 'Statut non disponible depuis Lengo Pay, utilisation du statut en base'
       });
     }
 
-    // Mettre à jour le statut dans la base de données si nécessaire
+    // Prioriser lengo_status comme source de vérité
     console.log('💾 Mise à jour du statut dans la base de données...');
     
-    let dbStatus = 'EN_ATTENTE';
+    let dbStatus = 'ANNULEE';
     let dateTransaction = null;
+    let shouldUpdateDB = true;
     
     // Mapper les statuts LengoPay vers nos statuts (enum transaction_statut)
     switch (statusResult.status.toUpperCase()) {
@@ -88,7 +86,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'PENDING':
       case 'INITIATED':
-        dbStatus = 'ANNULEE'; // Pour les transactions en attente, on utilise ANNULEE par défaut
+        // Pour les transactions en attente, ne pas forcer la mise à jour si déjà en attente
+        dbStatus = 'ANNULEE'; // On garde ANNULEE pour les transactions en attente
+        shouldUpdateDB = false; // Ne pas forcer la mise à jour si déjà en attente
         break;
       default:
         dbStatus = 'ANNULEE';
@@ -97,20 +97,40 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Mapping des statuts:', {
       lengo_status: statusResult.status,
       mapped_db_status: dbStatus,
-      date_transaction: dateTransaction
+      date_transaction: dateTransaction,
+      should_update_db: shouldUpdateDB
     });
 
-    // Mettre à jour la transaction dans la base de données
-    const { data: updatedTransaction, error: updateError } = await supabase
-      .from('transactions')
-      .update({
-        statut: dbStatus,
-        date_transaction: dateTransaction,
-        updated_at: new Date().toISOString()
-      })
-      .eq('numero_transaction', pay_id)
-      .select()
-      .single();
+    // Mettre à jour la transaction dans la base de données seulement si nécessaire
+    let updatedTransaction = null;
+    let updateError = null;
+    
+    if (shouldUpdateDB) {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({
+          statut: dbStatus,
+          date_transaction: dateTransaction,
+          updated_at: new Date().toISOString()
+        })
+        .eq('numero_transaction', pay_id)
+        .select()
+        .single();
+      
+      updatedTransaction = data;
+      updateError = error;
+    } else {
+      // Récupérer la transaction actuelle sans la modifier
+      const { data, error } = await supabase
+        .from('transactions')
+        .select()
+        .eq('numero_transaction', pay_id)
+        .single();
+      
+      updatedTransaction = data;
+      updateError = error;
+      console.log('⏸️ Transaction en attente - pas de mise à jour forcée');
+    }
 
     if (updateError) {
       console.error('❌ Erreur mise à jour transaction:', updateError);
@@ -124,7 +144,8 @@ export async function POST(request: NextRequest) {
       });
       
       // Si la transaction est liée à une demande d'avance et que le paiement est réussi
-      if (updatedTransaction?.demande_avance_id && dbStatus === 'EFFECTUEE') {
+      // Utiliser lengo_status comme source de vérité pour les notifications
+      if (updatedTransaction?.demande_avance_id && statusResult.status.toUpperCase() === 'SUCCESS') {
         console.log('🔄 Mise à jour du statut de la demande d\'avance:', updatedTransaction.demande_avance_id);
         
         // Vérifier d'abord l'état actuel de la demande
@@ -157,8 +178,8 @@ export async function POST(request: NextRequest) {
       } else {
         console.log('⚠️ Pas de mise à jour de la demande d\'avance:', {
           hasDemandeId: !!updatedTransaction?.demande_avance_id,
-          dbStatus,
-          isEffectuee: dbStatus === 'EFFECTUEE'
+          lengo_status: statusResult.status,
+          isSuccess: statusResult.status.toUpperCase() === 'SUCCESS'
         });
       }
     }

@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {

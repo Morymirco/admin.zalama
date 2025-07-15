@@ -1,15 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { lengoPayCashin, LengoPayCashinParams } from '@/services/lengoPayService';
+import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
 
-if (!supabaseServiceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Utiliser la clé anonyme pour éviter les problèmes de permissions
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const LENGO_SITE_ID = process.env.LENGO_SITE_ID;
 
 // Fonction pour normaliser le numéro de téléphone selon la doc LengoPay
@@ -77,6 +74,86 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Vérifier s'il existe déjà une transaction pour cette demande
+    if (requestId) {
+      console.log('🔍 Vérification des transactions existantes pour la demande:', requestId);
+      
+      const { data: existingTransactions, error: checkError } = await supabase
+        .from('transactions')
+        .select('id, numero_transaction, statut, date_creation')
+        .eq('demande_avance_id', requestId)
+        .order('date_creation', { ascending: false });
+
+      if (checkError) {
+        console.error('❌ Erreur lors de la vérification des transactions existantes:', checkError);
+      } else if (existingTransactions && existingTransactions.length > 0) {
+        console.log('⚠️ Transactions existantes trouvées:', existingTransactions);
+        
+        // Vérifier s'il y a une transaction récente (moins de 5 minutes)
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const recentTransaction = existingTransactions.find(t => 
+          new Date(t.date_creation) > fiveMinutesAgo
+        );
+
+        if (recentTransaction) {
+          console.log('❌ Transaction récente trouvée, éviter le doublon:', recentTransaction);
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Une transaction pour cette demande a déjà été initiée récemment. Veuillez attendre quelques minutes avant de réessayer.',
+            existingTransaction: recentTransaction
+          }, { status: 409 });
+        }
+
+        // Vérifier s'il y a une transaction réussie
+        const successfulTransaction = existingTransactions.find(t => t.statut === 'EFFECTUEE');
+        if (successfulTransaction) {
+          console.log('❌ Transaction réussie déjà existante:', successfulTransaction);
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Cette demande a déjà été payée avec succès.',
+            existingTransaction: successfulTransaction
+          }, { status: 409 });
+        }
+
+        // Vérifier s'il y a une transaction annulée à mettre à jour
+        const cancelledTransaction = existingTransactions.find(t => t.statut === 'ANNULEE');
+        if (cancelledTransaction) {
+          console.log('🔄 Transaction annulée trouvée, mise à jour au lieu de créer:', cancelledTransaction);
+          
+          // Mettre à jour la transaction existante au lieu d'en créer une nouvelle
+          const { data: updatedTransaction, error: updateError } = await supabase
+            .from('transactions')
+            .update({
+              statut: 'ANNULEE', // Utiliser ANNULEE au lieu de EN_ATTENTE
+              date_creation: new Date().toISOString(),
+              date_transaction: null
+            })
+            .eq('id', cancelledTransaction.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('❌ Erreur mise à jour transaction:', updateError);
+            return NextResponse.json({ success: false, error: 'Erreur DB: ' + updateError.message }, { status: 500 });
+          }
+
+          console.log('✅ Transaction mise à jour avec succès:', updatedTransaction);
+          
+          // Retourner la transaction mise à jour
+          return NextResponse.json({
+            success: true,
+            pay_id: cancelledTransaction.numero_transaction, // Réutiliser l'ancien pay_id
+            transaction: updatedTransaction,
+            message: 'Transaction relancée avec succès',
+            status: 'Request received successfully',
+            note: 'Transaction annulée relancée'
+          });
+        }
+
+        console.log('ℹ️ Transactions existantes mais anciennes ou échouées, continuer avec le nouveau paiement');
+      }
+    }
+
     // Normaliser le numéro de téléphone
     const normalizedPhone = normalizePhone(phone);
     console.log('📱 Numéro normalisé:', { original: phone, normalized: normalizedPhone });
@@ -84,7 +161,7 @@ export async function POST(request: NextRequest) {
     console.log('🔧 Vérification des variables d\'environnement:');
     console.log('  - LENGO_SITE_ID:', LENGO_SITE_ID ? '✅ Présent' : '❌ Manquant');
     console.log('  - LENGO_CALLBACK_URL:', process.env.LENGO_CALLBACK_URL ? '✅ Présent' : '❌ Manquant');
-    console.log('  - SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✅ Présent' : '❌ Manquant');
+    console.log('  - SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ Présent' : '❌ Manquant');
 
     // Préparer les paramètres pour Lengo Pay selon la doc officielle
     const lengoParams: LengoPayCashinParams = {

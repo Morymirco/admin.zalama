@@ -1,14 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
 
-if (!supabaseServiceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Utiliser la clé anonyme pour éviter les problèmes de permissions
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +34,7 @@ export async function GET(request: NextRequest) {
     if (checkStatus) {
       console.log('🔍 Vérification du statut des transactions en attente...');
       
-      const pendingTransactions = transactions.filter(t => t.statut === 'EN_ATTENTE');
+      const pendingTransactions = transactions.filter(t => t.statut === 'ANNULEE');
       console.log(`📋 ${pendingTransactions.length} transactions en attente à vérifier`);
       
       for (const transaction of pendingTransactions) {

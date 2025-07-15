@@ -2,19 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
 const LENGO_LICENSE_KEY = process.env.LENGO_API_KEY; // Utiliser LENGO_API_KEY au lieu de LENGO_LICENSE_KEY
 const LENGO_SITE_ID = process.env.LENGO_SITE_ID;
-
-if (!supabaseServiceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
-}
 
 if (!LENGO_LICENSE_KEY || !LENGO_SITE_ID) {
   throw new Error('LENGO_API_KEY and LENGO_SITE_ID are required');
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Utiliser la clé anonyme pour éviter les problèmes de permissions
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Fonction pour mapper le statut LengoPay vers notre statut
 function mapLengoStatus(lengoStatus: string): string {

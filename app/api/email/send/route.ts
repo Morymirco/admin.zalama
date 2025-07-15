@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import emailService from '@/services/emailService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,8 +15,8 @@ export async function POST(request: NextRequest) {
 
     console.log('📧 Email - Envoi via API:', { to, subject });
 
-    // Utiliser emailService côté serveur
-    const result = await emailService.sendEmail({
+    // Utiliser serverEmailService côté serveur
+    const result = await serverEmailService.sendEmail({
       to: Array.isArray(to) ? to : [to],
       subject: subject,
       html: html,

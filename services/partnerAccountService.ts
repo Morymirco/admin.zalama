@@ -1,7 +1,5 @@
-import smsService from './smsService';
-import emailService from './emailService';
+import { generatePassword } from '@/lib/utils';
 import { createClient } from '@supabase/supabase-js';
-import { generatePassword, validateEmail } from '@/lib/utils';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -190,7 +188,7 @@ class PartnerAccountService {
     try {
       const smsMessage = `Bonjour ${rhData.nom_rh}, votre compte ZaLaMa RH a été créé avec succès.\nEmail: ${rhData.email_rh}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
       
-      const smsResponse = await smsService.sendSMS({
+      const smsResponse = await serverSmsService.sendSMS({
         to: [rhData.telephone_rh],
         message: smsMessage,
         sender_name: 'ZaLaMa'
@@ -225,11 +223,20 @@ class PartnerAccountService {
         <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
       `;
       
-      await emailService.sendEmail({
-        to: [rhData.email_rh],
-        subject: subject,
-        html: html
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: [rhData.email_rh],
+          subject: subject,
+          html: html
+        })
       });
+
+      const emailResult = await response.json();
+      if (!emailResult.success) {
+        throw new Error(emailResult.error || 'Erreur lors de l\'envoi de l\'email');
+      }
       
       return {
         success: true,
@@ -253,7 +260,7 @@ class PartnerAccountService {
     try {
       const smsMessage = `Bonjour ${responsableData.nom_representant}, votre compte ZaLaMa responsable a été créé avec succès.\nEmail: ${responsableData.email_representant}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
       
-      const smsResponse = await smsService.sendSMS({
+      const smsResponse = await serverSmsService.sendSMS({
         to: [responsableData.telephone_representant],
         message: smsMessage,
         sender_name: 'ZaLaMa'
@@ -288,11 +295,20 @@ class PartnerAccountService {
         <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
       `;
       
-      await emailService.sendEmail({
-        to: [responsableData.email_representant],
-        subject: subject,
-        html: html
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: [responsableData.email_representant],
+          subject: subject,
+          html: html
+        })
       });
+
+      const emailResult = await response.json();
+      if (!emailResult.success) {
+        throw new Error(emailResult.error || 'Erreur lors de l\'envoi de l\'email');
+      }
       
       return {
         success: true,

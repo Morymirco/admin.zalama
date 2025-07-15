@@ -1,9 +1,12 @@
 "use client";
-import { Home, Users, BarChart2, AlertCircle, Target, PieChart, Settings, LogOut, ChevronLeft, ChevronRight, User2, ChevronDown, ChevronUp, Database, FileText, MessageSquare, Mail, Send, CreditCard } from 'lucide-react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/hooks/useAuth';
+import { AlertCircle, BarChart2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CreditCard, Database, FileText, Home, LogOut, MessageSquare, PieChart, Send, Settings, Target, User2, Users } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 const navItems = [
   { label: 'Tableau de bord', icon: Home, href: '/dashboard' },
@@ -18,6 +21,7 @@ const navItems = [
   { label: 'Alertes & Risques', icon: AlertCircle, href: '/dashboard/alertes' },
   { label: 'Objectifs & Performances', icon: Target, href: '/dashboard/performance' },
   { label: 'Visualisations', icon: BarChart2, href: '/dashboard/visualisations' },
+  { label: 'Profil', icon: User2, href: '/dashboard/profile' },
   { label: 'Test Migration', icon: Database, href: '/dashboard/migration-test' },
   { label: 'Test SMS', icon: MessageSquare, href: '/dashboard/test-sms' },
   { label: 'Test Employé', icon: User2, href: '/dashboard/test-employee' },
@@ -26,9 +30,46 @@ const navItems = [
 
 export default function Sidebar() {
   const { theme } = useTheme();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ nom: string; prenom: string; role: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Charger les informations du profil utilisateur
+  useEffect(() => {
+    if (user?.email) {
+      loadUserProfile();
+    }
+  }, [user]);
+
+  const loadUserProfile = async () => {
+    try {
+      const { data, error } = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user?.email })
+      }).then(res => res.json());
+
+      if (data) {
+        setUserProfile(data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du profil:', error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Déconnexion réussie');
+      router.push('/login');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+      toast.error('Erreur lors de la déconnexion');
+    }
+  };
 
   const toggleSidebar = () => {
     const newCollapsedState = !collapsed;
@@ -66,6 +107,14 @@ export default function Sidebar() {
       collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)'
     );
   }, [collapsed]);
+
+  // Initiales de l'utilisateur
+  const getUserInitials = () => {
+    if (userProfile?.prenom && userProfile?.nom) {
+      return `${userProfile.prenom.charAt(0)}${userProfile.nom.charAt(0)}`.toUpperCase();
+    }
+    return user?.email?.charAt(0).toUpperCase() || 'U';
+  };
 
   return (
     <aside 
@@ -105,12 +154,16 @@ export default function Sidebar() {
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--zalama-blue)] to-[var(--zalama-blue-accent)] flex items-center justify-center text-white font-bold text-sm shadow-md">
               <User2 className="w-4 h-4 md:hidden" />
-              <span className={`${collapsed ? 'hidden' : 'block'}`}>FG</span>
+              <span className={`${collapsed ? 'hidden' : 'block'}`}>{getUserInitials()}</span>
             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <span className="text-[var(--zalama-text)] text-sm leading-tight">Fassou Gbagan</span>
-                <span className="bg-[var(--zalama-success)] text-xs text-white px-1.5 py-0.5 rounded w-fit">Admin</span>
+                <span className="text-[var(--zalama-text)] text-sm leading-tight">
+                  {userProfile ? `${userProfile.prenom} ${userProfile.nom}` : user?.email}
+                </span>
+                <span className="bg-[var(--zalama-success)] text-xs text-white px-1.5 py-0.5 rounded w-fit">
+                  {userProfile?.role || 'Admin'}
+                </span>
               </div>
             )}
           </div>
@@ -123,16 +176,25 @@ export default function Sidebar() {
         
         {menuOpen && !collapsed && (
           <div className="py-1 bg-[var(--zalama-bg-darker)] rounded-md shadow-lg absolute bottom-20 right-[calc(-200px)] w-[200px] z-50 border border-[var(--zalama-border)]">
-            <button className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-[var(--zalama-bg-light)] transition-colors">
+            <Link 
+              href="/dashboard/profile"
+              className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-[var(--zalama-bg-light)] transition-colors"
+            >
               <User2 className="w-4 h-4 text-[var(--zalama-blue)]" />
               <span>Profil</span>
-            </button>
-            <button className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-[var(--zalama-bg-light)] transition-colors">
+            </Link>
+            <Link 
+              href="/dashboard/settings"
+              className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-[var(--zalama-bg-light)] transition-colors"
+            >
               <Settings className="w-4 h-4 text-[var(--zalama-blue)]" />
               <span>Paramètres</span>
-            </button>
+            </Link>
             <div className="border-t border-[var(--zalama-border)] my-1"></div>
-            <button className="flex items-center gap-3 px-4 py-2 w-full text-left text-[var(--zalama-danger)] hover:bg-[var(--zalama-bg-light)] transition-colors">
+            <button 
+              onClick={handleSignOut}
+              className="flex items-center gap-3 px-4 py-2 w-full text-left text-[var(--zalama-danger)] hover:bg-[var(--zalama-bg-light)] transition-colors"
+            >
               <LogOut className="w-4 h-4" />
               <span>Déconnexion</span>
             </button>

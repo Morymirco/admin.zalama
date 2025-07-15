@@ -1,6 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import smsService from './smsService';
-import emailService from './emailService';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
@@ -64,7 +62,7 @@ class PartnershipNotificationService {
           if (phoneNumbers.length > 0) {
             console.log('📱 Envoi SMS à', phoneNumbers.length, 'contacts:', phoneNumbers);
             
-            const smsResult = await smsService.sendSMS({
+            const smsResult = await serverSmsService.sendSMS({
               to: phoneNumbers,
               message: smsMessage,
               sender_name: 'ZaLaMa'
@@ -112,11 +110,17 @@ class PartnershipNotificationService {
             <p>Votre équipe ZaLaMa vous contactera bientôt pour finaliser l'intégration.</p>
           `;
           
-          const emailResult = await emailService.sendEmail({
-            to: [request.email],
-            subject: subject,
-            html: html
+          const response = await fetch('/api/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: [request.email],
+              subject: subject,
+              html: html
+            })
           });
+
+          const emailResult = await response.json();
           
           results.email = {
             success: emailResult.success,
@@ -149,11 +153,17 @@ class PartnershipNotificationService {
           
           // Envoyer aux contacts admin
           const adminEmails = contacts.map(contact => contact.email).filter(email => email);
-          const adminEmailResult = await emailService.sendEmail({
-            to: adminEmails,
-            subject: adminSubject,
-            html: adminHtml
+          const adminResponse = await fetch('/api/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: adminEmails,
+              subject: adminSubject,
+              html: adminHtml
+            })
           });
+
+          const adminEmailResult = await adminResponse.json();
           
           if (!results.email.success) {
             results.email = {

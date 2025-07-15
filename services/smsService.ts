@@ -43,23 +43,6 @@ class SMSService {
         };
       }
 
-      // Vérifier le solde avant d'envoyer (optionnel)
-      try {
-        const balanceCheck = await this.checkBalance();
-        if (balanceCheck.balance <= 0) {
-          console.warn('⚠️ Solde SMS insuffisant - SMS non envoyé');
-          return {
-            success: false,
-            error: 'Solde SMS insuffisant',
-            message: 'SMS non envoyé - solde insuffisant',
-            details: `Solde actuel: ${balanceCheck.balance}`
-          };
-        }
-      } catch (balanceError) {
-        console.warn('⚠️ Impossible de vérifier le solde SMS:', balanceError);
-        // Continuer quand même, l'envoi échouera naturellement si le solde est insuffisant
-      }
-
       // Utiliser l'API route Next.js pour éviter les problèmes CORS
       const smsData = {
         to: message.to,
@@ -67,64 +50,34 @@ class SMSService {
         sender_name: message.sender_name || this.senderName,
       };
 
-      console.log('📱 Envoi SMS direct via Nimba SMS:', smsData);
+      console.log('📱 Envoi SMS via API route:', smsData);
       
-      // Importer et utiliser directement le client Nimba SMS
-      const { Client } = await import('nimbasms');
-      
-      // Configuration Nimba SMS
-      const config = {
-        SERVICE_ID: process.env.NIMBA_SMS_SERVICE_ID || '9d83d5b67444c654c702f109dd837167',
-        SECRET_TOKEN: process.env.NIMBA_SMS_SECRET_TOKEN || 'qf_bpb4CVfEalTU5eVEFC05wpoqlo17M-mozkZVbIHT_3xfOIjB7Oac-lkXZ6Pg2VqO2LXVy6BUlYTZe73y411agSC0jVh3OcOU92s8Rplc',
-      };
-
-      const client = new Client(config);
-      
-      // Envoyer le SMS directement via le client Nimba SMS
-      const response = await client.messages.create({
-        to: smsData.to,
-        message: smsData.message,
-        sender_name: smsData.sender_name,
+      // Appeler l'API route Next.js au lieu d'appeler directement Nimba SMS
+      const response = await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(smsData)
       });
 
-      // Vérifier si la réponse contient une erreur
-      if (response && typeof response === 'object') {
-        // Vérifier les erreurs spécifiques de Nimba SMS
-        if (response.solde && response.solde.includes('insuffisant')) {
-          console.log('⚠️ Solde SMS insuffisant:', response.solde);
-          return {
-            success: false,
-            error: 'Solde SMS insuffisant',
-            message: 'SMS non envoyé - solde insuffisant',
-            details: response.solde
-          };
-        }
-        
-        if (response.error) {
-          console.log('❌ Erreur SMS:', response.error);
-          return {
-            success: false,
-            error: response.error,
-            message: 'SMS non envoyé',
-            details: response
-          };
-        }
-        
-        if (response.status && response.status !== 'success') {
-          console.log('❌ Statut SMS non réussi:', response.status);
-          return {
-            success: false,
-            error: `Statut: ${response.status}`,
-            message: 'SMS non envoyé',
-            details: response
-          };
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Erreur API SMS:', errorData);
+        return {
+          success: false,
+          error: errorData.error || 'Erreur lors de l\'envoi du SMS',
+          message: 'SMS non envoyé',
+          details: errorData
+        };
       }
 
-      console.log('✅ SMS envoyé avec succès:', response);
+      const result = await response.json();
+      console.log('✅ SMS envoyé avec succès via API:', result);
+      
       return {
         success: true,
-        response: response,
+        response: result,
         message: 'SMS envoyé avec succès'
       };
     } catch (error) {

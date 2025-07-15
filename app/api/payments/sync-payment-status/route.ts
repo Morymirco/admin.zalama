@@ -1,18 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
 
-if (!supabaseServiceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Utiliser seulement la clé anonyme pour éviter les problèmes de permissions
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Début de la synchronisation des statuts de paiement');
+    
+    // Vérification de sécurité basique
+    const origin = request.headers.get('origin');
+    
+    // Autoriser seulement les appels depuis l'application
+    if (origin && !origin.includes('vercel.app') && !origin.includes('localhost')) {
+      console.warn('⚠️ Tentative d\'accès non autorisée depuis:', origin);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Accès non autorisé' 
+      }, { status: 403 });
+    }
     
     const body = await request.json();
     console.log('📋 Body reçu:', body);
@@ -85,7 +94,13 @@ export async function POST(request: NextRequest) {
 
           if (updateError) {
             console.error(`❌ Erreur mise à jour demande ${transaction.demande_avance_id}:`, updateError);
-            errors.push(`Erreur mise à jour demande ${transaction.demande_avance_id}: ${updateError.message}`);
+            
+            // Si c'est une erreur de permissions, informer l'utilisateur
+            if (updateError.message.includes('permission') || updateError.message.includes('policy')) {
+              errors.push(`Permissions insuffisantes pour mettre à jour la demande ${transaction.demande_avance_id}. Contactez l'administrateur.`);
+            } else {
+              errors.push(`Erreur mise à jour demande ${transaction.demande_avance_id}: ${updateError.message}`);
+            }
           } else {
             console.log(`✅ Demande ${transaction.demande_avance_id} mise à jour avec succès`);
             updatedCount++;
@@ -108,7 +123,8 @@ export async function POST(request: NextRequest) {
       message: 'Synchronisation terminée',
       updated: updatedCount,
       total_transactions: transactions.length,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
+      note: 'Utilisation de la clé anonyme - certaines opérations peuvent être limitées'
     });
     
   } catch (error) {

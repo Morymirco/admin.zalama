@@ -1,47 +1,43 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import FinanceCharts from "@/components/dashboard/finances/FinanceCharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  BarChart3, 
-  PieChart,
-  Calendar,
-  Filter,
-  Download,
-  Users,
-  Building,
-  CreditCard,
-  Wallet
-} from "lucide-react";
-import FinanceCharts from "@/components/dashboard/finances/FinanceCharts";
-import FinanceStats from "@/components/dashboard/finances/FinanceStats";
 import { supabase } from "@/lib/supabase";
+import {
+    BarChart3,
+    Calendar,
+    CreditCard,
+    Download,
+    Filter,
+    TrendingDown,
+    TrendingUp,
+    Users,
+    Wallet
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 // Types selon la structure de la base de données
-interface FinancialTransaction {
+interface Transaction {
   id: string;
+  demande_avance_id?: string;
+  employe_id: string;
+  entreprise_id: string;
   montant: number;
-  type: 'Débloqué' | 'Récupéré' | 'Revenu' | 'Remboursement';
-  description?: string;
-  partenaire_id?: string;
-  utilisateur_id?: string;
-  service_id?: string;
-  statut: 'En attente' | 'Validé' | 'Rejeté' | 'Annulé';
+  numero_transaction: string;
+  methode_paiement: 'VIREMENT_BANCAIRE' | 'MOBILE_MONEY' | 'ESPECES' | 'CHEQUE';
+  numero_compte?: string;
+  numero_reception?: string;
+  recu_url?: string;
   date_transaction: string;
-  date_validation?: string;
-  reference?: string;
+  date_creation: string;
+  statut: 'EFFECTUEE' | 'ANNULEE';
   created_at: string;
   updated_at: string;
-  transaction_id?: number;
-  partenaire?: { nom: string; type: string };
-  utilisateur?: { nom: string; prenom: string; email: string };
-  service?: { nom: string; categorie: string };
+  employe?: { nom: string; prenom: string };
+  entreprise?: { nom: string };
 }
 
 interface SalaryAdvanceRequest {
@@ -65,26 +61,6 @@ interface SalaryAdvanceRequest {
   updated_at: string;
   employe?: { nom: string; prenom: string };
   partenaire?: { nom: string };
-}
-
-interface Transaction {
-  id: string;
-  demande_avance_id?: string;
-  employe_id: string;
-  entreprise_id: string;
-  montant: number;
-  numero_transaction: string;
-  methode_paiement: 'VIREMENT_BANCAIRE' | 'MOBILE_MONEY' | 'ESPECES' | 'CHEQUE';
-  numero_compte?: string;
-  numero_reception?: string;
-  recu_url?: string;
-  date_transaction: string;
-  date_creation: string;
-  statut: 'EFFECTUEE' | 'ANNULEE';
-  created_at: string;
-  updated_at: string;
-  employe?: { nom: string; prenom: string };
-  entreprise?: { nom: string };
 }
 
 interface FinancialStats {
@@ -118,9 +94,8 @@ interface FinancialStats {
 }
 
 const FinancesPage = () => {
-  const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>([]);
-  const [salaryAdvances, setSalaryAdvances] = useState<SalaryAdvanceRequest[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [salaryAdvances, setSalaryAdvances] = useState<SalaryAdvanceRequest[]>([]);
   const [stats, setStats] = useState<FinancialStats>({
     capitalInitial: 25000000,
     montantDebloque: 0,
@@ -153,19 +128,6 @@ const FinancesPage = () => {
     try {
       setLoading(true);
       
-      // Charger les transactions financières
-      const { data: financialData, error: financialError } = await supabase
-        .from('financial_transactions')
-        .select(`
-          *,
-          partenaire:partners(nom, type),
-          utilisateur:employees(nom, prenom, email),
-          service:services(nom, categorie)
-        `)
-        .order('date_transaction', { ascending: false });
-
-      if (financialError) throw financialError;
-
       // Charger les demandes d'avance de salaire
       const { data: salaryData, error: salaryError } = await supabase
         .from('salary_advance_requests')
@@ -190,12 +152,11 @@ const FinancesPage = () => {
 
       if (transactionError) throw transactionError;
 
-      setFinancialTransactions(financialData || []);
-      setSalaryAdvances(salaryData || []);
       setTransactions(transactionData || []);
+      setSalaryAdvances(salaryData || []);
 
       // Calculer les statistiques
-      calculateStats(financialData || [], salaryData || [], transactionData || []);
+      calculateStats(salaryData || [], transactionData || []);
 
     } catch (error) {
       console.error('Erreur lors du chargement des données financières:', error);
@@ -205,7 +166,6 @@ const FinancesPage = () => {
   };
 
   const calculateStats = (
-    financialData: FinancialTransaction[],
     salaryData: SalaryAdvanceRequest[],
     transactionData: Transaction[]
   ) => {
@@ -228,35 +188,33 @@ const FinancesPage = () => {
     // Taux de remboursement
     const tauxRemboursement = montantDebloque > 0 ? (montantRecupere / montantDebloque) * 100 : 0;
 
-    // Revenus et dépenses
-    const totalRevenus = financialData
-      .filter(t => t.type === 'Revenu')
+    // Revenus et dépenses basés sur les transactions
+    const totalRevenus = transactionData
+      .filter(t => t.statut === 'EFFECTUEE')
       .reduce((sum, t) => sum + (t.montant || 0), 0);
 
-    const totalDepenses = financialData
-      .filter(t => t.type === 'Débloqué')
-      .reduce((sum, t) => sum + (t.montant || 0), 0);
+    const totalDepenses = montantDebloque; // Les dépenses sont les montants débloqués
 
     const beneficeNet = totalRevenus - totalDepenses;
 
-    // Revenus par commissions (estimation)
+    // Revenus par commissions (estimation basée sur les transactions)
     const revenusCommissions = totalRevenus * 0.15;
-
-    // Statistiques par type
-    const parType = financialData.reduce((acc, transaction) => {
-      acc[transaction.type] = (acc[transaction.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Statistiques par statut
-    const parStatut = financialData.reduce((acc, transaction) => {
-      acc[transaction.statut] = (acc[transaction.statut] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
 
     // Statistiques par méthode de paiement
     const parMethodePaiement = transactionData.reduce((acc, transaction) => {
       acc[transaction.methode_paiement] = (acc[transaction.methode_paiement] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Statistiques par statut (transactions)
+    const parStatut = transactionData.reduce((acc, transaction) => {
+      acc[transaction.statut] = (acc[transaction.statut] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Statistiques par type (basées sur les demandes d'avance)
+    const parType = salaryData.reduce((acc, demande) => {
+      acc[demande.type_motif] = (acc[demande.type_motif] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -293,8 +251,8 @@ const FinancesPage = () => {
     });
   };
 
-  const filteredTransactions = financialTransactions.filter(transaction => {
-    if (selectedType !== 'all' && transaction.type !== selectedType) {
+  const filteredTransactions = transactions.filter(transaction => {
+    if (selectedType !== 'all' && transaction.methode_paiement !== selectedType) {
       return false;
     }
     return true;
@@ -450,19 +408,13 @@ const FinancesPage = () => {
             value="transactions" 
             className="data-[state=active]:bg-[var(--zalama-blue)] data-[state=active]:text-white text-[var(--zalama-text)]"
           >
-            Transactions Financières
+            Transactions
           </TabsTrigger>
           <TabsTrigger 
             value="advances" 
             className="data-[state=active]:bg-[var(--zalama-blue)] data-[state=active]:text-white text-[var(--zalama-text)]"
           >
             Demandes d'Avance
-          </TabsTrigger>
-          <TabsTrigger 
-            value="payments" 
-            className="data-[state=active]:bg-[var(--zalama-blue)] data-[state=active]:text-white text-[var(--zalama-text)]"
-          >
-            Paiements
           </TabsTrigger>
         </TabsList>
 
@@ -494,7 +446,7 @@ const FinancesPage = () => {
         <TabsContent value="transactions" className="space-y-4">
           <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)] shadow-lg">
             <CardHeader>
-              <CardTitle className="text-[var(--zalama-text)]">Transactions Financières</CardTitle>
+              <CardTitle className="text-[var(--zalama-text)]">Transactions</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -505,27 +457,26 @@ const FinancesPage = () => {
                   >
                     <div className="flex items-center space-x-4">
                       <div className={`p-2 rounded-full ${
-                        transaction.type === 'Revenu' ? 'bg-[var(--zalama-success)]/20' : 'bg-[var(--zalama-blue)]/20'
+                        transaction.statut === 'EFFECTUEE' ? 'bg-[var(--zalama-success)]/20' : 'bg-[var(--zalama-danger)]/20'
                       }`}>
-                        <DollarSign className={`h-4 w-4 ${
-                          transaction.type === 'Revenu' ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-blue)]'
+                        <CreditCard className={`h-4 w-4 ${
+                          transaction.statut === 'EFFECTUEE' ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-danger)]'
                         }`} />
                       </div>
                       <div>
-                        <p className="font-medium text-[var(--zalama-text)]">{transaction.description || transaction.type}</p>
+                        <p className="font-medium text-[var(--zalama-text)]">
+                          {transaction.employe?.prenom} {transaction.employe?.nom}
+                        </p>
                         <p className="text-sm text-[var(--zalama-text-secondary)]">
-                          {transaction.partenaire?.nom && `Partenaire: ${transaction.partenaire.nom}`}
-                          {transaction.utilisateur && ` - ${transaction.utilisateur.prenom} ${transaction.utilisateur.nom}`}
+                          {transaction.entreprise?.nom} - {transaction.methode_paiement}
                         </p>
                         <p className="text-xs text-[var(--zalama-text-secondary)]">
-                          {new Date(transaction.date_transaction).toLocaleDateString('fr-FR')}
+                          {transaction.numero_transaction} - {new Date(transaction.date_transaction).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-semibold ${
-                        transaction.type === 'Revenu' ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-blue)]'
-                      }`}>
+                      <p className="font-semibold text-[var(--zalama-success)]">
                         {transaction.montant.toLocaleString('fr-FR')} GNF
                       </p>
                       <Badge variant="outline" className="border-[var(--zalama-border)] text-[var(--zalama-text)]">
@@ -579,53 +530,6 @@ const FinancesPage = () => {
                       </p>
                       <Badge variant="outline" className="border-[var(--zalama-border)] text-[var(--zalama-text)]">
                         {advance.statut}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="payments" className="space-y-4">
-          <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)] shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-[var(--zalama-text)]">Paiements Effectués</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {transactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-4 border border-[var(--zalama-border)] rounded-lg bg-[var(--zalama-bg-lighter)] hover:bg-[var(--zalama-bg-light)] transition-colors"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-2 rounded-full ${
-                        transaction.statut === 'EFFECTUEE' ? 'bg-[var(--zalama-success)]/20' : 'bg-[var(--zalama-danger)]/20'
-                      }`}>
-                        <CreditCard className={`h-4 w-4 ${
-                          transaction.statut === 'EFFECTUEE' ? 'text-[var(--zalama-success)]' : 'text-[var(--zalama-danger)]'
-                        }`} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-[var(--zalama-text)]">
-                          {transaction.employe?.prenom} {transaction.employe?.nom}
-                        </p>
-                        <p className="text-sm text-[var(--zalama-text-secondary)]">
-                          {transaction.entreprise?.nom} - {transaction.methode_paiement}
-                        </p>
-                        <p className="text-xs text-[var(--zalama-text-secondary)]">
-                          {transaction.numero_transaction} - {new Date(transaction.date_transaction).toLocaleDateString('fr-FR')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-[var(--zalama-success)]">
-                        {transaction.montant.toLocaleString('fr-FR')} GNF
-                      </p>
-                      <Badge variant="outline" className="border-[var(--zalama-border)] text-[var(--zalama-text)]">
-                        {transaction.statut}
                       </Badge>
                     </div>
                   </div>

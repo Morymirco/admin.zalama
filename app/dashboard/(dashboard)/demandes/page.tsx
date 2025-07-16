@@ -237,19 +237,34 @@ export default function DemandesPage() {
   // Fonction pour vérifier le statut des paiements en attente
   const handleCheckPaymentStatus = useCallback(async () => {
     try {
-      const response = await fetch('/api/payments/transactions?check_status=true');
+      console.log('🔄 Vérification globale des statuts de paiement...');
+      
+      const response = await fetch('/api/payments/sync-transaction-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
+
       const result = await response.json();
       
-      if (result.success) {
-        toast.success('Statut des paiements vérifié avec succès');
+      if (response.ok) {
+        console.log('✅ Vérification réussie:', result);
+        toast.success(`Vérification terminée: ${result.updated} transaction(s) mise(s) à jour`);
+        
+        // Rafraîchir les données
+        await refreshRequests();
+        await refreshTransactions();
       } else {
-        toast.error('Erreur lors de la vérification des statuts');
+        console.error('❌ Erreur vérification:', result);
+        toast.error(result.error || 'Erreur lors de la vérification');
       }
     } catch (error) {
-      console.error('Erreur lors de la vérification des statuts:', error);
-      toast.error('Erreur lors de la vérification des statuts');
+      console.error('💥 Erreur lors de la vérification:', error);
+      toast.error('Erreur réseau lors de la vérification');
     }
-  }, []);
+  }, [refreshRequests, refreshTransactions]);
 
   // Calculer les éléments de la page courante
   const startIndex = (currentPage - 1) * 10;

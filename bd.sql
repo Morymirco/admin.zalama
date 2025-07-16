@@ -113,9 +113,24 @@ CREATE TABLE public.financial_transactions (
   updated_at timestamp with time zone DEFAULT now(),
   transaction_id bigint,
   CONSTRAINT financial_transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT financial_transactions_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.employees(id),
   CONSTRAINT financial_transactions_service_id_fkey FOREIGN KEY (service_id) REFERENCES public.services(id),
+  CONSTRAINT financial_transactions_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.employees(id),
   CONSTRAINT financial_transactions_partenaire_id_fkey FOREIGN KEY (partenaire_id) REFERENCES public.partners(id)
+);
+CREATE TABLE public.historique_remboursements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  remboursement_id uuid NOT NULL,
+  action character varying NOT NULL,
+  montant_avant numeric,
+  montant_apres numeric,
+  statut_avant character varying,
+  statut_apres character varying,
+  description text NOT NULL,
+  utilisateur_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT historique_remboursements_pkey PRIMARY KEY (id),
+  CONSTRAINT historique_remboursements_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.admin_users(id),
+  CONSTRAINT historique_remboursements_remboursement_id_fkey FOREIGN KEY (remboursement_id) REFERENCES public.remboursements(id)
 );
 CREATE TABLE public.notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -129,8 +144,8 @@ CREATE TABLE public.notifications (
   employee_id uuid,
   partner_id uuid,
   CONSTRAINT notifications_pkey PRIMARY KEY (id),
-  CONSTRAINT notifications_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id),
   CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.admin_users(id),
+  CONSTRAINT notifications_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id),
   CONSTRAINT notifications_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.partners(id)
 );
 CREATE TABLE public.partners (
@@ -216,6 +231,36 @@ CREATE TABLE public.performance_metrics (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT performance_metrics_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.remboursements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  transaction_id uuid NOT NULL UNIQUE,
+  demande_avance_id uuid NOT NULL,
+  employe_id uuid NOT NULL,
+  partenaire_id uuid NOT NULL,
+  montant_transaction numeric NOT NULL,
+  frais_service numeric DEFAULT 0,
+  montant_total_remboursement numeric NOT NULL,
+  methode_remboursement USER-DEFINED NOT NULL,
+  date_creation timestamp with time zone DEFAULT now(),
+  date_transaction_effectuee timestamp with time zone NOT NULL,
+  date_limite_remboursement timestamp with time zone NOT NULL,
+  date_remboursement_effectue timestamp with time zone,
+  statut USER-DEFINED DEFAULT 'EN_ATTENTE'::remboursement_statut,
+  numero_compte character varying,
+  numero_reception character varying,
+  reference_paiement character varying,
+  numero_transaction_remboursement character varying,
+  commentaire_partenaire text,
+  commentaire_admin text,
+  motif_retard text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT remboursements_pkey PRIMARY KEY (id),
+  CONSTRAINT remboursements_partenaire_id_fkey FOREIGN KEY (partenaire_id) REFERENCES public.partners(id),
+  CONSTRAINT remboursements_demande_avance_id_fkey FOREIGN KEY (demande_avance_id) REFERENCES public.salary_advance_requests(id),
+  CONSTRAINT remboursements_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id),
+  CONSTRAINT remboursements_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id)
+);
 CREATE TABLE public.salary_advance_requests (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   employe_id uuid,
@@ -236,8 +281,8 @@ CREATE TABLE public.salary_advance_requests (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT salary_advance_requests_pkey PRIMARY KEY (id),
-  CONSTRAINT salary_advance_requests_partenaire_id_fkey FOREIGN KEY (partenaire_id) REFERENCES public.partners(id),
-  CONSTRAINT salary_advance_requests_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id)
+  CONSTRAINT salary_advance_requests_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id),
+  CONSTRAINT salary_advance_requests_partenaire_id_fkey FOREIGN KEY (partenaire_id) REFERENCES public.partners(id)
 );
 CREATE TABLE public.security_events (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -286,9 +331,9 @@ CREATE TABLE public.transactions (
   description text,
   message_callback text,
   CONSTRAINT transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT transactions_entreprise_id_fkey FOREIGN KEY (entreprise_id) REFERENCES public.partners(id),
   CONSTRAINT transactions_demande_avance_id_fkey FOREIGN KEY (demande_avance_id) REFERENCES public.salary_advance_requests(id),
-  CONSTRAINT transactions_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id)
+  CONSTRAINT transactions_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employees(id),
+  CONSTRAINT transactions_entreprise_id_fkey FOREIGN KEY (entreprise_id) REFERENCES public.partners(id)
 );
 CREATE TABLE public.user_activities (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

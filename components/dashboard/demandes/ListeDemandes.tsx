@@ -76,7 +76,7 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
     try {
       console.log('🔄 Synchronisation du statut de paiement pour la demande:', request.id);
       
-      const response = await fetch('/api/payments/sync-payment-status', {
+      const response = await fetch('/api/payments/sync-transaction-status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ const ListeDemandes: React.FC<ListeDemandesProps> = ({
       
       if (response.ok) {
         console.log('✅ Synchronisation réussie:', result);
-        toast.success(`Synchronisation réussie: ${result.updatedCount} mise(s) à jour`);
+        toast.success(`Synchronisation réussie: ${result.updated} transaction(s) mise(s) à jour`);
         
         // Rafraîchir les données
         if (onRefresh) {

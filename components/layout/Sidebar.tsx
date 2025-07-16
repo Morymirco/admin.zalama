@@ -1,7 +1,7 @@
 "use client";
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
-import { AlertCircle, BarChart2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CreditCard, Database, FileText, Home, LogOut, MessageSquare, PieChart, Send, Settings, Target, User2, Users } from 'lucide-react';
+import { AlertCircle, BarChart2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CreditCard, Database, FileText, Home, LogOut, MessageSquare, PieChart, RotateCcw, Send, Settings, Target, User2, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ const navItems = [
   { label: 'Tableau de bord', icon: Home, href: '/dashboard' },
   { label: 'Utilisateurs', icon: Users, href: '/dashboard/utilisateurs' },
   { label: 'Finances', icon: BarChart2, href: '/dashboard/finances' },
+  { label: 'Remboursements', icon: RotateCcw, href: '/dashboard/remboursements' },
   { label: 'Paiements', icon: CreditCard, href: '/dashboard/paiements' },
   { label: 'Services', icon: PieChart, href: '/dashboard/services' },
   { label: 'Partenaires', icon: Users, href: '/dashboard/partenaires' },

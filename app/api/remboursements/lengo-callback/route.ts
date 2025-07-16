@@ -9,21 +9,29 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // POST /api/remboursements/lengo-callback - Callback de Lengo Pay
 export async function POST(request: NextRequest) {
+  const timestamp = new Date().toISOString();
+  const requestId = Math.random().toString(36).substring(7);
+  
+  console.log(`🚨 [${timestamp}] [${requestId}] CALLBACK LENGO PAY DÉTECTÉ!`);
+  console.log(`📞 [${requestId}] Headers reçus:`, Object.fromEntries(request.headers.entries()));
+  
   try {
     const body = await request.json();
     const { pay_id, status, amount, message, Client } = body;
 
-    console.log('📞 Callback Lengo Pay reçu:', {
+    console.log(`📞 [${requestId}] Callback Lengo Pay reçu:`, {
       pay_id,
       status,
       amount,
       message,
-      Client
+      Client,
+      timestamp,
+      request_id: requestId
     });
 
     // Validation des données requises selon la documentation
     if (!pay_id) {
-      console.error('❌ Callback Lengo Pay: pay_id manquant');
+      console.error(`❌ [${requestId}] Callback Lengo Pay: pay_id manquant`);
       return NextResponse.json(
         { error: 'pay_id requis' },
         { status: 400 }
@@ -31,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!status) {
-      console.error('❌ Callback Lengo Pay: status manquant');
+      console.error(`❌ [${requestId}] Callback Lengo Pay: status manquant`);
       return NextResponse.json(
         { error: 'status requis' },
         { status: 400 }
@@ -46,14 +54,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (fetchError || !remboursement) {
-      console.error('❌ Callback Lengo Pay: Remboursement non trouvé pour pay_id:', pay_id);
+      console.error(`❌ [${requestId}] Callback Lengo Pay: Remboursement non trouvé pour pay_id:`, pay_id);
       return NextResponse.json(
         { error: 'Remboursement non trouvé' },
         { status: 404 }
       );
     }
 
-    console.log('✅ Remboursement trouvé:', {
+    console.log(`✅ [${requestId}] Remboursement trouvé:`, {
       id: remboursement.id,
       montant: remboursement.montant_total_remboursement,
       statut_actuel: remboursement.statut
@@ -85,7 +93,7 @@ export async function POST(request: NextRequest) {
         commentaire = `Statut inconnu via Lengo Pay: ${status} - ${message || 'Unknown Status'}`;
     }
 
-    console.log('🔄 Mise à jour du statut:', {
+    console.log(`🔄 [${requestId}] Mise à jour du statut:`, {
       pay_id,
       status_lengo: status,
       nouveau_statut: nouveauStatut,
@@ -114,14 +122,14 @@ export async function POST(request: NextRequest) {
       .eq('id', remboursement.id);
 
     if (updateError) {
-      console.error('❌ Erreur lors de la mise à jour du remboursement:', updateError);
+      console.error(`❌ [${requestId}] Erreur lors de la mise à jour du remboursement:`, updateError);
       return NextResponse.json(
         { error: 'Erreur lors de la mise à jour' },
         { status: 500 }
       );
     }
 
-    console.log('✅ Remboursement mis à jour avec succès:', {
+    console.log(`✅ [${requestId}] Remboursement mis à jour avec succès:`, {
       remboursement_id: remboursement.id,
       ancien_statut: remboursement.statut,
       nouveau_statut: nouveauStatut,
@@ -133,11 +141,13 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Callback traité avec succès',
       remboursement_id: remboursement.id,
-      statut: nouveauStatut
+      statut: nouveauStatut,
+      request_id: requestId,
+      timestamp
     });
 
   } catch (error) {
-    console.error('❌ Erreur dans le callback Lengo Pay:', error);
+    console.error(`❌ [${requestId}] Erreur dans le callback Lengo Pay:`, error);
     return NextResponse.json(
       { error: 'Erreur serveur interne' },
       { status: 500 }
@@ -147,9 +157,13 @@ export async function POST(request: NextRequest) {
 
 // GET /api/remboursements/lengo-callback - Endpoint de test pour vérifier que l'URL est accessible
 export async function GET(request: NextRequest) {
+  const timestamp = new Date().toISOString();
+  console.log(`🧪 [${timestamp}] Test GET sur le callback Lengo Pay`);
+  
   return NextResponse.json({
     success: true,
     message: 'Callback Lengo Pay endpoint accessible',
-    timestamp: new Date().toISOString()
+    timestamp,
+    status: 'READY'
   });
 } 

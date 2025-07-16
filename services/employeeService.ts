@@ -294,7 +294,8 @@ class EmployeeService {
           const employeMessage = `Bonjour ${employeeData.prenom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${password}\nConnectez-vous sur https://admin.zalama.com`;
           
           // Envoyer SMS via l'API route
-          const smsResponse = await fetch('/api/sms/send', {
+          const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+          const smsResponse = await fetch(`${baseUrl}/api/sms/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -349,7 +350,8 @@ class EmployeeService {
           
         const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom} (${partenaireNom}). Email: ${employeeData.email || 'Non fourni'}. Compte employé: ${userId ? 'Créé' : 'Non créé'}.`;
         // Envoyer SMS admin via l'API route
-        const adminSmsResponse = await fetch('/api/sms/send', {
+        const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+        const adminSmsResponse = await fetch(`${baseUrl}/api/sms/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -406,7 +408,8 @@ class EmployeeService {
         `;
         
         // Envoyer email via l'API route
-        const response = await fetch('/api/email/send', {
+        const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}/api/email/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

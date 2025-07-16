@@ -293,10 +293,18 @@ class EmployeeService {
             
           const employeMessage = `Bonjour ${employeeData.prenom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${password}\nConnectez-vous sur https://admin.zalama.com`;
           
-          const employeSMSResult = await smsService.sendSMS({
-            to: [employeeData.telephone],
-            message: employeMessage
+          // Envoyer SMS via l'API route
+          const smsResponse = await fetch('https://admin.zalama.com/api/sms/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: [employeeData.telephone],
+              message: employeMessage,
+              sender_name: 'ZaLaMa'
+            })
           });
+
+          const employeSMSResult = await smsResponse.json();
           
           smsResults.employe = {
             success: employeSMSResult.success,
@@ -340,10 +348,18 @@ class EmployeeService {
           'Aucun partenaire';
           
         const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom} (${partenaireNom}). Email: ${employeeData.email || 'Non fourni'}. Compte employé: ${userId ? 'Créé' : 'Non créé'}.`;
-        const adminSMSResult = await serverSmsService.sendSMS({
-          to: ['+224625212115'],
-          message: adminMessage
+        // Envoyer SMS admin via l'API route
+        const adminSmsResponse = await fetch('https://admin.zalama.com/api/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: ['+224625212115'],
+            message: adminMessage,
+            sender_name: 'ZaLaMa'
+          })
         });
+
+        const adminSMSResult = await adminSmsResponse.json();
         smsResults.admin = {
           success: adminSMSResult.success,
           message: adminSMSResult.success ? 'SMS admin envoyé' : '',
@@ -389,7 +405,8 @@ class EmployeeService {
           <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
         `;
         
-        const response = await fetch('/api/email/send', {
+        // Envoyer email via l'API route
+        const response = await fetch('https://admin.zalama.com/api/email/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

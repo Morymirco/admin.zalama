@@ -8,25 +8,24 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Configuration Lengo Pay depuis les variables d'environnement
-const LENGO_API_URL = process.env.LENGO_API_URL || 'https://portal.lengopay.com';
-const LENGO_API_KEY = process.env.LENGO_API_KEY;
-const LENGO_WEBSITE_ID = process.env.LENGO_SITE_ID;
+const LENGO_API_URL = process.env.LENGO_API_URL || 'https://api.lengopay.com';
+const LENGO_API_KEY = process.env.LENGO_API_KEY || 'your_lengo_api_key_here';
+const LENGO_WEBSITE_ID = process.env.LENGO_SITE_ID || 'your_website_id_here';
 
 // URLs définies directement pour éviter les problèmes de configuration
-const BASE_URL = 'http://localhost:3000';
-const PRODUCTION_URL = 'http://admin.zalamasas.com';
+const BASE_URL = process.env.NODE_ENV === 'production' ? 'https://admin.zalamasas.com' : 'http://localhost:3000';
 const CALLBACK_URL = `${BASE_URL}/api/remboursements/lengo-callback`;
-const RETURN_URL = `${PRODUCTION_URL}/dashboard/remboursements?status=success`;
+const RETURN_URL = `${BASE_URL}/dashboard/remboursements?status=success`;
 
-    console.log('🔧 Configuration URLs:', {
-      BASE_URL,
-      PRODUCTION_URL,
-      CALLBACK_URL,
-      RETURN_URL,
-      LENGO_API_URL,
-      LENGO_WEBSITE_ID: LENGO_WEBSITE_ID ? '✅ Configuré' : '❌ Manquant',
-      LENGO_API_KEY: LENGO_API_KEY ? '✅ Configuré' : '❌ Manquant'
-    });
+console.log('🔧 Configuration URLs:', {
+  BASE_URL,
+  CALLBACK_URL,
+  RETURN_URL,
+  LENGO_API_URL,
+  LENGO_WEBSITE_ID: LENGO_WEBSITE_ID ? '✅ Configuré' : '❌ Manquant',
+  LENGO_API_KEY: LENGO_API_KEY ? '✅ Configuré' : '❌ Manquant',
+  NODE_ENV: process.env.NODE_ENV
+});
 
 // POST /api/remboursements/lengo-paiement - Initier un paiement via Lengo Pay
 export async function POST(request: NextRequest) {
@@ -101,7 +100,6 @@ export async function POST(request: NextRequest) {
 
     console.log('🔗 URLs configurées:', {
       base_url: BASE_URL,
-      production_url: PRODUCTION_URL,
       return_url: lengoPayload.return_url,
       callback_url: lengoPayload.callback_url,
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL
@@ -120,7 +118,39 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(lengoPayload)
     });
 
-    const lengoResult = await lengoResponse.json();
+    console.log('📥 Réponse Lengo Pay:', {
+      status: lengoResponse.status,
+      statusText: lengoResponse.statusText,
+      contentType: lengoResponse.headers.get('content-type')
+    });
+
+    // Vérifier le type de contenu de la réponse
+    const contentType = lengoResponse.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      // Si ce n'est pas du JSON, récupérer le texte pour le debug
+      const responseText = await lengoResponse.text();
+      console.error('❌ Réponse non-JSON de Lengo Pay:', {
+        status: lengoResponse.status,
+        contentType,
+        responseText: responseText.substring(0, 500) // Limiter pour le log
+      });
+      
+      return NextResponse.json(
+        { error: `Erreur API Lengo Pay: Réponse non-JSON (${lengoResponse.status})` },
+        { status: 500 }
+      );
+    }
+
+    let lengoResult;
+    try {
+      lengoResult = await lengoResponse.json();
+    } catch (parseError) {
+      console.error('❌ Erreur parsing JSON Lengo Pay:', parseError);
+      return NextResponse.json(
+        { error: 'Erreur parsing réponse Lengo Pay' },
+        { status: 500 }
+      );
+    }
 
     if (!lengoResponse.ok) {
       console.error('❌ Erreur API Lengo Pay:', {
@@ -129,16 +159,8 @@ export async function POST(request: NextRequest) {
         result: lengoResult
       });
       return NextResponse.json(
-        { error: `Erreur Lengo Pay: ${lengoResult.message || 'Erreur inconnue'}` },
+        { error: `Erreur Lengo Pay: ${lengoResult.message || lengoResult.error || 'Erreur inconnue'}` },
         { status: lengoResponse.status }
-      );
-    }
-
-    if (lengoResult.status !== 'Success') {
-      console.error('❌ Échec Lengo Pay:', lengoResult);
-      return NextResponse.json(
-        { error: `Échec Lengo Pay: ${lengoResult.message || 'Statut non réussi'}` },
-        { status: 400 }
       );
     }
 

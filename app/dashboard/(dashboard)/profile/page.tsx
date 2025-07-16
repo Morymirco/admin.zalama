@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
+import { createClient } from '@supabase/supabase-js';
 import {
     Bell,
     Calendar,
@@ -23,6 +23,12 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+
+// Configuration Supabase - Utiliser les mêmes clés que les autres services qui fonctionnent
+const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface UserProfile {
   id: string;

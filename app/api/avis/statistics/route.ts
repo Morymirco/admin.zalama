@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Configuration Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -19,14 +19,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 // GET - Récupérer les statistiques des avis
 export async function GET(request: NextRequest) {
   try {
-    // Récupérer tous les avis avec les relations
+    // Récupérer tous les avis
     const { data: avis, error } = await supabase
       .from('avis')
-      .select(`
-        *,
-        employee:employees(id, nom, prenom),
-        partner:partners(id, nom)
-      `);
+      .select('*');
 
     if (error) {
       console.error('Erreur lors de la récupération des avis pour stats:', error);
@@ -38,7 +34,41 @@ export async function GET(request: NextRequest) {
 
     const avisList = avis || [];
 
-    // Calculer les statistiques
+    // Récupérer les IDs uniques des partenaires et employés
+    const partnerIds = [...new Set(avisList.filter(avis => avis.partner_id).map(avis => avis.partner_id))];
+    const employeeIds = [...new Set(avisList.filter(avis => avis.employee_id).map(avis => avis.employee_id))];
+
+    // Récupérer les noms des partenaires
+    const partnerNames = new Map();
+    if (partnerIds.length > 0) {
+      const { data: partners, error: partnerError } = await supabase
+        .from('partners')
+        .select('id, nom')
+        .in('id', partnerIds);
+      
+      if (!partnerError && partners) {
+        partners.forEach(partner => {
+          partnerNames.set(partner.id, partner.nom);
+        });
+      }
+    }
+
+    // Récupérer les noms des employés
+    const employeeNames = new Map();
+    if (employeeIds.length > 0) {
+      const { data: employees, error: employeeError } = await supabase
+        .from('employees')
+        .select('id, nom, prenom')
+        .in('id', employeeIds);
+      
+      if (!employeeError && employees) {
+        employees.forEach(employee => {
+          employeeNames.set(employee.id, `${employee.prenom} ${employee.nom}`);
+        });
+      }
+    }
+
+    // Calculer les statistiques de base
     const total_avis = avisList.length;
     const moyenne_note = total_avis > 0 
       ? avisList.reduce((sum, avis) => sum + avis.note, 0) / total_avis 
@@ -56,14 +86,15 @@ export async function GET(request: NextRequest) {
       return { note, count };
     });
 
-    // Répartition par partenaire
+    // Répartition par partenaire avec vrais noms
     const partnerStats = new Map();
     avisList.forEach(avis => {
-      if (avis.partner_id && avis.partner) {
+      if (avis.partner_id) {
         if (!partnerStats.has(avis.partner_id)) {
+          const partnerName = partnerNames.get(avis.partner_id) || `Partenaire ${avis.partner_id}`;
           partnerStats.set(avis.partner_id, {
             partenaire_id: avis.partner_id,
-            partenaire_nom: avis.partner.nom,
+            partenaire_nom: partnerName,
             count: 0,
             total_note: 0
           });
@@ -81,14 +112,15 @@ export async function GET(request: NextRequest) {
       moyenne: stats.count > 0 ? Math.round((stats.total_note / stats.count) * 10) / 10 : 0
     }));
 
-    // Répartition par employé
+    // Répartition par employé avec vrais noms
     const employeeStats = new Map();
     avisList.forEach(avis => {
-      if (avis.employee_id && avis.employee) {
+      if (avis.employee_id) {
         if (!employeeStats.has(avis.employee_id)) {
+          const employeeName = employeeNames.get(avis.employee_id) || `Employé ${avis.employee_id}`;
           employeeStats.set(avis.employee_id, {
             employee_id: avis.employee_id,
-            employee_nom: `${avis.employee.prenom} ${avis.employee.nom}`,
+            employee_nom: employeeName,
             count: 0,
             total_note: 0
           });

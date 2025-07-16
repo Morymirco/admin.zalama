@@ -1,5 +1,100 @@
-import { supabase } from '@/lib/supabase';
-import type { User, Partner, Employee, Service, Alert, FinancialTransaction, PerformanceMetric, Notification } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Configuration Supabase - Utiliser les mêmes clés que les autres services qui fonctionnent
+const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Types définis localement
+interface User {
+  id: string;
+  email: string;
+  nom?: string;
+  prenom?: string;
+  role: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface Partner {
+  id: string;
+  nom: string;
+  type: string;
+  adresse?: string;
+  telephone?: string;
+  email?: string;
+  nombre_employes?: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface Employee {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone?: string;
+  adresse?: string;
+  poste?: string;
+  role?: string;
+  partner_id?: string;
+  actif: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface Service {
+  id: string;
+  nom: string;
+  description?: string;
+  prix?: number;
+  duree?: number;
+  actif: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface Alert {
+  id: string;
+  titre: string;
+  message: string;
+  type: string;
+  priorite: string;
+  statut: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface FinancialTransaction {
+  id: string;
+  montant: number;
+  type: string;
+  description?: string;
+  statut: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface PerformanceMetric {
+  id: string;
+  nom: string;
+  valeur: number;
+  unite?: string;
+  date_mesure: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface Notification {
+  id: string;
+  user_id: string;
+  titre: string;
+  message: string;
+  lu: boolean;
+  created_at: string;
+  updated_at?: string;
+}
 
 // =====================================================
 // SERVICE UTILISATEURS

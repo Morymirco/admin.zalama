@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Configuration Lengo Pay depuis les variables d'environnement
 const LENGO_API_URL = process.env.LENGO_API_URL || 'https://portal.lengopay.com';
-const LENGO_LICENSE_KEY = process.env.LENGO_API_KEY;
+const LENGO_API_KEY = process.env.LENGO_API_KEY;
 const LENGO_WEBSITE_ID = process.env.LENGO_SITE_ID;
 
 // URLs définies directement pour éviter les problèmes de configuration
@@ -25,7 +25,7 @@ const RETURN_URL = `${PRODUCTION_URL}/dashboard/remboursements?status=success`;
       RETURN_URL,
       LENGO_API_URL,
       LENGO_WEBSITE_ID: LENGO_WEBSITE_ID ? '✅ Configuré' : '❌ Manquant',
-      LENGO_LICENSE_KEY: LENGO_LICENSE_KEY ? '✅ Configuré' : '❌ Manquant'
+      LENGO_API_KEY: LENGO_API_KEY ? '✅ Configuré' : '❌ Manquant'
     });
 
 // POST /api/remboursements/lengo-paiement - Initier un paiement via Lengo Pay
@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier que les clés Lengo Pay sont configurées
-    if (!LENGO_LICENSE_KEY || !LENGO_WEBSITE_ID) {
+    if (!LENGO_API_KEY || !LENGO_WEBSITE_ID) {
       console.error('Configuration Lengo Pay manquante:', {
-        license_key: !!LENGO_LICENSE_KEY,
+        api_key: !!LENGO_API_KEY,
         website_id: !!LENGO_WEBSITE_ID
       });
       return NextResponse.json(
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     const lengoResponse = await fetch(`${LENGO_API_URL}/api/v1/payments`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${LENGO_LICENSE_KEY}`,
+        'Authorization': `Basic ${LENGO_API_KEY}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },

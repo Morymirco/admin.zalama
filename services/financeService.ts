@@ -1,5 +1,10 @@
-import { supabase } from '@/lib/supabase';
-import { FinancialTransaction } from '@/types/employee';
+import { createClient } from '@supabase/supabase-js';
+
+// Configuration Supabase - Utiliser les mêmes clés que les autres services qui fonctionnent
+const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Interface pour les statistiques financières
 interface FinanceStats {
@@ -47,70 +52,73 @@ interface ChartData {
   };
 }
 
-// Fonction utilitaire pour convertir les données de la DB
-const convertFromDB = (dbTransaction: any): FinancialTransaction => {
-  return {
-    id: dbTransaction.id,
-    montant: dbTransaction.montant,
-    type: dbTransaction.type,
-    description: dbTransaction.description,
-    partenaire_id: dbTransaction.partenaire_id,
-    utilisateur_id: dbTransaction.utilisateur_id,
-    service_id: dbTransaction.service_id,
-    statut: dbTransaction.statut,
-    date_transaction: dbTransaction.date_transaction,
-    date_validation: dbTransaction.date_validation,
-    reference: dbTransaction.reference,
-    created_at: dbTransaction.created_at,
-    updated_at: dbTransaction.updated_at,
-    transaction_id: dbTransaction.transaction_id
-  };
-};
+// Types
+export interface Transaction {
+  id: string;
+  demande_avance_id?: string;
+  employe_id: string;
+  entreprise_id: string;
+  montant: number;
+  numero_transaction: string;
+  methode_paiement: 'VIREMENT_BANCAIRE' | 'MOBILE_MONEY' | 'ESPECES' | 'CHEQUE';
+  numero_compte?: string;
+  numero_reception?: string;
+  recu_url?: string;
+  date_transaction: string;
+  date_creation: string;
+  statut: 'EFFECTUEE' | 'ANNULEE';
+  created_at: string;
+  updated_at: string;
+  employe?: { nom: string; prenom: string };
+  entreprise?: { nom: string };
+}
+
+export interface SalaryAdvanceRequest {
+  id: string;
+  employe_id: string;
+  partenaire_id: string;
+  montant_demande: number;
+  type_motif: string;
+  motif: string;
+  numero_reception?: string;
+  montant_total: number;
+  salaire_disponible?: number;
+  avance_disponible?: number;
+  date_validation?: string;
+  date_rejet?: string;
+  motif_rejet?: string;
+  frais_service: number;
+  statut: 'En attente' | 'Validé' | 'Rejeté' | 'Annulé';
+  date_creation: string;
+  created_at: string;
+  updated_at: string;
+  employe?: { nom: string; prenom: string };
+  partenaire?: { nom: string };
+}
+
+export interface Remboursement {
+  id: string;
+  montant_total_remboursement: number;
+  statut: 'EN_ATTENTE' | 'EFFECTUEE' | 'ANNULEE';
+  methode_remboursement: string;
+  date_creation: string;
+  date_remboursement?: string;
+  employe?: { nom: string; prenom: string };
+  partenaire?: { nom: string };
+}
+
+export interface LengoBalance {
+  status: string;
+  balance: string;
+  currency: string;
+}
 
 class FinanceService {
-  // Récupérer toutes les transactions financières
-  async getAllTransactions(): Promise<FinancialTransaction[]> {
-    try {
-      const { data, error } = await supabase
-        .from('financial_transactions')
-        .select(`
-          *,
-          partenaire:partners(nom, type),
-          utilisateur:employees(nom, prenom, email),
-          service:services(nom, categorie)
-        `)
-        .order('date_transaction', { ascending: false });
+  // =====================================================
+  // TRANSACTIONS
+  // =====================================================
 
-      if (error) throw error;
-      return (data || []).map(convertFromDB);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des transactions:', error);
-      throw error;
-    }
-  }
-
-  // Récupérer les demandes d'avance de salaire
-  async getSalaryAdvances(): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('salary_advance_requests')
-        .select(`
-          *,
-          employe:employees(nom, prenom),
-          partenaire:partners(nom)
-        `)
-        .order('date_creation', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Erreur lors de la récupération des avances:', error);
-      throw error;
-    }
-  }
-
-  // Récupérer les transactions
-  async getTransactions(): Promise<any[]> {
+  async getTransactions(): Promise<Transaction[]> {
     try {
       const { data, error } = await supabase
         .from('transactions')
@@ -129,124 +137,254 @@ class FinanceService {
     }
   }
 
-  // Calculer les statistiques financières complètes
+  async getTransactionsByStatus(statut: string): Promise<Transaction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          employe:employees(nom, prenom),
+          entreprise:partners(nom)
+        `)
+        .eq('statut', statut)
+        .order('date_transaction', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des transactions par statut:', error);
+      throw error;
+    }
+  }
+
+  async getTransactionsByMonth(year: number, month: number): Promise<Transaction[]> {
+    try {
+      const startDate = new Date(year, month - 1, 1).toISOString();
+      const endDate = new Date(year, month, 0).toISOString();
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          employe:employees(nom, prenom),
+          entreprise:partners(nom)
+        `)
+        .gte('date_transaction', startDate)
+        .lte('date_transaction', endDate)
+        .order('date_transaction', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des transactions par mois:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // REMBOURSEMENTS
+  // =====================================================
+
+  async getRemboursements(): Promise<Remboursement[]> {
+    try {
+      const { data, error } = await supabase
+        .from('remboursements')
+        .select(`
+          *,
+          employe:employees(nom, prenom),
+          partenaire:partners(nom)
+        `)
+        .order('date_creation', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des remboursements:', error);
+      throw error;
+    }
+  }
+
+  async getRemboursementsByStatus(statut: string): Promise<Remboursement[]> {
+    try {
+      const { data, error } = await supabase
+        .from('remboursements')
+        .select(`
+          *,
+          employe:employees(nom, prenom),
+          partenaire:partners(nom)
+        `)
+        .eq('statut', statut)
+        .order('date_creation', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des remboursements par statut:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // DEMANDES D'AVANCE
+  // =====================================================
+
+  async getSalaryAdvanceRequests(): Promise<SalaryAdvanceRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employe:employees(nom, prenom),
+          partenaire:partners(nom)
+        `)
+        .order('date_creation', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des demandes d\'avance:', error);
+      throw error;
+    }
+  }
+
+  async getSalaryAdvanceRequestsByStatus(statut: string): Promise<SalaryAdvanceRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employe:employees(nom, prenom),
+          partenaire:partners(nom)
+        `)
+        .eq('statut', statut)
+        .order('date_creation', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des demandes d\'avance par statut:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // SOLDE LENGO PAY
+  // =====================================================
+
+  async getLengoBalance(): Promise<LengoBalance> {
+    try {
+      const response = await fetch('/api/payments/lengo-balance');
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erreur lors de la récupération du solde');
+      }
+
+      return data.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du solde Lengo Pay:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // STATISTIQUES
+  // =====================================================
+
   async getFinanceStats(): Promise<FinanceStats> {
     try {
-      const [transactions, salaryAdvances, allTransactions] = await Promise.all([
-        this.getAllTransactions(),
-        this.getSalaryAdvances(),
-        this.getTransactions()
+      const [transactions, remboursements, demandes] = await Promise.all([
+        this.getTransactions(),
+        this.getRemboursements(),
+        this.getSalaryAdvanceRequests()
       ]);
 
-      // Calculer le montant débloqué (avances de salaire)
-      const montantDebloque = salaryAdvances.reduce((sum, advance) => {
-        return sum + (advance.montant_demande || 0);
-      }, 0);
-
-      // Calculer le montant récupéré (transactions effectuées)
-      const montantRecupere = allTransactions
+      // Statistiques des transactions
+      const totalTransactions = transactions.length;
+      const transactionsEffectuees = transactions.filter(t => t.statut === 'EFFECTUEE').length;
+      const transactionsAnnulees = transactions.filter(t => t.statut === 'ANNULEE').length;
+      const montantTotalTransactions = transactions
         .filter(t => t.statut === 'EFFECTUEE')
-        .reduce((sum, transaction) => {
-          return sum + (transaction.montant || 0);
-        }, 0);
-
-      // Capital initial (valeur fixe pour l'instant)
-      const capitalInitial = 25000000;
-
-      // Solde disponible
-      const soldeDisponible = capitalInitial - montantDebloque + montantRecupere;
-
-      // Taux de remboursement
-      const tauxRemboursement = montantDebloque > 0 ? (montantRecupere / montantDebloque) * 100 : 0;
-
-      // Calculer revenus et dépenses
-      const totalRevenus = transactions
-        .filter(t => ['entree', 'credit', 'revenu'].includes(t.type))
         .reduce((sum, t) => sum + (t.montant || 0), 0);
 
-      const totalDepenses = transactions
-        .filter(t => ['sortie', 'debit', 'depense'].includes(t.type))
-        .reduce((sum, t) => sum + (t.montant || 0), 0);
+      // Transactions ce mois
+      const now = new Date();
+      const transactionsCeMois = transactions.filter(t => {
+        const transactionDate = new Date(t.date_transaction);
+        return t.statut === 'EFFECTUEE' && 
+               transactionDate.getMonth() === now.getMonth() &&
+               transactionDate.getFullYear() === now.getFullYear();
+      });
+      const montantCeMois = transactionsCeMois.reduce((sum, t) => sum + (t.montant || 0), 0);
 
-      const beneficeNet = totalRevenus - totalDepenses;
+      // Statistiques des remboursements
+      const totalRemboursements = remboursements.length;
+      const remboursementsEffectues = remboursements.filter(r => r.statut === 'EFFECTUEE').length;
+      const remboursementsEnAttente = remboursements.filter(r => r.statut === 'EN_ATTENTE').length;
+      const remboursementsAnnules = remboursements.filter(r => r.statut === 'ANNULEE').length;
+      const montantTotalRemboursements = remboursements
+        .filter(r => r.statut === 'EFFECTUEE')
+        .reduce((sum, r) => sum + (r.montant_total_remboursement || 0), 0);
+      const montantRemboursementsEnAttente = remboursements
+        .filter(r => r.statut === 'EN_ATTENTE')
+        .reduce((sum, r) => sum + (r.montant_total_remboursement || 0), 0);
 
-      // Revenus par commissions (estimation basée sur les transactions)
-      const revenusCommissions = totalRevenus * 0.15; // 15% de commission estimée
+      // Statistiques des demandes d'avance
+      const totalDemandes = demandes.length;
+      const demandesEnAttente = demandes.filter(d => d.statut === 'En attente').length;
+      const demandesApprouvees = demandes.filter(d => d.statut === 'Validé').length;
+      const demandesRejetees = demandes.filter(d => d.statut === 'Rejeté').length;
+      const montantTotalDemandes = demandes
+        .filter(d => d.statut === 'Validé')
+        .reduce((sum, d) => sum + (d.montant_demande || 0), 0);
 
-      // Statistiques par type
-      const parType = transactions.reduce((acc, transaction) => {
-        acc[transaction.type] = (acc[transaction.type] || 0) + 1;
+      // Répartitions
+      const repartitionMethodePaiement = transactions.reduce((acc, transaction) => {
+        const methode = transaction.methode_paiement || 'Inconnue';
+        acc[methode] = (acc[methode] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
-      // Statistiques par statut
-      const parStatut = transactions.reduce((acc, transaction) => {
+      const repartitionMethodeRemboursement = remboursements.reduce((acc, remboursement) => {
+        const methode = remboursement.methode_remboursement || 'Inconnue';
+        acc[methode] = (acc[methode] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const repartitionStatutTransactions = transactions.reduce((acc, transaction) => {
         acc[transaction.statut] = (acc[transaction.statut] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
-      // Statistiques par catégorie
-      const parCategorie = transactions.reduce((acc, transaction) => {
-        const categorie = transaction.service || 'Autre';
-        acc[categorie] = (acc[categorie] || 0) + (transaction.montant || 0);
+      const repartitionStatutRemboursements = remboursements.reduce((acc, remboursement) => {
+        acc[remboursement.statut] = (acc[remboursement.statut] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
-      // Statistiques par mois (6 derniers mois)
-      const parMois: Record<string, { revenus: number; depenses: number }> = {};
-      const mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août'];
-      
-      mois.forEach((moisNom, index) => {
-        const moisDate = new Date();
-        moisDate.setMonth(moisDate.getMonth() - (7 - index));
-        
-        const transactionsDuMois = transactions.filter(t => {
-          if (!t.date_transaction) return false;
-          const transactionDate = new Date(t.date_transaction);
-          return transactionDate.getMonth() === moisDate.getMonth() && 
-                 transactionDate.getFullYear() === moisDate.getFullYear();
-        });
-
-        const revenus = transactionsDuMois
-          .filter(t => ['entree', 'credit', 'revenu'].includes(t.type))
-          .reduce((sum, t) => sum + (t.montant || 0), 0);
-
-        const depenses = transactionsDuMois
-          .filter(t => ['sortie', 'debit', 'depense'].includes(t.type))
-          .reduce((sum, t) => sum + (t.montant || 0), 0);
-
-        parMois[moisNom] = { revenus, depenses };
-      });
-
-      // Transactions de ce mois
-      const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
-      const transactionsCeMois = transactions.filter(transaction => {
-        if (!transaction.date_transaction) return false;
-        const transactionDate = new Date(transaction.date_transaction);
-        return transactionDate >= firstDayOfMonth;
-      });
-      
-      const montantCeMois = transactionsCeMois.reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
-
       return {
-        capitalInitial,
-        montantDebloque,
-        montantRecupere,
-        soldeDisponible,
-        tauxRemboursement,
-        totalRevenus,
-        totalDepenses,
-        beneficeNet,
-        revenusCommissions,
-        totalTransactions: transactions.length,
-        transactionsCeMois: transactionsCeMois.length,
+        totalTransactions,
+        transactionsEffectuees,
+        transactionsAnnulees,
+        montantTotalTransactions,
         montantCeMois,
-        parType,
-        parStatut,
-        parCategorie,
-        parMois
+        
+        totalRemboursements,
+        remboursementsEffectues,
+        remboursementsEnAttente,
+        remboursementsAnnules,
+        montantTotalRemboursements,
+        montantRemboursementsEnAttente,
+        
+        totalDemandes,
+        demandesEnAttente,
+        demandesApprouvees,
+        demandesRejetees,
+        montantTotalDemandes,
+        
+        repartitionMethodePaiement,
+        repartitionMethodeRemboursement,
+        repartitionStatutTransactions,
+        repartitionStatutRemboursements
       };
     } catch (error) {
       console.error('Erreur lors du calcul des statistiques financières:', error);
@@ -254,112 +392,32 @@ class FinanceService {
     }
   }
 
-  // Obtenir les données pour les graphiques
-  async getChartData(): Promise<ChartData> {
+  // =====================================================
+  // DONNÉES COMPLÈTES
+  // =====================================================
+
+  async getAllFinanceData() {
     try {
-      const stats = await this.getFinanceStats();
-      
-      // Évolution mensuelle
-      const evolutionMensuelle = Object.entries(stats.parMois).map(([mois, data]) => ({
-        mois,
-        revenus: data.revenus,
-        depenses: data.depenses
-      }));
-
-      // Répartition par catégorie
-      const repartitionCategories = Object.entries(stats.parCategorie)
-        .map(([categorie, montant]) => ({
-          categorie,
-          montant,
-          pourcentage: (montant / (stats.totalRevenus + stats.totalDepenses)) * 100,
-          type: montant > 0 ? 'revenu' : 'depense'
-        }))
-        .sort((a, b) => b.montant - a.montant)
-        .slice(0, 6); // Top 6 catégories
-
-      // Calculer la tendance
-      const derniersMois = evolutionMensuelle.slice(-3);
-      const premiersMois = evolutionMensuelle.slice(-6, -3);
-      
-      const moyenneRecente = derniersMois.reduce((sum, mois) => sum + mois.revenus, 0) / 3;
-      const moyenneAnterieure = premiersMois.reduce((sum, mois) => sum + mois.revenus, 0) / 3;
-      
-      const croissance = moyenneAnterieure > 0 ? ((moyenneRecente - moyenneAnterieure) / moyenneAnterieure) * 100 : 0;
-      const prevision = moyenneRecente * 1.12; // +12% prévu
+      const [transactions, remboursements, demandes, stats] = await Promise.all([
+        this.getTransactions(),
+        this.getRemboursements(),
+        this.getSalaryAdvanceRequests(),
+        this.getFinanceStats()
+      ]);
 
       return {
-        evolutionMensuelle,
-        repartitionCategories,
-        tendances: {
-          croissance,
-          prevision
-        }
+        transactions,
+        remboursements,
+        demandes,
+        stats
       };
     } catch (error) {
-      console.error('Erreur lors de la récupération des données de graphiques:', error);
-      throw error;
-    }
-  }
-
-  // Créer une nouvelle transaction
-  async createTransaction(transactionData: Partial<FinancialTransaction>): Promise<FinancialTransaction> {
-    try {
-      const { data, error } = await supabase
-        .from('financial_transactions')
-        .insert([{
-          ...transactionData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return convertFromDB(data);
-    } catch (error) {
-      console.error('Erreur lors de la création de la transaction:', error);
-      throw error;
-    }
-  }
-
-  // Mettre à jour une transaction
-  async updateTransaction(id: string, transactionData: Partial<FinancialTransaction>): Promise<FinancialTransaction> {
-    try {
-      const { data, error } = await supabase
-        .from('financial_transactions')
-        .update({
-          ...transactionData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return convertFromDB(data);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de la transaction:', error);
-      throw error;
-    }
-  }
-
-  // Supprimer une transaction
-  async deleteTransaction(id: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('financial_transactions')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Erreur lors de la suppression de la transaction:', error);
+      console.error('Erreur lors de la récupération de toutes les données financières:', error);
       throw error;
     }
   }
 }
 
-const financeService = new FinanceService();
+export const financeService = new FinanceService();
+export type { ChartData, FinanceStats };
 
-export default financeService;
-export type { FinanceStats, ChartData };

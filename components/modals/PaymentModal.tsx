@@ -48,7 +48,7 @@ export default function PaymentModal({ isOpen, onClose, remboursement, onSuccess
         },
         body: JSON.stringify({
           remboursement_id: remboursement.id,
-          amount: remboursement.montant_total_remboursement,
+          amount: Math.round(remboursement.montant_total_remboursement),
           currency: 'GNF'
         }),
       });

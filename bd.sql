@@ -367,4 +367,3 @@ CREATE TABLE public.users (
   updated_at timestamp with time zone DEFAULT now(),
   encrypted_password text,
   CONSTRAINT users_pkey PRIMARY KEY (id)
-);

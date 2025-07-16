@@ -8,9 +8,9 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Configuration Lengo Pay depuis les variables d'environnement
-const LENGO_API_URL = process.env.LENGO_API_URL || 'https://api.lengopay.com';
-const LENGO_API_KEY = process.env.LENGO_API_KEY || 'your_lengo_api_key_here';
-const LENGO_WEBSITE_ID = process.env.LENGO_SITE_ID || 'your_website_id_here';
+const LENGO_API_URL = (process.env.LENGO_API_URL || 'https://portal.lengopay.com').replace(/\/$/, '');
+const LENGO_API_KEY = process.env.LENGO_API_KEY || 'bDM0WlhpcDRta052MmxIZEFFcEV1Mno0WERwS2R0dnk3ZUhWOEpwczdYVXdnM1Bwd016UTVLcEVZNmc0RkQwMw==';
+const LENGO_WEBSITE_ID = process.env.LENGO_SITE_ID || 'ozazlahgzpntmYAG';
 
 // URLs définies directement pour éviter les problèmes de configuration
 const BASE_URL = process.env.NODE_ENV === 'production' ? 'https://admin.zalamasas.com' : 'http://localhost:3000';
@@ -89,12 +89,12 @@ export async function POST(request: NextRequest) {
       website_id: LENGO_WEBSITE_ID
     });
 
-    // Préparer les données pour Lengo Pay selon la documentation officielle
+    // Préparer les données pour Lengo Pay selon la documentation officielle v1
     const lengoPayload = {
       websiteid: LENGO_WEBSITE_ID,
       amount: Math.round(amount), // Lengo Pay attend un entier
       currency: currency,
-      return_url: RETURN_URL, // Redirection vers le site de production après paiement
+      return_url: RETURN_URL, // Redirection vers le site après paiement
       callback_url: CALLBACK_URL // Notification callback serveur - OBLIGATOIRE pour connaître le statut
     };
 
@@ -107,8 +107,11 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 Données envoyées à Lengo Pay:', lengoPayload);
 
-    // Appeler l'API Lengo Pay directement selon la documentation
-    const lengoResponse = await fetch(`${LENGO_API_URL}/api/v1/payments`, {
+    // Appeler l'API Lengo Pay directement selon la documentation officielle v1
+    const apiUrl = `${LENGO_API_URL}/api/v1/payments`;
+    console.log('🌐 URL complète de l\'API:', apiUrl);
+    
+    const lengoResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${LENGO_API_KEY}`,

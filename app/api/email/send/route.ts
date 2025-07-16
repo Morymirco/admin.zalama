@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Resend } from 'resend';
+
+// Configuration Resend Email
+const resend = new Resend(process.env.RESEND_API_KEY || 're_1234567890abcdef');
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,26 +19,27 @@ export async function POST(request: NextRequest) {
 
     console.log('📧 Email - Envoi via API:', { to, subject });
 
-    // Utiliser serverEmailService côté serveur
-    const result = await serverEmailService.sendEmail({
+    // Envoyer l'email directement avec Resend
+    const result = await resend.emails.send({
+      from: 'noreply@zalamagn.com',
       to: Array.isArray(to) ? to : [to],
       subject: subject,
       html: html,
       text: text
     });
 
-    if (result.success) {
-      console.log('✅ Email envoyé avec succès via API:', result.id);
+    if (result.data) {
+      console.log('✅ Email envoyé avec succès via API:', result.data.id);
       return NextResponse.json({
         success: true,
-        id: result.id,
+        id: result.data.id,
         message: 'Email envoyé avec succès'
       });
     } else {
       console.error('❌ Erreur email via API:', result.error);
       return NextResponse.json({
         success: false,
-        error: result.error || 'Erreur lors de l\'envoi de l\'email'
+        error: result.error?.message || 'Erreur lors de l\'envoi de l\'email'
       }, { status: 500 });
     }
 

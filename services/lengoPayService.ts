@@ -28,11 +28,11 @@ export interface LengoPayStatusResponse {
   date: string;
 }
 
-// Configuration depuis les variables d'environnement
-const LENGO_API_URL = process.env.LENGO_API_URL || 'https://portal.lengopay.com';
-const LENGO_SITE_ID = process.env.LENGO_SITE_ID;
-const LENGO_API_KEY = process.env.LENGO_API_KEY;
-const LENGO_CALLBACK_URL = process.env.LENGO_CALLBACK_URL;
+// Configuration directe avec les valeurs fournies
+const LENGO_API_URL = 'https://portal.lengopay.com';
+const LENGO_SITE_ID = 'ozazlahgzpntmYAG';
+const LENGO_API_KEY = 'bDM0WlhpcDRta052MmxIZEFFcEV1Mno0WERwS2R0dnk3ZUhWOEpwczdYVXdnM1Bwd016UTVLcEVZNmc0RkQwMw==';
+const LENGO_CALLBACK_URL = 'https://votre-domaine.com/api/payments/lengo-callback';
 
 export async function lengoPayCashin(params: LengoPayCashinParams): Promise<LengoPayCashinResponse> {
   console.log('🔧 Début de lengoPayCashin avec les paramètres:', params);

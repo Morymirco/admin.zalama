@@ -7,7 +7,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOi
 
 // Utiliser la clé anonyme pour éviter les problèmes de permissions
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-const LENGO_SITE_ID = process.env.LENGO_SITE_ID;
+
+// Configuration directe avec les valeurs fournies
+const LENGO_SITE_ID = 'ozazlahgzpntmYAG';
+const LENGO_CALLBACK_URL = 'https://votre-domaine.com/api/payments/lengo-callback';
 
 // Fonction pour normaliser le numéro de téléphone selon la doc LengoPay
 function normalizePhone(phone: string): string {
@@ -160,7 +163,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🔧 Vérification des variables d\'environnement:');
     console.log('  - LENGO_SITE_ID:', LENGO_SITE_ID ? '✅ Présent' : '❌ Manquant');
-    console.log('  - LENGO_CALLBACK_URL:', process.env.LENGO_CALLBACK_URL ? '✅ Présent' : '❌ Manquant');
+    console.log('  - LENGO_CALLBACK_URL:', LENGO_CALLBACK_URL ? '✅ Présent' : '❌ Manquant');
     console.log('  - SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ Présent' : '❌ Manquant');
 
     // Préparer les paramètres pour Lengo Pay selon la doc officielle
@@ -170,7 +173,7 @@ export async function POST(request: NextRequest) {
       websiteid: LENGO_SITE_ID || '',
       type_account: type_account || 'lp-om-gn',
       account: normalizedPhone,
-      callback_url: process.env.LENGO_CALLBACK_URL,
+      callback_url: LENGO_CALLBACK_URL,
     };
 
     console.log('💳 Paramètres Lengo Pay préparés:', { 

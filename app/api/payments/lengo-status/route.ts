@@ -7,7 +7,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOi
 
 // Utiliser la clé anonyme pour éviter les problèmes de permissions
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-const LENGO_SITE_ID = process.env.LENGO_SITE_ID;
+
+// Configuration directe avec les valeurs fournies
+const LENGO_SITE_ID = 'ozazlahgzpntmYAG';
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,5 +1,5 @@
-import React from 'react';
 import { X } from 'lucide-react';
+import React from 'react';
 
 interface Alerte {
   id: string;
@@ -18,13 +18,15 @@ interface ModaleEditionAlerteProps {
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   alerte: Alerte | null;
+  isLoading?: boolean;
 }
 
 const ModaleEditionAlerte: React.FC<ModaleEditionAlerteProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  alerte
+  alerte,
+  isLoading = false
 }) => {
   if (!isOpen || !alerte) return null;
 
@@ -131,15 +133,26 @@ const ModaleEditionAlerte: React.FC<ModaleEditionAlerteProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors"
+              disabled={isLoading}
+              className="px-4 py-2 border border-[var(--zalama-border)] rounded-lg text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors"
+              disabled={isLoading}
+              className="px-4 py-2 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Enregistrer
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Enregistrement...
+                </>
+              ) : (
+                <>
+                  Enregistrer
+                </>
+              )}
             </button>
           </div>
         </form>

@@ -323,20 +323,20 @@ class SalaryAdvanceService {
         if (response.ok) {
           const notificationResult = await response.json();
           if (notificationResult.success) {
-            console.log('✅ Notifications envoyées avec succès');
+            console.log('✅ Notifications de rejet envoyées avec succès');
             if (notificationResult.details) {
               console.log('📊 Détails des notifications:');
               console.log('   SMS:', notificationResult.details.sms?.success ? '✅' : '❌');
               console.log('   Email:', notificationResult.details.email?.success ? '✅' : '❌');
             }
           } else {
-            console.warn('⚠️ Échec de l\'envoi des notifications:', notificationResult.error);
+            console.warn('⚠️ Échec de l\'envoi des notifications de rejet:', notificationResult.error);
           }
         } else {
-          console.warn('⚠️ Erreur API notifications:', response.status);
+          console.warn('⚠️ Erreur API notifications de rejet:', response.status);
         }
       } catch (notificationError) {
-        console.error('❌ Erreur lors de l\'envoi des notifications:', notificationError);
+        console.error('❌ Erreur lors de l\'envoi des notifications de rejet:', notificationError);
         // Ne pas faire échouer le rejet si les notifications échouent
       }
       

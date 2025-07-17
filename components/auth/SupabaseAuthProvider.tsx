@@ -1,14 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from '@supabase/supabase-js';
-
-// Configuration Supabase
-const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '@/lib/supabase-config';
+import authService from '@/services/authService';
 
 // Cache pour éviter les appels API répétés
 const sessionUpdateCache = new Map<string, number>();
@@ -138,16 +133,13 @@ export default function SupabaseAuthProvider({
       try {
         if (DEBUG) console.log('🔍 Checking initial session...');
         
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('❌ Erreur lors de la vérification de session:', error);
-        }
+        // Utiliser le service d'authentification optimisé
+        const session = await authService.getSession();
         
         // Mettre à jour le cookie de session
         await updateSession(session, 'INITIAL');
       } catch (error) {
-        console.error('❌ Erreur lors de la vérification de session:', error);
+        if (DEBUG) console.warn('⚠️ Erreur lors de la vérification de session:', error);
       } finally {
         setLoading(false);
       }
@@ -156,7 +148,7 @@ export default function SupabaseAuthProvider({
     checkSession();
 
     // Écouter les changements d'authentification avec debounce
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = authService.onAuthStateChange(
       async (event, session) => {
         if (DEBUG) console.log(`🔄 Auth state changed: ${event}`, session?.user?.email);
         

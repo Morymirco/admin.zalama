@@ -1,15 +1,5 @@
-import { createClient, Session, User } from '@supabase/supabase-js';
-
-// Configuration Supabase - Variables définies directement
-const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc4NzI1OCwiZXhwIjoyMDY2MzYzMjU4fQ.6sIgEDZIP1fkUoxdPJYfzKHU1B_SfN6Hui6v_FV6yzw';
-
-// Client pour les opérations côté client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Client pour les opérations côté serveur (avec clé de service)
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+import { authWithRetry, supabase, supabaseAdmin, supabaseConfig } from '@/lib/supabase-config';
+import { Session, User } from '@supabase/supabase-js';
 
 export interface AuthUser {
   id: string;
@@ -39,12 +29,21 @@ class AuthService {
   // Connexion
   async signIn(credentials: LoginCredentials): Promise<{ user: User; session: Session }> {
     try {
+      console.log('🔑 AuthService.signIn - Configuration utilisée:');
+      console.log('- URL Supabase:', supabaseConfig.url);
+      console.log('- Anon Key (début):', supabaseConfig.anonKey.substring(0, 20) + '...');
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur Supabase lors de la connexion:', error);
+        throw error;
+      }
+
+      console.log('✅ Connexion Supabase réussie pour:', credentials.email);
 
       // S'assurer que l'utilisateur existe dans la table admin_users
       if (data.user) {
@@ -60,13 +59,13 @@ class AuthService {
 
       return data;
     } catch (error) {
-      console.error('Erreur de connexion:', error);
+      console.error('💥 Erreur de connexion AuthService:', error);
       throw error;
     }
   }
 
   // Inscription
-  async signUp(signUpData: SignUpData): Promise<{ user: User; session: Session | null }> {
+  async signUp(signUpData: SignUpData): Promise<{ user: User | null; session: Session | null }> {
     try {
       const { data, error } = await supabase.auth.signUp({
         email: signUpData.email,
@@ -115,48 +114,24 @@ class AuthService {
 
   // Récupérer la session actuelle (optimisée)
   async getSession(): Promise<Session | null> {
-    try {
-      // Utiliser une promesse avec timeout pour éviter les blocages
-      const sessionPromise = supabase.auth.getSession();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout session')), 5000)
-      );
-      
-      const { data: { session }, error } = await Promise.race([
-        sessionPromise,
-        timeoutPromise
-      ]) as any;
-      
+    const result = await authWithRetry(async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
       if (error) throw error;
       return session;
-    } catch (error) {
-      console.error('Erreur lors de la récupération de la session:', error);
-      // Retourner null au lieu de throw pour éviter les blocages
-      return null;
-    }
+    }, 2, 8000); // 2 essais max, timeout de 8s
+    
+    return result;
   }
 
   // Récupérer l'utilisateur actuel (optimisée)
   async getCurrentUser(): Promise<User | null> {
-    try {
-      // Utiliser une promesse avec timeout pour éviter les blocages
-      const userPromise = supabase.auth.getUser();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout user')), 5000)
-      );
-      
-      const { data: { user }, error } = await Promise.race([
-        userPromise,
-        timeoutPromise
-      ]) as any;
-      
+    const result = await authWithRetry(async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
       if (error) throw error;
       return user;
-    } catch (error) {
-      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
-      // Retourner null au lieu de throw pour éviter les blocages
-      return null;
-    }
+    }, 2, 8000); // 2 essais max, timeout de 8s
+    
+    return result;
   }
 
   // Réinitialiser le mot de passe

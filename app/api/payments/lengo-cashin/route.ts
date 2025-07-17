@@ -10,8 +10,8 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Configuration directe avec les valeurs fournies
-const LENGO_SITE_ID = 'ozazlahgzpntmYAG';
-const LENGO_CALLBACK_URL = 'https://votre-domaine.com/api/payments/lengo-callback';
+const LENGO_SITE_ID = process.env.LENGO_SITE_ID || 'ozazlahgzpntmYAG';
+const LENGO_CALLBACK_URL = `${process.env.NEXT_PUBLIC_BASE_URL || http://localhost:300api/payments/lengo-callback`;
 
 // Fonction pour normaliser le numéro de téléphone selon la doc LengoPay
 function normalizePhone(phone: string): string {

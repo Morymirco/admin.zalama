@@ -6,10 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
 
-const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey
-);
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Client pour les opérations admin (création de comptes Auth)
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -282,163 +279,98 @@ class EmployeeService {
         }
       };
 
-      // Envoyer un SMS à l'employé
-      if (employeeData.telephone) {
+      // Envoyer SMS et email directement via les services côté serveur
+      try {
+        console.log('📱📧 Envoi SMS et email via services serveur...');
+        
+        // Importer les services côté serveur
+        const { default: serverSmsService } = await import('@/services/serverSmsService');
+        const { default: serverEmailService } = await import('@/services/serverEmailService');
+        
+        // 1. Envoyer SMS à l'employé
         try {
-          console.log('📱 Envoi SMS de bienvenue à l\'employé...');
-          
-          const partenaireNom = employeeData.partner_id ? 
-            (await supabase.from('partners').select('nom').eq('id', employeeData.partner_id).single()).data?.nom || 'Partenaire inconnu' : 
-            'Aucun partenaire';
-            
-          const employeMessage = `Bonjour ${employeeData.prenom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${password}\nConnectez-vous sur https://admin.zalama.com`;
-          
-          // Envoyer SMS via l'API route
-          const baseUrl = typeof window !== 'undefined' ? '' : (process.env.NODE_ENV === 'production' ? 'https://admin.zalamasas.com' : 'http://localhost:3000');
-          const smsResponse = await fetch(`${baseUrl}/api/sms/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: [employeeData.telephone],
-              message: employeMessage,
-              sender_name: 'ZaLaMa'
-            })
+          const smsResult = await serverSmsService.sendSMS({
+            to: [employeeData.telephone || ''],
+            message: `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte employé ZaLaMa a été créé avec succès. Vos identifiants: Email: ${employeeData.email}, Mot de passe: ${password || 'Mot de passe temporaire'}. Connectez-vous sur https://admin.zalama.com`,
+            sender_name: 'ZaLaMa'
           });
 
-          const employeSMSResult = await smsResponse.json();
-          
           smsResults.employe = {
-            success: employeSMSResult.success,
-            message: employeSMSResult.success ? 'SMS employé envoyé' : '',
-            error: employeSMSResult.error || employeSMSResult.message || ''
+            success: smsResult.success || false,
+            message: smsResult.message || 'SMS envoyé',
+            error: smsResult.error || ''
           };
-          
-          if (smsResults.employe.success) {
-            console.log('📱 SMS employé: ✅ Envoyé');
-          } else {
-            const errorMsg = smsResults.employe.error;
-            if (errorMsg.includes('solde insuffisant')) {
-              console.log('📱 SMS employé: ⚠️ Solde insuffisant - SMS non envoyé');
-            } else if (errorMsg.includes('Solde SMS insuffisant')) {
-              console.log('📱 SMS employé: ⚠️ Solde SMS insuffisant - SMS non envoyé');
-            } else {
-              console.log(`📱 SMS employé: ❌ ${smsResults.employe.error}`);
-            }
-          }
+          console.log('📱 SMS employé: ✅ Envoyé');
         } catch (smsError) {
+          console.error('❌ Erreur SMS employé:', smsError);
           smsResults.employe = {
             success: false,
             message: '',
-            error: `Erreur SMS employé: ${smsError}`
+            error: `Erreur SMS: ${smsError}`
           };
-          console.log('❌ Erreur SMS employé:', smsError);
         }
-      } else {
-        console.log('⚠️ Aucun numéro de téléphone fourni pour l\'employé - SMS non envoyé');
-        smsResults.employe = {
-          success: false,
-          message: '',
-          error: 'Aucun numéro de téléphone fourni'
-        };
-      }
 
-      // Envoyer un SMS à l'administrateur
-      try {
-        const partenaireNom = employeeData.partner_id ? 
-          (await supabase.from('partners').select('nom').eq('id', employeeData.partner_id).single()).data?.nom || 'Partenaire inconnu' : 
-          'Aucun partenaire';
-          
-        const adminMessage = `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom} (${partenaireNom}). Email: ${employeeData.email || 'Non fourni'}. Compte employé: ${userId ? 'Créé' : 'Non créé'}.`;
-        // Envoyer SMS admin via l'API route
-        const baseUrl = typeof window !== 'undefined' ? '' : (process.env.NODE_ENV === 'production' ? 'https://admin.zalamasas.com' : 'http://localhost:3000');
-        const adminSmsResponse = await fetch(`${baseUrl}/api/sms/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: ['+224625212115'],
-            message: adminMessage,
+        // 2. Envoyer SMS à l'admin
+        try {
+          const adminSmsResult = await serverSmsService.sendSMS({
+            to: ['+224625212115'], // Numéro admin
+            message: `Nouvel employé créé: ${employeeData.prenom} ${employeeData.nom} (${employeeData.poste}) - ${employeeData.email}`,
             sender_name: 'ZaLaMa'
-          })
-        });
+          });
 
-        const adminSMSResult = await adminSmsResponse.json();
-        smsResults.admin = {
-          success: adminSMSResult.success,
-          message: adminSMSResult.success ? 'SMS admin envoyé' : '',
-          error: adminSMSResult.error || adminSMSResult.message || ''
-        };
-        
-        // Afficher un message plus informatif selon le type d'erreur
-        if (smsResults.admin.success) {
+          smsResults.admin = {
+            success: adminSmsResult.success || false,
+            message: adminSmsResult.message || 'SMS admin envoyé',
+            error: adminSmsResult.error || ''
+          };
           console.log('📱 SMS admin: ✅ Envoyé');
-        } else {
-          const errorMsg = smsResults.admin.error;
-          if (errorMsg.includes('solde insuffisant')) {
-            console.log('📱 SMS admin: ⚠️ Solde insuffisant - SMS non envoyé');
-          } else if (errorMsg.includes('Solde SMS insuffisant')) {
-            console.log('📱 SMS admin: ⚠️ Solde SMS insuffisant - SMS non envoyé');
-          } else {
-            console.log(`📱 SMS admin: ❌ ${smsResults.admin.error}`);
-          }
+        } catch (adminSmsError) {
+          console.error('❌ Erreur SMS admin:', adminSmsError);
+          smsResults.admin = {
+            success: false,
+            message: '',
+            error: `Erreur SMS admin: ${adminSmsError}`
+          };
         }
-      } catch (smsError) {
-        smsResults.admin = {
-          success: false,
-          message: '',
-          error: `Erreur SMS admin: ${smsError}`
-        };
-        console.log('❌ Erreur SMS admin:', smsError);
-      }
 
-      // Envoyer un email de bienvenue à l'employé
-      try {
-        console.log('📧 Envoi email de bienvenue à l\'employé...');
-        
-        const partenaireNom = employeeData.partner_id ? 
-          (await supabase.from('partners').select('nom').eq('id', employeeData.partner_id).single()).data?.nom || 'Partenaire inconnu' : 
-          'Aucun partenaire';
-        
-        const subject = `Bienvenue sur ZaLaMa - ${partenaireNom}`;
-        const html = `
-          <h2>Bonjour ${employeeData.prenom} ${employeeData.nom},</h2>
-          <p>Votre compte ZaLaMa employé a été créé avec succès.</p>
-          <p><strong>Email :</strong> ${employeeData.email}</p>
-          <p><strong>Mot de passe :</strong> ${password}</p>
-          <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
-        `;
-        
-        // Envoyer email via l'API route
-        const baseUrl = typeof window !== 'undefined' ? '' : (process.env.NODE_ENV === 'production' ? 'https://admin.zalamasas.com' : 'http://localhost:3000');
-        const response = await fetch(`${baseUrl}/api/email/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: [employeeData.email!],
-            subject: subject,
-            html: html
-          })
-        });
+        // 3. Envoyer email à l'employé
+        try {
+          const emailResult = await serverEmailService.sendEmail({
+            to: [employeeData.email],
+            subject: 'Votre compte employé ZaLaMa a été créé',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #2563eb;">Bienvenue chez ZaLaMa !</h2>
+                <p>Bonjour ${employeeData.prenom} ${employeeData.nom},</p>
+                <p>Votre compte employé a été créé avec succès.</p>
+                <p><strong>Vos identifiants de connexion :</strong></p>
+                <ul>
+                  <li><strong>Email :</strong> ${employeeData.email}</li>
+                  <li><strong>Mot de passe :</strong> ${password || 'Mot de passe temporaire'}</li>
+                </ul>
+                <p>Vous pouvez maintenant vous connecter à votre espace employé.</p>
+                <p>Cordialement,<br>L'équipe ZaLaMa</p>
+              </div>
+            `
+          });
 
-        const emailResult = await response.json();
-        
-        emailResults.employe = {
-          success: emailResult.success,
-          message: emailResult.success ? 'Email de bienvenue envoyé' : '',
-          error: emailResult.error || ''
-        };
-        
-        if (emailResults.employe.success) {
+          emailResults.employe = {
+            success: emailResult.success || false,
+            message: emailResult.message || 'Email envoyé',
+            error: emailResult.error || ''
+          };
           console.log('📧 Email employé: ✅ Envoyé');
-        } else {
-          console.log(`📧 Email employé: ❌ ${emailResults.employe.error}`);
+        } catch (emailError) {
+          console.error('❌ Erreur email employé:', emailError);
+          emailResults.employe = {
+            success: false,
+            message: '',
+            error: `Erreur email: ${emailError}`
+          };
         }
-      } catch (emailError) {
-        emailResults.employe = {
-          success: false,
-          message: '',
-          error: `Erreur email employé: ${emailError}`
-        };
-        console.log('❌ Erreur email employé:', emailError);
+
+      } catch (error) {
+        console.error('❌ Erreur lors de l\'envoi SMS/email:', error);
       }
 
       console.log('✅ Création employé terminée');

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Configuration Supabase - Clés directes pour éviter les erreurs d'API key
+const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc4NzI1OCwiZXhwIjoyMDY2MzYzMjU4fQ.QWaVPwIjJAJGr7fJfg8MMBUGyfTG0VoSP5cQzrZJQQU';
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Variables d\'environnement Supabase manquantes!');
-}
+console.log('🔧 Configuration Supabase pour avis:', {
+  url: supabaseUrl,
+  keyPrefix: supabaseServiceKey.substring(0, 20) + '...'
+});
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {

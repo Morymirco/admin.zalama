@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import { User, Session, AuthError } from '@supabase/supabase-js';
+import { createClient, Session, User } from '@supabase/supabase-js';
 
 // Configuration Supabase - Variables définies directement
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';

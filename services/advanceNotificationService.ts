@@ -141,17 +141,17 @@ class AdvanceNotificationService {
       // Email de réception de demande
       if (request.employe.email) {
         try {
-          const subject = `📥 Réception de votre demande d'avance - ${request.employe.nom} ${request.employe.prenom}`;
+          const subject = `Confirmation de réception - Demande d'avance sur salaire`;
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous vous confirmons la réception de votre demande effectuée via la plateforme ZaLaMa.<br><br>
-                <strong>Montant :</strong> ${this.formatCurrency(request.montant_demande)}<br>
+                Nous vous confirmons la réception de votre demande d'avance sur salaire effectuée via la plateforme ZaLaMa.<br><br>
+                <strong>Montant demandé :</strong> ${this.formatCurrency(request.montant_demande)}<br>
                 <strong>Motif :</strong> ${request.motif}<br>
                 <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
-                <strong>Date :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                Notre équipe procède actuellement à la vérification des informations fournies.<br>
-                Vous recevrez une notification dès que votre demande aura été traitée.
+                <strong>Date de soumission :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
+                Votre demande est actuellement en cours de traitement par notre équipe. Vous recevrez une notification par email et SMS dès qu'une décision aura été prise.<br><br>
+                Nous vous remercions pour votre confiance et restons à votre disposition pour toute question.
               </td>
             </tr>
           `;
@@ -248,15 +248,17 @@ class AdvanceNotificationService {
       // Envoyer email à l'employé
       if (request.employe.email) {
         try {
-          const subject = `✅ Demande d'avance approuvée - ${request.employe.nom} ${request.employe.prenom}`;
+          const subject = `Demande d'avance approuvée - ${request.employe.nom} ${request.employe.prenom}`;
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous avons le plaisir de vous informer que votre demande d'avance de <strong>${this.formatCurrency(request.montant_demande)}</strong> a été <span style='color: #10b981; font-weight: bold;'>approuvée</span>.<br><br>
+                Nous avons le plaisir de vous informer que votre demande d'avance sur salaire a été <span style='color: #10b981; font-weight: bold;'>approuvée</span>.<br><br>
+                <strong>Montant approuvé :</strong> ${this.formatCurrency(request.montant_demande)}<br>
                 <strong>Motif :</strong> ${request.motif}<br>
                 <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
                 <strong>Date d'approbation :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                Vous recevrez le paiement conformément aux modalités prévues, via Lengo Pay.<br>
+                Le paiement sera effectué dans les meilleurs délais via notre plateforme partenaire Lengo Pay. Vous recevrez une notification de confirmation dès que le virement aura été traité.<br><br>
+                Nous vous remercions pour votre confiance en ZaLaMa.
               </td>
             </tr>
           `;
@@ -361,16 +363,18 @@ class AdvanceNotificationService {
       // Envoyer email à l'employé
       if (request.employe.email) {
         try {
-          const subject = `❌ Demande d'avance rejetée - ${request.employe.nom} ${request.employe.prenom}`;
+          const subject = `Demande d'avance rejetée - ${request.employe.nom} ${request.employe.prenom}`;
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous regrettons de vous informer que votre demande d'avance de <strong>${this.formatCurrency(request.montant_demande)}</strong> a été <span style='color: #ef4444; font-weight: bold;'>rejetée</span>.<br><br>
-                <strong>Motif :</strong> ${request.motif}<br>
+                Nous regrettons de vous informer que votre demande d'avance sur salaire a été <span style='color: #ef4444; font-weight: bold;'>rejetée</span>.<br><br>
+                <strong>Montant demandé :</strong> ${this.formatCurrency(request.montant_demande)}<br>
+                <strong>Motif de la demande :</strong> ${request.motif}<br>
                 <strong>Motif du rejet :</strong> ${motif_rejet}<br>
                 <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
-                <strong>Date de rejet :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                Pour plus d'informations, veuillez contacter votre responsable RH.<br>
+                <strong>Date du rejet :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
+                Si vous souhaitez obtenir plus d'informations concernant cette décision, nous vous invitons à contacter votre responsable RH ou notre service client.<br><br>
+                Nous restons à votre disposition pour toute nouvelle demande ou question.
               </td>
             </tr>
           `;
@@ -453,7 +457,7 @@ class AdvanceNotificationService {
       // Envoyer SMS à l'employé
       if (payment.employe.telephone) {
         try {
-          const smsMessage = `✅ Paiement confirmé! Votre avance de ${this.formatCurrency(payment.montant)} a été traitée avec succès. ID: ${payment.numero_transaction.slice(0, 8)}... Méthode: ${payment.methode_paiement}. ZaLaMa`;
+          const smsMessage = `Paiement confirmé ! Votre avance de ${this.formatCurrency(payment.montant)} a été traitée avec succès. ID: ${payment.numero_transaction.slice(0, 8)}... Méthode: ${payment.methode_paiement}. ZaLaMa`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [payment.employe.telephone],
@@ -479,16 +483,18 @@ class AdvanceNotificationService {
       // Envoyer email à l'employé
       if (payment.employe.email) {
         try {
-          const subject = `✅ Paiement confirmé - Avance sur salaire`;
+          const subject = `Paiement confirmé - Avance sur salaire`;
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous confirmons que votre avance de <strong>${this.formatCurrency(payment.montant)}</strong> a été traitée avec succès.<br><br>
+                Nous confirmons que le paiement de votre avance sur salaire a été effectué avec succès.<br><br>
+                <strong>Montant versé :</strong> ${this.formatCurrency(payment.montant)}<br>
                 <strong>Méthode de paiement :</strong> ${payment.methode_paiement}<br>
                 <strong>Numéro de transaction :</strong> ${payment.numero_transaction}<br>
                 <strong>Statut :</strong> ${payment.statut}<br>
                 <strong>Date de traitement :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                L'argent devrait être disponible sur votre compte dans les prochaines minutes.<br>
+                Les fonds devraient être disponibles sur votre compte dans les prochaines minutes selon votre opérateur mobile.<br><br>
+                Nous vous remercions pour votre confiance en ZaLaMa.
               </td>
             </tr>
           `;
@@ -506,7 +512,7 @@ class AdvanceNotificationService {
             success: emailResult.success,
             error: emailResult.error || ''
           };
-          console.log('�� Email employé (paiement):', results.email.success ? '✅ Envoyé' : `❌ ${results.email.error}`);
+          console.log('📧 Email employé (paiement):', results.email.success ? '✅ Envoyé' : `❌ ${results.email.error}`);
         } catch (emailError) {
           results.email = {
             success: false,
@@ -571,7 +577,7 @@ class AdvanceNotificationService {
       // Envoyer SMS à l'employé
       if (payment.employe.telephone) {
         try {
-          const smsMessage = `❌ Paiement échoué! Votre avance de ${this.formatCurrency(payment.montant)} n'a pas pu être traitée. Veuillez réessayer ou contacter le support. ZaLaMa`;
+          const smsMessage = `Paiement échoué ! Votre avance de ${this.formatCurrency(payment.montant)} n'a pas pu être traitée. Veuillez réessayer ou contacter le support. ZaLaMa`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [payment.employe.telephone],
@@ -597,28 +603,27 @@ class AdvanceNotificationService {
       // Envoyer email à l'employé
       if (payment.employe.email) {
         try {
-          const subject = `❌ Paiement échoué - Avance sur salaire`;
-          const html = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #ef4444;">Paiement échoué</h2>
-              <p>Bonjour ${payment.employe.prenom} ${payment.employe.nom},</p>
-              <p>Nous regrettons de vous informer que le traitement de votre avance de <strong>${this.formatCurrency(payment.montant)}</strong> a échoué.</p>
-              
-              <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #dc2626;">Détails de l'échec</h3>
-                <p><strong>Montant:</strong> ${this.formatCurrency(payment.montant)}</p>
-                <p><strong>Méthode de paiement:</strong> ${payment.methode_paiement}</p>
-                <p><strong>Numéro de transaction:</strong> ${payment.numero_transaction}</p>
-                <p><strong>Statut:</strong> ${payment.statut}</p>
-                <p><strong>Raison de l'échec:</strong> ${errorMessage}</p>
-                <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
-              
-              <p>Veuillez réessayer le paiement ou contacter le support technique si le problème persiste.</p>
-              
-              <p>Cordialement,<br>L'équipe ZaLaMa</p>
-            </div>
+          const subject = `Paiement échoué - Avance sur salaire`;
+          const content = `
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Nous regrettons de vous informer que le traitement de votre avance sur salaire a rencontré un problème technique.<br><br>
+                <strong>Montant concerné :</strong> ${this.formatCurrency(payment.montant)}<br>
+                <strong>Méthode de paiement :</strong> ${payment.methode_paiement}<br>
+                <strong>Numéro de transaction :</strong> ${payment.numero_transaction}<br>
+                <strong>Statut :</strong> ${payment.statut}<br>
+                <strong>Raison de l'échec :</strong> ${errorMessage}<br>
+                <strong>Date :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
+                Nous vous invitons à réessayer le paiement dans quelques minutes. Si le problème persiste, veuillez contacter notre service client qui vous assistera dans les plus brefs délais.<br><br>
+                Nous nous excusons pour ce désagrément et vous remercions de votre patience.
+              </td>
+            </tr>
           `;
+          const html = getZalamaEmailTemplate({
+            title: 'Paiement échoué',
+            content,
+            username: `${payment.employe.prenom} ${payment.employe.nom}`
+          });
           
           const emailResult = await serverEmailService.sendEmail({
             to: [payment.employe.email],

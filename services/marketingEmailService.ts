@@ -14,30 +14,26 @@ export class MarketingEmailService {
   static generateMarketingEmail(data: MarketingEmailData): string {
     const { subject, message, campaignType = 'custom' } = data;
     
-    // Déterminer l'icône et la couleur selon le type de campagne
+    // Déterminer la couleur selon le type de campagne
     const getCampaignStyle = () => {
       switch (campaignType) {
         case 'newsletter':
           return {
-            icon: '📰',
             color: '#3B82F6',
             title: 'Newsletter ZaLaMa'
           };
         case 'promotion':
           return {
-            icon: '🎉',
             color: '#10B981',
             title: 'Offre Spéciale ZaLaMa'
           };
         case 'announcement':
           return {
-            icon: '📢',
             color: '#F59E0B',
             title: 'Annonce Importante ZaLaMa'
           };
         default:
           return {
-            icon: '📧',
             color: '#6366F1',
             title: 'Message ZaLaMa'
           };
@@ -53,7 +49,6 @@ export class MarketingEmailService {
         <tr>
           <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="font-size: 48px; margin-bottom: 10px;">${style.icon}</div>
               <h1 style="color: ${style.color}; margin: 0; font-size: 24px; font-weight: 600;">
                 ${style.title}
               </h1>

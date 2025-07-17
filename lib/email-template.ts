@@ -36,11 +36,20 @@ export function getZalamaEmailTemplate({ title, content, username }: ZalamaEmail
     </tr>
     <tr>
       <td style="background-color: #1e40af; padding: 25px; text-align: center; font-size: 14px; color: #ffffff; border-radius: 0 0 12px 12px;">
-        <p style="margin: 0 0 15px 0; font-weight: 500;">ZaLaMa SAS - Merci pour votre confiance</p>
-        <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+        <p style="margin: 0 0 15px 0; font-weight: 500; color: #ffffff;">ZaLaMa SAS - Merci pour votre confiance</p>
+        <table cellpadding="0" cellspacing="0" style="margin: 0 auto 15px auto;">
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); padding: 12px 30px; border-radius: 10px; border: 1px solid #ffffff;">
               <a href="mailto:contact@zalamagn.com" style="color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">Contactez-nous</a>
+            </td>
+          </tr>
+        </table>
+        <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+          <tr>
+            <td style="background-color: #ffffff; padding: 12px 30px; border-radius: 10px; border: 1px solid #dbeafe; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <a href="https://www.zalamagn.com" style="color: #1e40af; text-decoration: none; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center;">
+                www.zalamagn.com
+              </a>
             </td>
           </tr>
         </table>

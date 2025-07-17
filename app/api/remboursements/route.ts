@@ -18,7 +18,13 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('remboursements')
-      .select('*')
+      .select(`
+        *,
+        employe:employees(id, nom, prenom, email, telephone),
+        partenaire:partners(id, nom, email, email_rh, telephone),
+        demande_avance:salary_advance_requests(id, montant_demande, motif, date_creation),
+        transaction:transactions(id, numero_transaction, methode_paiement, date_transaction, statut)
+      `)
       .order('date_creation', { ascending: false })
       .range(offset, offset + limit - 1);
 

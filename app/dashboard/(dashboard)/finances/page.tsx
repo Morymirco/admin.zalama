@@ -10,10 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { financeService, type Remboursement, type SalaryAdvanceRequest, type Transaction } from "@/services/financeService";
 import {
-  CreditCard,
-  Download,
-  Filter,
-  Users
+    CreditCard,
+    Download,
+    Filter,
+    Users
 } from "lucide-react";
 import { useEffect, useState } from "react";
 

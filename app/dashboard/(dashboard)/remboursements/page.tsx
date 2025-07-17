@@ -35,6 +35,7 @@ import {
     DollarSign,
     Download,
     Eye,
+    FileText,
     Filter,
     Plus,
     Search,
@@ -237,25 +238,23 @@ export default function RemboursementsPage() {
     setDetailsModalOpen(true);
   };
 
-  // Fonction pour obtenir les mois disponibles
+  // Fonction pour obtenir les 12 derniers mois
   const getMoisDisponibles = () => {
-    const mois = new Set<string>();
-    remboursements.forEach(remboursement => {
-      if (remboursement.date_creation) {
-        const date = new Date(remboursement.date_creation);
-        const moisAnnee = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        mois.add(moisAnnee);
-      }
-    });
+    const mois = [];
+    const maintenant = new Date();
     
-    return Array.from(mois).sort().reverse().map(mois => {
-      const [annee, moisNum] = mois.split('-');
-      const date = new Date(parseInt(annee), parseInt(moisNum) - 1);
-      return {
-        value: mois,
-        label: date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })
-      };
-    });
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(maintenant.getFullYear(), maintenant.getMonth() - i, 1);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = date.toLocaleDateString('fr-FR', { 
+        year: 'numeric', 
+        month: 'long' 
+      });
+      
+      mois.push({ value, label });
+    }
+    
+    return mois;
   };
 
   // Fonction pour payer tous les remboursements d'un partenaire
@@ -430,10 +429,10 @@ export default function RemboursementsPage() {
 
       {/* Statistiques */}
       {statistiques && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-[var(--zalama-text)]">Total Remboursements</CardTitle>
+              <CardTitle className="text-sm font-medium text-[var(--zalama-text)]">Total</CardTitle>
               <DollarSign className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
             </CardHeader>
             <CardContent>
@@ -446,7 +445,7 @@ export default function RemboursementsPage() {
 
           <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-[var(--zalama-text)]">Remboursements Payés</CardTitle>
+              <CardTitle className="text-sm font-medium text-[var(--zalama-text)]">Effectués</CardTitle>
               <TrendingUp className="h-4 w-4 text-[var(--zalama-success)]" />
             </CardHeader>
             <CardContent>
@@ -459,7 +458,7 @@ export default function RemboursementsPage() {
 
           <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-[var(--zalama-text)]">En Attente</CardTitle>
+              <CardTitle className="text-sm font-medium text-[var(--zalama-text)]">En attente</CardTitle>
               <Clock className="h-4 w-4 text-[var(--zalama-warning)]" />
             </CardHeader>
             <CardContent>
@@ -476,9 +475,22 @@ export default function RemboursementsPage() {
               <TrendingDown className="h-4 w-4 text-[var(--zalama-danger)]" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[var(--zalama-danger)]">{statistiques.remboursements_en_retard}</div>
+              <div className="text-2xl font-bold text-[var(--zalama-danger)]">{statistiques.par_statut?.EN_RETARD || 0}</div>
               <p className="text-xs text-[var(--zalama-text-secondary)]">
                 {formatMontant(statistiques.montant_en_retard)} en retard
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-[var(--zalama-text)]">Annulés</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[var(--zalama-text-secondary)]">{statistiques.par_statut?.ANNULE || 0}</div>
+              <p className="text-xs text-[var(--zalama-text-secondary)]">
+                Remboursements annulés
               </p>
             </CardContent>
           </Card>
@@ -581,90 +593,130 @@ export default function RemboursementsPage() {
               <CardDescription className="text-[var(--zalama-text-secondary)]">
                 Liste des remboursements des avances de salaire
               </CardDescription>
+              {/* Debug temporaire */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <strong>Debug:</strong> Total brut: {remboursements.length}, Après filtres: {filteredRemboursements.length}
+                  <br />
+                  Filtres actifs: statut={statusFilter}, partenaire={partnerFilter}, mois={monthFilter}
+                  <br />
+                  Partenaires trouvés: {partners.length}
+                </div>
+              )}
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-[var(--zalama-border)] hover:bg-[var(--zalama-bg-light)]">
-                    <TableHead className="text-[var(--zalama-text)]">Employé</TableHead>
-                    <TableHead className="text-[var(--zalama-text)]">Partenaire</TableHead>
-                    <TableHead className="text-[var(--zalama-text)]">Montant</TableHead>
-                    <TableHead className="text-[var(--zalama-text)]">Date Limite</TableHead>
-                    <TableHead className="text-[var(--zalama-text)]">Statut</TableHead>
-                    <TableHead className="text-[var(--zalama-text)]">Méthode</TableHead>
-                    <TableHead className="text-[var(--zalama-text)]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRemboursements.map((remboursement) => (
-                    <TableRow key={remboursement.id} className="border-[var(--zalama-border)] hover:bg-[var(--zalama-bg-light)]">
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
-                          <div>
-                            <div className="font-medium text-[var(--zalama-text)]">
-                              {remboursement.employe?.nom} {remboursement.employe?.prenom}
-                            </div>
-                            <div className="text-sm text-[var(--zalama-text-secondary)]">
-                              {remboursement.employe?.email}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
-                          <div className="font-medium text-[var(--zalama-text)]">{remboursement.partenaire?.nom}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium text-[var(--zalama-text)]">
-                          {formatMontant(remboursement.montant_total_remboursement)}
-                        </div>
-                        <div className="text-sm text-[var(--zalama-text-secondary)]">
-                          Transaction: {formatMontant(remboursement.montant_transaction)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-[var(--zalama-text)]">{formatDate(remboursement.date_limite_remboursement)}</div>
-                        {remboursement.jours_retard && remboursement.jours_retard > 0 && (
-                          <div className="text-sm text-[var(--zalama-danger)]">
-                            {remboursement.jours_retard} jours de retard
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(remboursement.statut)}
-                      </TableCell>
-                      <TableCell>
-                        {getMethodBadge(remboursement.methode_remboursement)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEffectuerPaiement(remboursement)}
-                            disabled={remboursement.statut !== 'EN_ATTENTE'}
-                            className="border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]"
-                          >
-                            <CreditCard className="h-4 w-4 mr-1" />
-                            Payer
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleVoirDetails(remboursement)}
-                            className="border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {filteredRemboursements.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-[var(--zalama-text-secondary)] mb-4">
+                    {remboursements.length === 0 ? (
+                      <>
+                        <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>Aucun remboursement trouvé dans la base de données</p>
+                        <p className="text-sm mt-1">Les remboursements sont créés automatiquement après les transactions effectuées</p>
+                      </>
+                    ) : (
+                      <>
+                        <Filter className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>Aucun remboursement ne correspond aux filtres sélectionnés</p>
+                        <p className="text-sm mt-1">{remboursements.length} remboursement(s) au total</p>
+                      </>
+                    )}
+                  </div>
+                  {remboursements.length === 0 && (
+                    <Button
+                      onClick={loadData}
+                      variant="outline"
+                      className="border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Recharger les données
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[var(--zalama-border)] hover:bg-[var(--zalama-bg-light)]">
+                      <TableHead className="text-[var(--zalama-text)]">Employé</TableHead>
+                      <TableHead className="text-[var(--zalama-text)]">Partenaire</TableHead>
+                      <TableHead className="text-[var(--zalama-text)]">Montant</TableHead>
+                      <TableHead className="text-[var(--zalama-text)]">Date Limite</TableHead>
+                      <TableHead className="text-[var(--zalama-text)]">Statut</TableHead>
+                      <TableHead className="text-[var(--zalama-text)]">Méthode</TableHead>
+                      <TableHead className="text-[var(--zalama-text)]">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRemboursements.map((remboursement) => (
+                      <TableRow key={remboursement.id} className="border-[var(--zalama-border)] hover:bg-[var(--zalama-bg-light)]">
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+                            <div>
+                              <div className="font-medium text-[var(--zalama-text)]">
+                                {remboursement.employe?.nom} {remboursement.employe?.prenom}
+                              </div>
+                              <div className="text-sm text-[var(--zalama-text-secondary)]">
+                                {remboursement.employe?.email}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 text-[var(--zalama-text-secondary)]" />
+                            <div className="font-medium text-[var(--zalama-text)]">{remboursement.partenaire?.nom}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium text-[var(--zalama-text)]">
+                            {formatMontant(remboursement.montant_total_remboursement)}
+                          </div>
+                          <div className="text-sm text-[var(--zalama-text-secondary)]">
+                            Transaction: {formatMontant(remboursement.montant_transaction)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-[var(--zalama-text)]">{formatDate(remboursement.date_limite_remboursement)}</div>
+                          {remboursement.jours_retard && remboursement.jours_retard > 0 && (
+                            <div className="text-sm text-[var(--zalama-danger)]">
+                              {remboursement.jours_retard} jours de retard
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(remboursement.statut)}
+                        </TableCell>
+                        <TableCell>
+                          {getMethodBadge(remboursement.methode_remboursement)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEffectuerPaiement(remboursement)}
+                              disabled={remboursement.statut !== 'EN_ATTENTE'}
+                              className="border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]"
+                            >
+                              <CreditCard className="h-4 w-4 mr-1" />
+                              Payer
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleVoirDetails(remboursement)}
+                              className="border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

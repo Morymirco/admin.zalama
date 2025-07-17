@@ -1,34 +1,30 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Building, 
-  Users, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Globe, 
+import {
+  ArrowLeft,
+  Building,
   Calendar,
   DollarSign,
-  Edit,
-  Trash2,
-  Plus,
-  UserPlus,
-  Briefcase,
   FileText,
-  Shield
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
+  Shield,
+  UserPlus,
+  Users
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import { useParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 // Importation des hooks et services
-import { useSupabasePartnerDetail, useSupabaseEmployees } from '@/hooks/useSupabasePartners';
+import DemandesAvanceSalaire from '@/components/dashboard/partenaires/DemandesAvanceSalaire';
 import ListeEmployes from '@/components/dashboard/partenaires/ListeEmployes';
 import ModaleAjoutEmploye from '@/components/dashboard/partenaires/ModaleAjoutEmploye';
-import DemandesAvanceSalaire from '@/components/dashboard/partenaires/DemandesAvanceSalaire';
-import employeeAccountService from '@/services/employeeAccountService';
+import RemboursementsPartenaire from '@/components/dashboard/partenaires/RemboursementsPartenaire';
+import { useSupabaseEmployees, useSupabasePartnerDetail } from '@/hooks/useSupabasePartners';
 
 export default function PartenaireDetailPage() {
   const params = useParams();
@@ -36,7 +32,7 @@ export default function PartenaireDetailPage() {
   const partnerId = params.id as string;
 
   // États locaux
-  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'demandes'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'demandes' | 'remboursements'>('overview');
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
 
   // Hooks pour récupérer les données
@@ -230,6 +226,17 @@ export default function PartenaireDetailPage() {
         >
           <FileText className="h-4 w-4" />
           Demandes & Transactions
+        </button>
+        <button
+          onClick={() => setActiveTab('remboursements')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+            activeTab === 'remboursements'
+              ? 'bg-[var(--zalama-card)] text-[var(--zalama-text)] shadow-sm'
+              : 'text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)]'
+          }`}
+        >
+          <DollarSign className="h-4 w-4" />
+          Remboursements
         </button>
       </div>
 
@@ -454,12 +461,17 @@ export default function PartenaireDetailPage() {
             onRefresh={() => loadPartenaireDetail(partnerId)}
           />
         </div>
-      ) : (
+      ) : activeTab === 'demandes' ? (
         <div>
           {/* Liste des demandes d'avance sur salaire */}
           <DemandesAvanceSalaire partnerId={partnerId} />
         </div>
-      )}
+      ) : activeTab === 'remboursements' ? (
+        <div>
+          {/* Remboursements du partenaire */}
+          <RemboursementsPartenaire partnerId={partnerId} partnerName={partenaire.nom} />
+        </div>
+      ) : null}
 
       {/* Modal d'ajout d'employé */}
       <ModaleAjoutEmploye

@@ -44,13 +44,15 @@ export default function StatistiquesGenerales() {
   const { data: services, loading: loadingServices, error: errorServices } = useSupabaseCollection<Service>(serviceService);
   const { data: transactions, loading: loadingTransactions, error: errorTransactions } = useSupabaseCollection<Transaction>(transactionService);
 
-  // Logs de débogage
+  // Logs de débogage (uniquement en développement)
   useEffect(() => {
-    console.log('🔍 StatistiquesGenerales - État des données:');
-    console.log('Employees:', { data: employees, loading: loadingEmployees, error: errorEmployees });
-    console.log('Partners:', { data: partners, loading: loadingPartners, error: errorPartners });
-    console.log('Services:', { data: services, loading: loadingServices, error: errorServices });
-    console.log('Transactions:', { data: transactions, loading: loadingTransactions, error: errorTransactions });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 StatistiquesGenerales - État des données:');
+      console.log('Employees:', { data: employees?.length || 0, loading: loadingEmployees, error: errorEmployees?.message });
+      console.log('Partners:', { data: partners?.length || 0, loading: loadingPartners, error: errorPartners?.message });
+      console.log('Services:', { data: services?.length || 0, loading: loadingServices, error: errorServices?.message });
+      console.log('Transactions:', { data: transactions?.length || 0, loading: loadingTransactions, error: errorTransactions?.message });
+    }
   }, [employees, partners, services, transactions, loadingEmployees, loadingPartners, loadingServices, loadingTransactions, errorEmployees, errorPartners, errorServices, errorTransactions]);
 
   // Initialisation progressive

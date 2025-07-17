@@ -247,26 +247,21 @@ export default function MarketingPage() {
     try {
       setEmailLoading(true);
       
-          const response = await fetch('/api/email/send', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-          to: recipients,
-              subject: emailSubject,
-          html: emailMessage,
-          text: emailMessage,
-            }),
-          });
-
-          const result = await response.json();
+      // Utiliser le service marketing pour envoyer avec le template ZaLaMa
+      const { MarketingEmailService } = await import('@/services/marketingEmailService');
+      
+      const result = await MarketingEmailService.sendMarketingEmail({
+        subject: emailSubject,
+        message: emailMessage,
+        recipients: recipients,
+        campaignType: 'custom'
+      });
       
       if (result.success) {
         toast.success(`Emails envoyés avec succès à ${recipients.length} destinataire(s)`);
-      setEmailSubject('');
-      setEmailMessage('');
-      setEmailRecipients('');
+        setEmailSubject('');
+        setEmailMessage('');
+        setEmailRecipients('');
       } else {
         toast.error(result.error || 'Erreur lors de l\'envoi des emails');
       }

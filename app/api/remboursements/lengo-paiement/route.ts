@@ -14,7 +14,7 @@ const LENGO_WEBSITE_ID = process.env.LENGO_SITE_ID || 'ozazlahgzpntmYAG';
 
 // URLs définies directement pour éviter les problèmes de configuration
 const BASE_URL = process.env.NODE_ENV === 'production' ? 'https://admin.zalamasas.com' : 'http://localhost:3000';
-const CALLBACK_URL = `${BASE_URL}/api/remboursements/lengo-callback`;
+const CALLBACK_URL = process.env.LENGO_CALLBACK_URL || 'https://admin.zalamasas.com/api/remboursements/lengo-callback';
 const RETURN_URL = `${BASE_URL}/dashboard/remboursements?status=success`;
 
 console.log('🔧 Configuration URLs:', {

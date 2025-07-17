@@ -32,7 +32,7 @@ export interface LengoPayStatusResponse {
 const LENGO_API_URL = 'https://portal.lengopay.com';
 const LENGO_SITE_ID = 'ozazlahgzpntmYAG';
 const LENGO_API_KEY = 'bDM0WlhpcDRta052MmxIZEFFcEV1Mno0WERwS2R0dnk3ZUhWOEpwczdYVXdnM1Bwd016UTVLcEVZNmc0RkQwMw==';
-const LENGO_CALLBACK_URL = 'https://votre-domaine.com/api/payments/lengo-callback';
+const LENGO_CALLBACK_URL = process.env.LENGO_CALLBACK_URL || 'https://admin.zalamasas.com/api/payments/lengo-callback';
 
 export async function lengoPayCashin(params: LengoPayCashinParams): Promise<LengoPayCashinResponse> {
   console.log('🔧 Début de lengoPayCashin avec les paramètres:', params);

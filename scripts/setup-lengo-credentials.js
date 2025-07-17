@@ -6,7 +6,7 @@ const LENGO_CREDENTIALS = {
   SITE_ID: 'ozazlahgzpntmYAG',
   API_KEY: 'bDM0WlhpcDRta052MmxIZEFFcEV1Mno0WERwS2R0dnk3ZUhWOEpwczdYVXdnM1Bwd016UTVLcEVZNmc0RkQwMw==',
   API_URL: 'https://portal.lengopay.com',
-  CALLBACK_URL: 'https://votre-domaine.com/api/payments/lengo-callback'
+  CALLBACK_URL: 'https://admin.zalamasas.com/api/payments/lengo-callback'
 };
 
 function setupLengoCredentials() {
@@ -80,7 +80,7 @@ function setupLengoCredentials() {
   console.log('\n⚠️  IMPORTANT:');
   console.log('   - Remplacez "votre-domaine.com" par votre vrai domaine');
   console.log('   - Pour le développement local, utilisez ngrok ou similaire');
-  console.log('   - Exemple: LENGO_CALLBACK_URL=https://abc123.ngrok.io/api/payments/lengo-callback');
+  console.log('   - Exemple: LENGO_CALLBACK_URL=https://admin.zalamasas.com/api/payments/lengo-callback');
   
   console.log('\n🧪 Pour tester la configuration:');
   console.log('   npm run test-payment-page');

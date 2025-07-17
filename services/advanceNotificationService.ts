@@ -1,3 +1,4 @@
+import { getZalamaEmailTemplate } from '@/lib/email-template';
 import { createClient } from '@supabase/supabase-js';
 import serverEmailService from './serverEmailService';
 import serverSmsService from './serverSmsService';
@@ -126,6 +127,47 @@ class AdvanceNotificationService {
         console.error('❌ Erreur SMS interne ZaLaMa:', smsError);
       }
 
+      // Email de réception de demande
+      if (request.employe.email) {
+        try {
+          const subject = `📥 Réception de votre demande d'avance - ${request.employe.nom} ${request.employe.prenom}`;
+          const content = `
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Nous vous confirmons la réception de votre demande effectuée via la plateforme ZaLaMa.<br><br>
+                <strong>Montant :</strong> ${this.formatCurrency(request.montant_demande)}<br>
+                <strong>Motif :</strong> ${request.motif}<br>
+                <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
+                <strong>Date :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
+                Notre équipe procède actuellement à la vérification des informations fournies.<br>
+                Vous recevrez une notification dès que votre demande aura été traitée.
+              </td>
+            </tr>
+          `;
+          const html = getZalamaEmailTemplate({
+            title: 'Confirmation de réception',
+            content,
+            username: `${request.employe.prenom} ${request.employe.nom}`
+          });
+          const emailResult = await serverEmailService.sendEmail({
+            to: [request.employe.email],
+            subject: subject,
+            html: html
+          });
+          results.email = {
+            success: emailResult.success,
+            error: emailResult.error || ''
+          };
+          console.log('📧 Email employé (réception):', results.email.success ? '✅ Envoyé' : `❌ ${results.email.error}`);
+        } catch (emailError) {
+          results.email = {
+            success: false,
+            error: `Erreur email: ${emailError instanceof Error ? emailError.message : String(emailError)}`
+          };
+          console.error('❌ Erreur email employé (réception):', emailError);
+        }
+      }
+
       const overallSuccess = results.sms.success || results.email.success;
       
       return {
@@ -196,37 +238,31 @@ class AdvanceNotificationService {
       if (request.employe.email) {
         try {
           const subject = `✅ Demande d'avance approuvée - ${request.employe.nom} ${request.employe.prenom}`;
-          const html = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #10b981;">Demande d'avance approuvée</h2>
-              <p>Bonjour ${request.employe.prenom} ${request.employe.nom},</p>
-              <p>Nous avons le plaisir de vous informer que votre demande d'avance de <strong>${this.formatCurrency(request.montant_demande)}</strong> a été approuvée.</p>
-              
-              <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #0369a1;">Détails de votre demande</h3>
-                <p><strong>Montant demandé:</strong> ${this.formatCurrency(request.montant_demande)}</p>
-                <p><strong>Motif:</strong> ${request.motif}</p>
-                <p><strong>Entreprise:</strong> ${request.partenaire.nom}</p>
-                <p><strong>Date d'approbation:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
-              
-              <p>Le paiement sera effectué dans les prochaines heures. Vous recevrez une notification SMS et email dès que le paiement sera traité.</p>
-              
-              <p>Cordialement,<br>L'équipe ZaLaMa</p>
-            </div>
+          const content = `
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Nous avons le plaisir de vous informer que votre demande d'avance de <strong>${this.formatCurrency(request.montant_demande)}</strong> a été <span style='color: #10b981; font-weight: bold;'>approuvée</span>.<br><br>
+                <strong>Motif :</strong> ${request.motif}<br>
+                <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
+                <strong>Date d'approbation :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
+                Vous recevrez le paiement conformément aux modalités prévues, via Lengo Pay.<br>
+              </td>
+            </tr>
           `;
-          
+          const html = getZalamaEmailTemplate({
+            title: 'Demande d\'avance approuvée',
+            content,
+            username: `${request.employe.prenom} ${request.employe.nom}`
+          });
           const emailResult = await serverEmailService.sendEmail({
             to: [request.employe.email],
             subject: subject,
             html: html
           });
-          
           results.email = {
             success: emailResult.success,
             error: emailResult.error || ''
           };
-          
           console.log('📧 Email employé:', results.email.success ? '✅ Envoyé' : `❌ ${results.email.error}`);
         } catch (emailError) {
           results.email = {
@@ -315,38 +351,32 @@ class AdvanceNotificationService {
       if (request.employe.email) {
         try {
           const subject = `❌ Demande d'avance rejetée - ${request.employe.nom} ${request.employe.prenom}`;
-          const html = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #ef4444;">Demande d'avance rejetée</h2>
-              <p>Bonjour ${request.employe.prenom} ${request.employe.nom},</p>
-              <p>Nous regrettons de vous informer que votre demande d'avance de <strong>${this.formatCurrency(request.montant_demande)}</strong> a été rejetée.</p>
-              
-              <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #dc2626;">Détails de votre demande</h3>
-                <p><strong>Montant demandé:</strong> ${this.formatCurrency(request.montant_demande)}</p>
-                <p><strong>Motif de la demande:</strong> ${request.motif}</p>
-                <p><strong>Motif du rejet:</strong> ${motif_rejet}</p>
-                <p><strong>Entreprise:</strong> ${request.partenaire.nom}</p>
-                <p><strong>Date de rejet:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
-              
-              <p>Pour plus d'informations, veuillez contacter votre responsable RH.</p>
-              
-              <p>Cordialement,<br>L'équipe ZaLaMa</p>
-            </div>
+          const content = `
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Nous regrettons de vous informer que votre demande d'avance de <strong>${this.formatCurrency(request.montant_demande)}</strong> a été <span style='color: #ef4444; font-weight: bold;'>rejetée</span>.<br><br>
+                <strong>Motif :</strong> ${request.motif}<br>
+                <strong>Motif du rejet :</strong> ${motif_rejet}<br>
+                <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
+                <strong>Date de rejet :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
+                Pour plus d'informations, veuillez contacter votre responsable RH.<br>
+              </td>
+            </tr>
           `;
-          
+          const html = getZalamaEmailTemplate({
+            title: 'Demande d\'avance rejetée',
+            content,
+            username: `${request.employe.prenom} ${request.employe.nom}`
+          });
           const emailResult = await serverEmailService.sendEmail({
             to: [request.employe.email],
             subject: subject,
             html: html
           });
-          
           results.email = {
             success: emailResult.success,
             error: emailResult.error || ''
           };
-          
           console.log('📧 Email employé (rejet):', results.email.success ? '✅ Envoyé' : `❌ ${results.email.error}`);
         } catch (emailError) {
           results.email = {
@@ -439,39 +469,33 @@ class AdvanceNotificationService {
       if (payment.employe.email) {
         try {
           const subject = `✅ Paiement confirmé - Avance sur salaire`;
-          const html = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #10b981;">Paiement confirmé</h2>
-              <p>Bonjour ${payment.employe.prenom} ${payment.employe.nom},</p>
-              <p>Nous confirmons que votre avance de <strong>${this.formatCurrency(payment.montant)}</strong> a été traitée avec succès.</p>
-              
-              <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #0369a1;">Détails du paiement</h3>
-                <p><strong>Montant:</strong> ${this.formatCurrency(payment.montant)}</p>
-                <p><strong>Méthode de paiement:</strong> ${payment.methode_paiement}</p>
-                <p><strong>Numéro de transaction:</strong> ${payment.numero_transaction}</p>
-                <p><strong>Statut:</strong> ${payment.statut}</p>
-                <p><strong>Date de traitement:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
-              
-              <p>L'argent devrait être disponible sur votre compte dans les prochaines minutes.</p>
-              
-              <p>Cordialement,<br>L'équipe ZaLaMa</p>
-            </div>
+          const content = `
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Nous confirmons que votre avance de <strong>${this.formatCurrency(payment.montant)}</strong> a été traitée avec succès.<br><br>
+                <strong>Méthode de paiement :</strong> ${payment.methode_paiement}<br>
+                <strong>Numéro de transaction :</strong> ${payment.numero_transaction}<br>
+                <strong>Statut :</strong> ${payment.statut}<br>
+                <strong>Date de traitement :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
+                L'argent devrait être disponible sur votre compte dans les prochaines minutes.<br>
+              </td>
+            </tr>
           `;
-          
+          const html = getZalamaEmailTemplate({
+            title: 'Paiement confirmé',
+            content,
+            username: `${payment.employe.prenom} ${payment.employe.nom}`
+          });
           const emailResult = await serverEmailService.sendEmail({
             to: [payment.employe.email],
             subject: subject,
             html: html
           });
-          
           results.email = {
             success: emailResult.success,
             error: emailResult.error || ''
           };
-          
-          console.log('📧 Email employé (paiement):', results.email.success ? '✅ Envoyé' : `❌ ${results.email.error}`);
+          console.log('�� Email employé (paiement):', results.email.success ? '✅ Envoyé' : `❌ ${results.email.error}`);
         } catch (emailError) {
           results.email = {
             success: false,

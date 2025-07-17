@@ -7,7 +7,7 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 // Configuration Lengo Pay
 const LENGO_SITE_ID = 'ozazlahgzpntmYAG';
-const LENGO_CALLBACK_URL = 'https://votre-domaine.com/api/remboursements/lengo-callback';
+const LENGO_CALLBACK_URL = process.env.LENGO_CALLBACK_URL || 'https://admin.zalamasas.com/api/remboursements/lengo-callback';
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

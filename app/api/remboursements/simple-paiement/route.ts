@@ -14,9 +14,10 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Initialize CORS middleware
 const corsMiddleware = cors({
-  origin: 'http://localhost:3000', // Allow requests from this origin
+  origin: ['http://localhost:3000', 'https://admin.zalamasas.com'], // Allow both local and production
   methods: ['POST', 'OPTIONS'], // Allow POST and OPTIONS methods
   allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers
+  credentials: true, // Allow credentials
 });
 
 // Helper to run middleware in Next.js

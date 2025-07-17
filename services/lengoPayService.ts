@@ -251,7 +251,7 @@ export async function handleLengoPayCallback(callbackData: LengoPayCallback, sup
     numero_reception: account,
     message_callback: message,
     date_transaction: new Date().toISOString(),
-    date_modification: new Date().toISOString()
+    updated_at: new Date().toISOString()
   };
 
   console.log('💾 Données de mise à jour:', updateData);
@@ -280,7 +280,7 @@ export async function handleLengoPayCallback(callbackData: LengoPayCallback, sup
         statut: 'Validé',
         date_validation: new Date().toISOString(),
         numero_reception: pay_id,
-        date_modification: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', transactionData.demande_avance_id);
 

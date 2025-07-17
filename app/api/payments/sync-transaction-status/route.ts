@@ -24,49 +24,28 @@ function mapLengoStatusToTransactionStatus(lengoStatus: string): 'EFFECTUEE' | '
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    console.log('🔄 Début de la synchronisation du statut des transactions');
-    
-    // Vérification de sécurité basique
-    const origin = request.headers.get('origin');
-    
-    // Autoriser seulement les appels depuis l'application
-    if (origin && !origin.includes('vercel.app') && !origin.includes('localhost')) {
-      console.warn('⚠️ Tentative d\'accès non autorisée depuis:', origin);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Accès non autorisé' 
-      }, { status: 403 });
-    }
-    
-    const body = await request.json();
-    console.log('📋 Body reçu:', body);
-    
-    // body peut contenir: requestId (optionnel) - si non fourni, synchronise toutes les transactions
-    const { requestId } = body;
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`🔄 [${requestId}] SYNCHRONISATION DES STATUTS DE TRANSACTION`);
 
-    // Récupérer les transactions à synchroniser
-    let query = supabase
+  try {
+    // 1. Récupérer toutes les transactions avec un statut "EFFECTUEE" ou des IDs de paiement
+    console.log('📋 Récupération des transactions à synchroniser...');
+    
+    const { data: transactions, error: transactionsError } = await supabase
       .from('transactions')
       .select(`
         id,
         numero_transaction,
         statut,
+        montant,
         demande_avance_id,
         employe_id,
         entreprise_id,
-        montant,
         date_transaction,
-        date_creation,
-        description
-      `);
-
-    if (requestId) {
-      // Si un requestId est fourni, récupérer seulement les transactions liées à cette demande
-      query = query.eq('demande_avance_id', requestId);
-    }
-
-    const { data: transactions, error: transactionsError } = await query;
+        created_at
+      `)
+      .not('numero_transaction', 'is', null)
+      .order('created_at', { ascending: false });
 
     if (transactionsError) {
       console.error('❌ Erreur récupération transactions:', transactionsError);
@@ -76,82 +55,59 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    console.log(`📊 ${transactions.length} transactions trouvées pour synchronisation`);
-
-    if (transactions.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'Aucune transaction à synchroniser',
-        updated: 0,
-        total_transactions: 0
-      });
-    }
+    console.log(`📊 ${transactions.length} transactions trouvées avec numero_transaction`);
 
     let updatedCount = 0;
+    const updatedTransactions: string[] = [];
     const errors: string[] = [];
-    const updatedTransactions: any[] = [];
 
     for (const transaction of transactions) {
       try {
-        console.log(`🔄 Synchronisation pour la transaction ${transaction.numero_transaction}`);
+        console.log(`🔍 Vérification du statut pour transaction: ${transaction.numero_transaction}`);
         
-        // Vérifier le statut via LengoPay
+        // Vérifier le statut auprès de LengoPay
         const statusParams: LengoPayStatusParams = {
-          pay_id: transaction.numero_transaction,
-          websiteid: LENGO_SITE_ID || '',
+          site_id: LENGO_SITE_ID || '',
+          pay_id: transaction.numero_transaction
         };
-
-        console.log('🔍 Paramètres de vérification:', statusParams);
         
         const statusResult = await lengoPayStatus(statusParams);
-        console.log('✅ Réponse LengoPay:', statusResult);
-
+        console.log(`📊 Statut LengoPay pour ${transaction.numero_transaction}:`, statusResult);
+        
         if (!statusResult || !statusResult.status) {
-          console.warn(`⚠️ Pas de statut disponible pour ${transaction.numero_transaction}`);
-          errors.push(`Pas de statut disponible pour ${transaction.numero_transaction}`);
+          console.log(`⚠️ Statut non disponible pour ${transaction.numero_transaction}, passage au suivant`);
           continue;
         }
 
-        // Mapper le statut LengoPay vers notre statut
+        // Mapper le statut LengoPay vers notre enum
         const newStatus = mapLengoStatusToTransactionStatus(statusResult.status);
-        const currentStatus = transaction.statut;
-
-        console.log(`📊 Statuts: LengoPay=${statusResult.status}, Actuel=${currentStatus}, Nouveau=${newStatus}`);
-
+        console.log(`🔄 Mapping statut: ${statusResult.status} → ${newStatus}`);
+        
         // Mettre à jour seulement si le statut a changé
-        if (currentStatus !== newStatus) {
-          const updateData: any = {
-            statut: newStatus,
-            updated_at: new Date().toISOString()
-          };
-
-          // Si la transaction est maintenant EFFECTUEE, mettre à jour la date de transaction
-          if (newStatus === 'EFFECTUEE' && !transaction.date_transaction) {
-            updateData.date_transaction = statusResult.date ? new Date(statusResult.date).toISOString() : new Date().toISOString();
-          }
-
-          // Mettre à jour le message de callback si disponible
-          if (statusResult.message) {
-            updateData.message_callback = statusResult.message;
-          }
-
-          const { data: updatedTransaction, error: updateError } = await supabase
+        if (transaction.statut !== newStatus) {
+          console.log(`🔄 Mise à jour du statut: ${transaction.statut} → ${newStatus}`);
+          
+          const { error: updateError } = await supabase
             .from('transactions')
-            .update(updateData)
-            .eq('id', transaction.id)
-            .select()
-            .single();
+            .update({
+              statut: newStatus,
+              date_transaction: statusResult.status.toUpperCase() === 'SUCCESS' ? 
+                (statusResult.date ? new Date(statusResult.date).toISOString() : new Date().toISOString()) : 
+                transaction.date_transaction,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', transaction.id);
 
           if (updateError) {
             console.error(`❌ Erreur mise à jour transaction ${transaction.numero_transaction}:`, updateError);
-            errors.push(`Erreur mise à jour ${transaction.numero_transaction}: ${updateError.message}`);
+            errors.push(`Erreur mise à jour transaction ${transaction.numero_transaction}: ${updateError.message}`);
           } else {
-            console.log(`✅ Transaction ${transaction.numero_transaction} mise à jour: ${currentStatus} → ${newStatus}`);
+            console.log(`✅ Transaction ${transaction.numero_transaction} mise à jour avec succès`);
             updatedCount++;
-            updatedTransactions.push(updatedTransaction);
+            updatedTransactions.push(transaction.numero_transaction);
           }
         } else {
-          console.log(`ℹ️ Transaction ${transaction.numero_transaction} déjà à jour (${currentStatus})`);
+          console.log(`ℹ️ Transaction ${transaction.numero_transaction} déjà à jour (${transaction.statut})`);
         }
 
         // Si la transaction est maintenant EFFECTUEE et liée à une demande d'avance,
@@ -162,7 +118,7 @@ export async function POST(request: NextRequest) {
           const { error: demandUpdateError } = await supabase
             .from('salary_advance_requests')
             .update({ 
-              statut: 'APPROUVE', // Utiliser le statut correct de l'enum
+              statut: 'Validé', // Utiliser le statut correct de l'enum transaction_status
               date_validation: new Date().toISOString(),
               numero_reception: transaction.numero_transaction
             })
@@ -196,9 +152,9 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('💥 Erreur générale dans la synchronisation:', error);
-    return NextResponse.json({ 
-      success: false, 
+    console.error(`❌ [${requestId}] Erreur générale:`, error);
+    return NextResponse.json({
+      success: false,
       error: error instanceof Error ? error.message : 'Erreur inconnue'
     }, { status: 500 });
   }

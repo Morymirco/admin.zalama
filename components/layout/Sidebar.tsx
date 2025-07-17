@@ -1,6 +1,6 @@
 "use client";
-import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/services/authService';
 import { AlertCircle, BarChart2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CreditCard, Database, FileText, Home, LogOut, MessageSquare, PieChart, RotateCcw, Send, Settings, Target, User2, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -30,7 +30,7 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const { theme } = useTheme();
+  // const { theme } = useTheme(); // Non utilisé pour le moment
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -47,7 +47,7 @@ export default function Sidebar() {
 
   const loadUserProfile = async () => {
     try {
-      const { data, error } = await fetch('/api/user/profile', {
+      const { data } = await fetch('/api/user/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email })
@@ -63,12 +63,44 @@ export default function Sidebar() {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      console.log('🔄 Début de la déconnexion...');
+      
+      // Désactiver le bouton pendant la déconnexion
+      const button = document.querySelector('[data-signout-button]') as HTMLButtonElement;
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Déconnexion...';
+      }
+      
+      // Essayer d'abord avec le hook useAuth
+      try {
+        await signOut();
+        console.log('✅ Déconnexion réussie via useAuth');
+      } catch (hookError) {
+        console.warn('⚠️ Échec de déconnexion via useAuth, tentative directe avec Supabase:', hookError);
+        
+        // Fallback: déconnexion directe avec Supabase
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        console.log('✅ Déconnexion réussie via Supabase direct');
+      }
+      
       toast.success('Déconnexion réussie');
-      router.push('/login');
+      
+      // Attendre un peu avant la redirection pour que le toast s'affiche
+      setTimeout(() => {
+        router.push('/login');
+      }, 1000);
     } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
-      toast.error('Erreur lors de la déconnexion');
+      console.error('❌ Erreur lors de la déconnexion:', error);
+      toast.error(`Erreur lors de la déconnexion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      
+      // Réactiver le bouton en cas d'erreur
+      const button = document.querySelector('[data-signout-button]') as HTMLButtonElement;
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'Déconnexion';
+      }
     }
   };
 
@@ -194,7 +226,8 @@ export default function Sidebar() {
             <div className="border-t border-[var(--zalama-border)] my-1"></div>
             <button 
               onClick={handleSignOut}
-              className="flex items-center gap-3 px-4 py-2 w-full text-left text-[var(--zalama-danger)] hover:bg-[var(--zalama-bg-light)] transition-colors"
+              data-signout-button
+              className="flex items-center gap-3 px-4 py-2 w-full text-left text-[var(--zalama-danger)] hover:bg-[var(--zalama-bg-light)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogOut className="w-4 h-4" />
               <span>Déconnexion</span>

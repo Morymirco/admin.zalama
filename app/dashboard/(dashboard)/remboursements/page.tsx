@@ -139,9 +139,9 @@ export default function RemboursementsPage() {
 
   const formatMontant = (montant: number) => {
     if (isNaN(montant) || montant === null || montant === undefined) {
-      return '0 FCFA';
+      return '0 GNF';
     }
-    return new Intl.NumberFormat('fr-FR').format(montant) + ' FCFA';
+    return new Intl.NumberFormat('fr-FR').format(montant) + ' GNF';
   };
 
   const formatDate = (date: Date | string | null) => {

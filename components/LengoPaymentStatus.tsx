@@ -17,7 +17,7 @@ export default function LengoPaymentStatus({ remboursement, onRefresh }: LengoPa
   const [refreshing, setRefreshing] = useState(false);
 
   const formatMontant = (montant: number) => {
-    return new Intl.NumberFormat('fr-FR').format(montant) + ' FCFA';
+    return new Intl.NumberFormat('fr-FR').format(montant) + ' GNF';
   };
 
   const getStatusInfo = () => {

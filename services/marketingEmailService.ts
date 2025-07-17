@@ -48,24 +48,7 @@ export class MarketingEmailService {
       content: `
         <tr>
           <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: ${style.color}; margin: 0; font-size: 24px; font-weight: 600;">
-                ${style.title}
-              </h1>
-            </div>
-            
-            <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
-              <div style="color: #374151; line-height: 1.6; font-size: 16px;">
-                ${message.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; padding-top: 30px; border-top: 1px solid #e5e7eb;">
-              <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                Ce message a été envoyé par le système de marketing ZaLaMa.<br>
-                Pour toute question, contactez notre équipe support.
-              </p>
-            </div>
+            ${message.replace(/\n/g, '</td></tr><tr><td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">')}
           </td>
         </tr>
       `

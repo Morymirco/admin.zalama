@@ -294,7 +294,7 @@ const ModaleEditionPartenaire: React.FC<ModaleEditionPartenaireProps> = ({
                 </div>
                 
                 <div>
-                  <label htmlFor="salaire_net_total" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Salaire net total (FCFA)</label>
+                  <label htmlFor="salaire_net_total" className="block text-sm font-medium text-[var(--zalama-text)] mb-1">Salaire net total (GNF)</label>
                   <input
                     type="number"
                     id="salaire_net_total"

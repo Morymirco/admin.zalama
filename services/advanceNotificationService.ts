@@ -91,7 +91,7 @@ class AdvanceNotificationService {
       if (request.employe.telephone) {
         try {
           const dateDemande = new Date().toLocaleDateString('fr-FR');
-          const smsMessage = `ZaLaMa\nBonjour ${request.employe.prenom},\nZaLaMa a bien reçu votre demande d'avance sur salaire de ${this.formatCurrency(request.montant_demande)} GNF pour ${request.motif}, effectuée le ${dateDemande}.\nElle est en cours de traitement. Vous recevrez une notification dès sa validation.\nMerci pour votre confiance.`;
+          const smsMessage = `ZaLaMa - Confirmation de réception de votre demande d'avance sur salaire de ${this.formatCurrency(request.montant_demande)} effectuée le ${dateDemande}. Votre demande est en cours de traitement. Vous serez informé de la décision par SMS et email. Merci.`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [request.employe.telephone],
@@ -117,7 +117,7 @@ class AdvanceNotificationService {
       // Envoyer SMS interne à ZaLaMa
       try {
         const dateDemande = new Date().toLocaleDateString('fr-FR');
-        const smsInterne = `ZaLaMa\nNouvelle demande d'avance sur salaire de ${this.formatCurrency(request.montant_demande)} GNF, soumise par ${request.employe.nom} ${request.employe.prenom}, ${request.partenaire.nom}, pour ${request.motif} ce ${dateDemande}.\nEn attente de traitement.`;
+        const smsInterne = `ZaLaMa - Nouvelle demande d'avance: ${this.formatCurrency(request.montant_demande)} de ${request.employe.nom} ${request.employe.prenom} (${request.partenaire.nom}) pour ${request.motif} le ${dateDemande}. Traitement requis.`;
         
         // Envoyer aux administrateurs (RH et responsables)
         const adminContacts = await this.getAdminContacts();
@@ -145,13 +145,22 @@ class AdvanceNotificationService {
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous vous confirmons la réception de votre demande d'avance sur salaire effectuée via la plateforme ZaLaMa.<br><br>
-                <strong>Montant demandé :</strong> ${this.formatCurrency(request.montant_demande)}<br>
-                <strong>Motif :</strong> ${request.motif}<br>
-                <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
-                <strong>Date de soumission :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                Votre demande est actuellement en cours de traitement par notre équipe. Vous recevrez une notification par email et SMS dès qu'une décision aura été prise.<br><br>
-                Nous vous remercions pour votre confiance et restons à votre disposition pour toute question.
+                Nous vous remercions pour votre confiance en ZaLaMa.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Nous accusons bonne réception de votre demande d'avance sur salaire de <span style="font-weight: bold; color: #1e40af;">${this.formatCurrency(request.montant_demande)}</span> effectuée ce jour.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Notre équipe procède actuellement à l'analyse de votre dossier et vous informera de la décision dans les plus brefs délais.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Vous recevrez une notification par email et SMS dès que votre demande aura été traitée.
               </td>
             </tr>
           `;
@@ -222,7 +231,7 @@ class AdvanceNotificationService {
       // Envoyer SMS à l'employé
       if (request.employe.telephone) {
         try {
-          const smsMessage = `ZaLaMa\nFélicitations ! Votre demande d'avance de ${this.formatCurrency(request.montant_demande)} a été approuvée.\nVous recevrez le paiement conformément aux modalités prévues, via Lengo Pay.\nMerci pour votre confiance.`;
+          const smsMessage = `ZaLaMa - Votre demande d'avance de ${this.formatCurrency(request.montant_demande)} a été approuvée. Le paiement sera effectué via Lengo Pay conformément aux modalités convenues. Merci pour votre confiance.`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [request.employe.telephone],
@@ -252,12 +261,21 @@ class AdvanceNotificationService {
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous avons le plaisir de vous informer que votre demande d'avance sur salaire a été <span style='color: #10b981; font-weight: bold;'>approuvée</span>.<br><br>
-                <strong>Montant approuvé :</strong> ${this.formatCurrency(request.montant_demande)}<br>
-                <strong>Motif :</strong> ${request.motif}<br>
-                <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
-                <strong>Date d'approbation :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                Le paiement sera effectué dans les meilleurs délais via notre plateforme partenaire Lengo Pay. Vous recevrez une notification de confirmation dès que le virement aura été traité.<br><br>
+                Nous avons le plaisir de vous informer que votre demande d'avance sur salaire a été <span style="font-weight: bold; color: #059669;">approuvée</span>.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Le montant de <span style="font-weight: bold; color: #1e40af;">${this.formatCurrency(request.montant_demande)}</span> sera versé dans les meilleurs délais via notre plateforme partenaire Lengo Pay.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Vous recevrez une notification de confirmation dès que le virement aura été traité.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
                 Nous vous remercions pour votre confiance en ZaLaMa.
               </td>
             </tr>
@@ -337,7 +355,7 @@ class AdvanceNotificationService {
       // Envoyer SMS à l'employé
       if (request.employe.telephone) {
         try {
-          const smsMessage = `ZaLaMa\nVotre demande d'avance sur salaire de ${this.formatCurrency(request.montant_demande)} pour ${request.motif} a été rejetée.\nRaison : ${motif_rejet}.\nVeuillez contacter l'assistance pour plus d'informations.`;
+          const smsMessage = `ZaLaMa - Votre demande d'avance de ${this.formatCurrency(request.montant_demande)} a été rejetée. Motif: ${motif_rejet}. Pour plus d'informations, veuillez contacter votre responsable RH ou notre service client.`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [request.employe.telephone],
@@ -367,13 +385,21 @@ class AdvanceNotificationService {
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous regrettons de vous informer que votre demande d'avance sur salaire a été <span style='color: #ef4444; font-weight: bold;'>rejetée</span>.<br><br>
-                <strong>Montant demandé :</strong> ${this.formatCurrency(request.montant_demande)}<br>
-                <strong>Motif de la demande :</strong> ${request.motif}<br>
-                <strong>Motif du rejet :</strong> ${motif_rejet}<br>
-                <strong>Entreprise :</strong> ${request.partenaire.nom}<br>
-                <strong>Date du rejet :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                Si vous souhaitez obtenir plus d'informations concernant cette décision, nous vous invitons à contacter votre responsable RH ou notre service client.<br><br>
+                Nous regrettons de vous informer que votre demande d'avance sur salaire a été <span style="font-weight: bold; color: #ef4444;">rejetée</span>.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Motif du rejet : <span style="font-weight: bold; color: #1e40af;">${motif_rejet}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Pour plus d'informations concernant cette décision, nous vous invitons à contacter votre responsable RH.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
                 Nous restons à votre disposition pour toute nouvelle demande ou question.
               </td>
             </tr>
@@ -457,7 +483,7 @@ class AdvanceNotificationService {
       // Envoyer SMS à l'employé
       if (payment.employe.telephone) {
         try {
-          const smsMessage = `Paiement confirmé ! Votre avance de ${this.formatCurrency(payment.montant)} a été traitée avec succès. ID: ${payment.numero_transaction.slice(0, 8)}... Méthode: ${payment.methode_paiement}. ZaLaMa`;
+          const smsMessage = `ZaLaMa - Paiement confirmé. Votre avance de ${this.formatCurrency(payment.montant)} a été traitée avec succès. Réf: ${payment.numero_transaction.slice(0, 8)}... Méthode: ${payment.methode_paiement}.`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [payment.employe.telephone],
@@ -487,13 +513,21 @@ class AdvanceNotificationService {
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous confirmons que le paiement de votre avance sur salaire a été effectué avec succès.<br><br>
-                <strong>Montant versé :</strong> ${this.formatCurrency(payment.montant)}<br>
-                <strong>Méthode de paiement :</strong> ${payment.methode_paiement}<br>
-                <strong>Numéro de transaction :</strong> ${payment.numero_transaction}<br>
-                <strong>Statut :</strong> ${payment.statut}<br>
-                <strong>Date de traitement :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                Les fonds devraient être disponibles sur votre compte dans les prochaines minutes selon votre opérateur mobile.<br><br>
+                Nous vous confirmons que le paiement de votre avance sur salaire a été effectué avec <span style="font-weight: bold; color: #059669;">succès</span>.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Montant versé : <span style="font-weight: bold; color: #1e40af;">${this.formatCurrency(payment.montant)}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Les fonds seront disponibles sur votre compte dans les prochaines minutes selon votre opérateur mobile.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
                 Nous vous remercions pour votre confiance en ZaLaMa.
               </td>
             </tr>
@@ -577,7 +611,7 @@ class AdvanceNotificationService {
       // Envoyer SMS à l'employé
       if (payment.employe.telephone) {
         try {
-          const smsMessage = `Paiement échoué ! Votre avance de ${this.formatCurrency(payment.montant)} n'a pas pu être traitée. Veuillez réessayer ou contacter le support. ZaLaMa`;
+          const smsMessage = `ZaLaMa - Échec de paiement. Votre avance de ${this.formatCurrency(payment.montant)} n'a pas pu être traitée. Veuillez réessayer ultérieurement ou contacter notre service client pour assistance.`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [payment.employe.telephone],
@@ -607,14 +641,21 @@ class AdvanceNotificationService {
           const content = `
             <tr>
               <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                Nous regrettons de vous informer que le traitement de votre avance sur salaire a rencontré un problème technique.<br><br>
-                <strong>Montant concerné :</strong> ${this.formatCurrency(payment.montant)}<br>
-                <strong>Méthode de paiement :</strong> ${payment.methode_paiement}<br>
-                <strong>Numéro de transaction :</strong> ${payment.numero_transaction}<br>
-                <strong>Statut :</strong> ${payment.statut}<br>
-                <strong>Raison de l'échec :</strong> ${errorMessage}<br>
-                <strong>Date :</strong> ${new Date().toLocaleDateString('fr-FR')}<br><br>
-                Nous vous invitons à réessayer le paiement dans quelques minutes. Si le problème persiste, veuillez contacter notre service client qui vous assistera dans les plus brefs délais.<br><br>
+                Nous regrettons de vous informer que le traitement de votre avance sur salaire a rencontré un <span style="font-weight: bold; color: #ef4444;">problème technique</span>.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Montant concerné : <span style="font-weight: bold; color: #1e40af;">${this.formatCurrency(payment.montant)}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                Nous vous invitons à réessayer le paiement dans quelques minutes ou à contacter notre service client pour assistance.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
                 Nous nous excusons pour ce désagrément et vous remercions de votre patience.
               </td>
             </tr>

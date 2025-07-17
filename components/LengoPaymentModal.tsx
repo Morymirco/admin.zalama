@@ -37,7 +37,7 @@ export default function LengoPaymentModal({
   const [returnUrl, setReturnUrl] = useState('');
 
   const formatMontant = (montant: number) => {
-    return new Intl.NumberFormat('fr-FR').format(montant) + ' FCFA';
+    return new Intl.NumberFormat('fr-FR').format(montant) + ' GNF';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

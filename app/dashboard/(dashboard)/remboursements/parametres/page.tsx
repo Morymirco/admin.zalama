@@ -195,7 +195,7 @@ export default function ParametresRemboursementsPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="min">Montant minimum (FCFA)</Label>
+                <Label htmlFor="min">Montant minimum (GNF)</Label>
                 <Input
                   id="min"
                   type="number"
@@ -205,7 +205,7 @@ export default function ParametresRemboursementsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="max">Montant maximum (FCFA)</Label>
+                <Label htmlFor="max">Montant maximum (GNF)</Label>
                 <Input
                   id="max"
                   type="number"
@@ -400,11 +400,11 @@ export default function ParametresRemboursementsPage() {
             </div>
             <div className="p-4 border rounded-lg">
               <h4 className="font-medium mb-2">Montant minimum</h4>
-              <p className="text-2xl font-bold">{parametres.montant_minimum_remboursement.toLocaleString()} FCFA</p>
+              <p className="text-2xl font-bold">{parametres.montant_minimum_remboursement.toLocaleString()} GNF</p>
             </div>
             <div className="p-4 border rounded-lg">
               <h4 className="font-medium mb-2">Montant maximum</h4>
-              <p className="text-2xl font-bold">{parametres.montant_maximum_remboursement.toLocaleString()} FCFA</p>
+              <p className="text-2xl font-bold">{parametres.montant_maximum_remboursement.toLocaleString()} GNF</p>
             </div>
             <div className="p-4 border rounded-lg">
               <h4 className="font-medium mb-2">Notifications</h4>

@@ -373,8 +373,8 @@ export async function POST(request: NextRequest) {
     if (results.rh.success && results.rh.account) {
       try {
         // SMS au RH
-        const rhSMSMessage = `Compte RH créé pour ${partenaireData.nom}. Email: ${partenaireData.email_rh}, Mot de passe: ${results.rh.account.password}`;
-        const rhSMSResult = await directSmsService.sendSMS([partenaireData.telephone_rh], rhSMSMessage);
+        const rhSMSMessage = `ZaLaMa - Votre compte RH a été créé avec succès pour ${partenaireData.nom}. Email: ${partenaireData.email_rh}, Mot de passe: ${results.rh.account.password}. Connexion: admin.zalama.com`;
+        const rhSMSResult = await directSmsService.sendSMS(partenaireData.telephone_rh, rhSMSMessage);
         smsResults.rh = {
           success: rhSMSResult.success,
           message: rhSMSResult.success ? 'SMS RH envoyé' : '',
@@ -465,8 +465,9 @@ export async function POST(request: NextRequest) {
     if (results.responsable.success && results.responsable.account) {
       try {
         // SMS au responsable
-        const responsableSMSMessage = `Compte responsable créé pour ${partenaireData.nom}. Email: ${partenaireData.email_representant}, Mot de passe: ${results.responsable.account.password}`;
-        const responsableSMSResult = await directSmsService.sendSMS([partenaireData.telephone_representant], responsableSMSMessage);
+        const responsableSMSMessage = `ZaLaMa - Votre compte responsable partenaire a été créé avec succès pour ${partenaireData.nom}. Email: ${partenaireData.email_representant}, Mot de passe: ${results.responsable.account.password}. Connexion: admin.zalama.com`;
+        
+        const responsableSMSResult = await directSmsService.sendSMS(partenaireData.telephone_representant, responsableSMSMessage);
         smsResults.responsable = {
           success: responsableSMSResult.success,
           message: responsableSMSResult.success ? 'SMS responsable envoyé' : '',

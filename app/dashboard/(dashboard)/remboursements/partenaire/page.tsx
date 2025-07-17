@@ -84,7 +84,7 @@ export default function RemboursementsPartenairePage() {
   };
 
   const formatMontant = (montant: number) => {
-    return new Intl.NumberFormat('fr-FR').format(montant) + ' FCFA';
+    return new Intl.NumberFormat('fr-FR').format(montant) + ' GNF';
   };
 
   const formatDate = (date: string) => {

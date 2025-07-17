@@ -278,13 +278,14 @@ export async function POST(request: NextRequest) {
       try {
         // SMS à l'employé (seulement si téléphone fourni)
         if (employeeData.telephone) {
-        const employeSMSMessage = `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${results.account.password}\nConnectez-vous sur https://admin.zalama.com`;
-        const employeSMSResult = await directSmsService.sendSMS([employeeData.telephone], employeSMSMessage);
-        smsResults.employe = {
-          success: employeSMSResult.success,
-          message: employeSMSResult.success ? 'SMS employé envoyé' : '',
-          error: employeSMSResult.error || employeSMSResult.message || ''
-        };
+          const employeSMSMessage = `ZaLaMa - Votre compte employé a été créé avec succès. Email de connexion: ${employeeData.email}, Mot de passe: ${results.account.password}. Connexion: admin.zalama.com. Bienvenue !`;
+          
+          const employeSMSResult = await directSmsService.sendSMS([employeeData.telephone], employeSMSMessage);
+          smsResults.employe = {
+            success: employeSMSResult.success,
+            message: employeSMSResult.success ? 'SMS employé envoyé' : '',
+            error: employeSMSResult.error || employeSMSResult.message || ''
+          };
           console.log('📱 SMS employé:', smsResults.employe.success ? '✅ Envoyé' : `❌ ${smsResults.employe.error}`);
         } else {
           smsResults.employe = {
@@ -305,66 +306,32 @@ export async function POST(request: NextRequest) {
             content: `
               <tr>
                 <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
-                  <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="color: #059669; margin: 0; font-size: 28px; font-weight: 700;">
-                      Bienvenue sur ZaLaMa
-                    </h1>
-                    <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 16px;">
-                      Votre compte employé a été créé avec succès
-                    </p>
-                  </div>
-                  
-                  <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 25px; border-radius: 16px; margin-bottom: 30px; border: 2px solid #0ea5e9;">
-                    <h3 style="color: #1e40af; margin: 0 0 20px 0; font-size: 20px; font-weight: 600; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
-                      Vos identifiants de connexion
-                    </h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                      <tr>
-                        <td style="padding: 8px 0; color: #374151; font-weight: 600; width: 30%;">Email :</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${employeeData.email}</td>
-                      </tr>
-                      <tr style="background-color: rgba(59, 130, 246, 0.05);">
-                        <td style="padding: 8px 0; color: #374151; font-weight: 600;">Mot de passe :</td>
-                        <td style="padding: 8px 0;">
-                          <code style="background-color: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-family: 'Courier New', monospace; color: #dc2626; font-weight: bold;">${results.account.password}</code>
-                        </td>
-                      </tr>
-                    </table>
-                  </div>
-                  
-                  <div style="background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 20%); padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 6px solid #f59e0b;">
-                    <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
-                      Important - Sécurité
-                    </h3>
-                    <p style="color: #78350f; margin: 0; line-height: 1.6;">
-                      Pour votre sécurité, nous vous recommandons vivement de modifier votre mot de passe lors de votre première connexion.
-                    </p>
-                  </div>
-                  
-                  <div style="text-align: center; margin-bottom: 30px;">
-                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" 
-                       style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);">
-                      Accéder à ZaLaMa
-                    </a>
-                  </div>
-                  
-                  <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
-                    <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
-                      Fonctionnalités disponibles
-                    </h3>
-                    <ul style="margin: 0; padding-left: 20px; color: #475569;">
-                      <li style="margin-bottom: 8px;">Demandes d'avance sur salaire en temps réel</li>
-                      <li style="margin-bottom: 8px;">Suivi de vos demandes et historique</li>
-                      <li style="margin-bottom: 8px;">Notifications instantanées par email et SMS</li>
-                      <li style="margin-bottom: 8px;">Interface simple et intuitive</li>
-                    </ul>
-                  </div>
-                  
-                  <div style="text-align: center; margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; border: 1px solid #cbd5e1;">
-                    <p style="color: #475569; margin: 0; font-size: 14px; line-height: 1.6;">
-                      Besoin d'aide ? Contactez notre support technique : support@zalamagn.com
-                    </p>
-                  </div>
+                  Nous vous remercions pour votre confiance en ZaLaMa.
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                  Votre compte employé a été créé avec succès sur notre plateforme.
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                  Email de connexion : <span style="font-weight: bold; color: #1e40af;">${employeeData.email}</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                  Mot de passe temporaire : <span style="font-weight: bold; color: #1e40af;">${results.account.password}</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                  Pour votre sécurité, nous vous recommandons de modifier votre mot de passe lors de votre première connexion.
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                  Vous pouvez maintenant accéder à toutes les fonctionnalités ZaLaMa depuis votre espace personnel.
                 </td>
               </tr>
             `

@@ -55,6 +55,97 @@ interface PaymentInfo {
 
 class AdvanceNotificationService {
   /**
+   * Envoyer les notifications lors de la réception d'une demande d'avance
+   */
+  async sendRequestReceivedNotification(requestId: string): Promise<NotificationResult> {
+    try {
+      console.log('🔄 Envoi des notifications de réception pour la demande:', requestId);
+
+      // Récupérer les détails de la demande
+      const request = await this.getRequestDetails(requestId);
+      if (!request) {
+        return {
+          success: false,
+          error: 'Demande d\'avance non trouvée'
+        };
+      }
+
+      const results = {
+        sms: { success: false, error: '' },
+        email: { success: false, error: '' }
+      };
+
+      // Envoyer SMS à l'employé
+      if (request.employe.telephone) {
+        try {
+          const dateDemande = new Date().toLocaleDateString('fr-FR');
+          const smsMessage = `ZaLaMa\nBonjour ${request.employe.prenom},\nZaLaMa a bien reçu votre demande d'avance sur salaire de ${this.formatCurrency(request.montant_demande)} GNF pour ${request.motif}, effectuée le ${dateDemande}.\nElle est en cours de traitement. Vous recevrez une notification dès sa validation.\nMerci pour votre confiance.`;
+          
+          const smsResult = await serverSmsService.sendSMS({
+            to: [request.employe.telephone],
+            message: smsMessage,
+            sender_name: 'ZaLaMa'
+          });
+          
+          results.sms = {
+            success: smsResult.success,
+            error: smsResult.error || smsResult.message || ''
+          };
+          
+          console.log('📱 SMS employé (réception):', results.sms.success ? '✅ Envoyé' : `❌ ${results.sms.error}`);
+        } catch (smsError) {
+          results.sms = {
+            success: false,
+            error: `Erreur SMS: ${smsError instanceof Error ? smsError.message : String(smsError)}`
+          };
+          console.error('❌ Erreur SMS employé (réception):', smsError);
+        }
+      }
+
+      // Envoyer SMS interne à ZaLaMa
+      try {
+        const dateDemande = new Date().toLocaleDateString('fr-FR');
+        const smsInterne = `ZaLaMa\nNouvelle demande d'avance sur salaire de ${this.formatCurrency(request.montant_demande)} GNF, soumise par ${request.employe.nom} ${request.employe.prenom}, ${request.partenaire.nom}, pour ${request.motif} ce ${dateDemande}.\nEn attente de traitement.`;
+        
+        // Envoyer aux administrateurs (RH et responsables)
+        const adminContacts = await this.getAdminContacts();
+        if (adminContacts.length > 0) {
+          const phoneNumbers = adminContacts.map(contact => contact.telephone).filter((phone): phone is string => !!phone);
+          
+          if (phoneNumbers.length > 0) {
+            const smsResult = await serverSmsService.sendSMS({
+              to: phoneNumbers,
+              message: smsInterne,
+              sender_name: 'ZaLaMa'
+            });
+            
+            console.log('📱 SMS interne ZaLaMa:', smsResult.success ? '✅ Envoyé' : `❌ ${smsResult.error}`);
+          }
+        }
+      } catch (smsError) {
+        console.error('❌ Erreur SMS interne ZaLaMa:', smsError);
+      }
+
+      const overallSuccess = results.sms.success || results.email.success;
+      
+      return {
+        success: overallSuccess,
+        sms_sent: results.sms.success,
+        email_sent: results.email.success,
+        details: results,
+        error: overallSuccess ? undefined : 'Aucune notification envoyée avec succès'
+      };
+
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'envoi des notifications de réception:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
+  }
+
+  /**
    * Envoyer les notifications lors de l'approbation d'une demande d'avance
    */
   async sendApprovalNotification(requestId: string): Promise<NotificationResult> {
@@ -78,7 +169,7 @@ class AdvanceNotificationService {
       // Envoyer SMS à l'employé
       if (request.employe.telephone) {
         try {
-          const smsMessage = `✅ Votre demande d'avance de ${this.formatCurrency(request.montant_demande)} a été approuvée! Vous recevrez le paiement dans les prochaines heures. ZaLaMa`;
+          const smsMessage = `ZaLaMa\nFélicitations ! Votre demande d'avance de ${this.formatCurrency(request.montant_demande)} a été approuvée.\nVous recevrez le paiement conformément aux modalités prévues, via Lengo Pay.\nMerci pour votre confiance.`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [request.employe.telephone],
@@ -197,7 +288,7 @@ class AdvanceNotificationService {
       // Envoyer SMS à l'employé
       if (request.employe.telephone) {
         try {
-          const smsMessage = `❌ Votre demande d'avance de ${this.formatCurrency(request.montant_demande)} a été rejetée. Motif: ${motif_rejet}. Contactez votre RH pour plus d'informations. ZaLaMa`;
+          const smsMessage = `ZaLaMa\nVotre demande d'avance sur salaire de ${this.formatCurrency(request.montant_demande)} pour ${request.motif} a été rejetée.\nRaison : ${motif_rejet}.\nVeuillez contacter l'assistance pour plus d'informations.`;
           
           const smsResult = await serverSmsService.sendSMS({
             to: [request.employe.telephone],
@@ -604,6 +695,26 @@ class AdvanceNotificationService {
     } catch (error) {
       console.error('❌ Erreur lors de la récupération des détails du paiement:', error);
       return null;
+    }
+  }
+
+  private async getAdminContacts(): Promise<{ email?: string; telephone?: string; role: string }[]> {
+    try {
+      const { data: adminUsers, error } = await supabase
+        .from('admin_users')
+        .select('email, telephone, role')
+        .in('role', ['rh', 'responsable', 'manager', 'admin'])
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Erreur lors de la récupération des administrateurs:', error);
+        return [];
+      }
+
+      return adminUsers || [];
+    } catch (error) {
+      console.error('❌ Erreur lors de la récupération des contacts admin:', error);
+      return [];
     }
   }
 

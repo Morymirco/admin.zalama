@@ -34,6 +34,16 @@ export async function POST(request: NextRequest) {
 
     // Traiter selon le type de notification
     switch (type) {
+      case 'request_received':
+        if (!requestId) {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'requestId requis pour la réception' 
+          }, { status: 400 });
+        }
+        result = await advanceNotificationService.sendRequestReceivedNotification(requestId);
+        break;
+
       case 'approval':
         if (!requestId) {
           return NextResponse.json({ 

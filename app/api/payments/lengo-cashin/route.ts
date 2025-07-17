@@ -1,4 +1,4 @@
-import { lengoPayCashin, LengoPayCashinParams } from '@/services/lengoPayService';
+  import { lengoPayCashin, LengoPayCashinParams } from '@/services/lengoPayService';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -11,7 +11,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Configuration directe avec les valeurs fournies
 const LENGO_SITE_ID = process.env.LENGO_SITE_ID || 'ozazlahgzpntmYAG';
-const LENGO_CALLBACK_URL = `${process.env.NEXT_PUBLIC_BASE_URL || http://localhost:300api/payments/lengo-callback`;
+const LENGO_CALLBACK_URL = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/payments/lengo-callback`;
 
 // Fonction pour normaliser le numéro de téléphone selon la doc LengoPay
 function normalizePhone(phone: string): string {

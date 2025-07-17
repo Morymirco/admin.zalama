@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getZalamaEmailTemplate } from '@/lib/email-template';
 import { generatePassword } from '@/lib/utils';
+import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'nimbasms';
 import { Resend } from 'resend';
 
@@ -380,15 +381,125 @@ export async function POST(request: NextRequest) {
           error: rhSMSResult.error || rhSMSResult.message || ''
         };
 
-        // Email au RH
-        const rhEmailSubject = `Compte RH créé - ${partenaireData.nom}`;
-        const rhEmailBody = `
-          <h2>Votre compte RH a été créé</h2>
-          <p><strong>Partenaire:</strong> ${partenaireData.nom}</p>
-          <p><strong>Email:</strong> ${partenaireData.email_rh}</p>
-          <p><strong>Mot de passe:</strong> ${results.rh.account.password}</p>
-          <p>Vous pouvez maintenant vous connecter à l'interface d'administration.</p>
-        `;
+        // Email au RH avec le design ZaLaMa moderne
+        const rhEmailSubject = `🏢 Bienvenue dans l'équipe ZaLaMa - Compte RH créé`;
+        
+        // Utiliser le template ZaLaMa moderne
+        const rhEmailBody = getZalamaEmailTemplate({
+          title: `Votre compte RH est prêt !`,
+          username: partenaireData.nom_rh,
+          content: `
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <div style="font-size: 64px; margin-bottom: 15px;">🏢</div>
+                  <h1 style="color: #1e40af; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">
+                    Votre compte RH a été créé !
+                  </h1>
+                  <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 16px; font-style: italic;">
+                    Gérez votre équipe avec ZaLaMa
+                  </p>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 25px; border-radius: 16px; margin-bottom: 30px; border: 2px solid #10b981;">
+                  <h3 style="color: #065f46; margin: 0 0 20px 0; font-size: 20px; font-weight: 600; border-bottom: 2px solid #059669; padding-bottom: 10px;">
+                    🏢 Informations de votre entreprise
+                  </h3>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600; width: 35%;">🏪 Entreprise :</td>
+                      <td style="padding: 10px 0; color: #1f2937; font-weight: 500;">${partenaireData.nom}</td>
+                    </tr>
+                    <tr style="background-color: rgba(16, 185, 129, 0.05);">
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600;">👤 Nom RH :</td>
+                      <td style="padding: 10px 0; color: #1f2937; font-weight: 500;">${partenaireData.nom_rh}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600;">👔 Rôle :</td>
+                      <td style="padding: 10px 0; color: #1f2937; font-weight: 500;">Responsable RH</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 25px; border-radius: 16px; margin-bottom: 30px; border: 2px solid #0ea5e9;">
+                  <h3 style="color: #1e40af; margin: 0 0 20px 0; font-size: 20px; font-weight: 600; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+                    🔐 Vos identifiants de connexion
+                  </h3>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600; width: 35%;">📧 Email :</td>
+                      <td style="padding: 10px 0; color: #1f2937; font-weight: 500;">${partenaireData.email_rh}</td>
+                    </tr>
+                    <tr style="background-color: rgba(59, 130, 246, 0.05);">
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600;">🔑 Mot de passe :</td>
+                      <td style="padding: 10px 0;">
+                        <code style="background-color: #e2e8f0; padding: 8px 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 14px; color: #1f2937; border: 1px solid #cbd5e1; letter-spacing: 1px;">
+                          ${results.rh.account.password}
+                        </code>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 20%); padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 6px solid #f59e0b;">
+                  <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+                    🔐 Sécurité importante
+                  </h3>
+                  <p style="color: #78350f; margin: 0; line-height: 1.6; font-weight: 500;">
+                    Pour votre sécurité, nous vous recommandons fortement de <strong>changer votre mot de passe</strong> lors de votre première connexion.
+                  </p>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 25px; padding: 25px; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 12px;">
+                  <h3 style="color: white; margin: 0 0 15px 0; font-size: 20px; font-weight: 600;">
+                    🌐 Accès à la plateforme
+                  </h3>
+                  <p style="color: #bfdbfe; margin: 0 0 20px 0; font-size: 16px;">
+                    Connectez-vous dès maintenant à l'interface d'administration ZaLaMa
+                  </p>
+                  <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <a href="https://admin.zalama.com" style="color: #ffffff; text-decoration: none; font-size: 18px; font-weight: 600; display: inline-block; padding: 12px 25px; background: rgba(255, 255, 255, 0.2); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.3);">
+                      ➜ Se connecter maintenant
+                    </a>
+                  </div>
+                </div>
+                
+                <div style="background: #ecfdf5; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #d1fae5;">
+                  <h3 style="color: #065f46; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+                    🚀 Fonctionnalités RH disponibles
+                  </h3>
+                  <ul style="margin: 0; padding-left: 20px; color: #064e3b;">
+                    <li style="margin-bottom: 8px; font-weight: 500;">👥 Gestion des employés</li>
+                    <li style="margin-bottom: 8px; font-weight: 500;">💰 Validation des demandes d'avance</li>
+                    <li style="margin-bottom: 8px; font-weight: 500;">📊 Rapports et statistiques RH</li>
+                    <li style="margin-bottom: 8px; font-weight: 500;">📧 Notifications et communications</li>
+                    <li style="margin-bottom: 8px; font-weight: 500;">⚙️ Paramètres de l'entreprise</li>
+                  </ul>
+                </div>
+                
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
+                  <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+                    💬 Support technique
+                  </h3>
+                  <p style="color: #475569; margin: 0 0 15px 0; line-height: 1.6;">
+                    Notre équipe est à votre disposition pour vous accompagner :
+                  </p>
+                  <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db;">
+                      <div style="color: #059669; font-weight: 600; margin-bottom: 5px;">📧 Email</div>
+                      <div style="color: #374151;">support@zalamagn.com</div>
+                    </div>
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db;">
+                      <div style="color: #059669; font-weight: 600; margin-bottom: 5px;">📱 Téléphone</div>
+                      <div style="color: #374151;">+224 XXX XXX XXX</div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          `
+        });
+        
         const rhEmailResult = await directEmailService.sendEmail(partenaireData.email_rh, rhEmailSubject, rhEmailBody);
         emailResults.rh = {
           success: rhEmailResult.success,
@@ -414,15 +525,125 @@ export async function POST(request: NextRequest) {
           error: responsableSMSResult.error || responsableSMSResult.message || ''
         };
 
-        // Email au responsable
-        const responsableEmailSubject = `Compte responsable créé - ${partenaireData.nom}`;
-        const responsableEmailBody = `
-          <h2>Votre compte responsable a été créé</h2>
-          <p><strong>Partenaire:</strong> ${partenaireData.nom}</p>
-          <p><strong>Email:</strong> ${partenaireData.email_representant}</p>
-          <p><strong>Mot de passe:</strong> ${results.responsable.account.password}</p>
-          <p>Vous pouvez maintenant vous connecter à l'interface d'administration.</p>
-        `;
+        // Email au responsable avec le design ZaLaMa moderne
+        const responsableEmailSubject = `🤝 Bienvenue dans l'écosystème ZaLaMa - Compte responsable créé`;
+        
+        // Utiliser le template ZaLaMa moderne
+        const responsableEmailBody = getZalamaEmailTemplate({
+          title: `Votre compte responsable est activé !`,
+          username: partenaireData.nom_representant,
+          content: `
+            <tr>
+              <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <div style="font-size: 64px; margin-bottom: 15px;">🤝</div>
+                  <h1 style="color: #1e40af; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">
+                    Votre compte responsable a été créé !
+                  </h1>
+                  <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 16px; font-style: italic;">
+                    Pilotez votre partenariat avec ZaLaMa
+                  </p>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 25px; border-radius: 16px; margin-bottom: 30px; border: 2px solid #f59e0b;">
+                  <h3 style="color: #92400e; margin: 0 0 20px 0; font-size: 20px; font-weight: 600; border-bottom: 2px solid #f59e0b; padding-bottom: 10px;">
+                    🤝 Informations du partenariat
+                  </h3>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600; width: 35%;">🏪 Entreprise :</td>
+                      <td style="padding: 10px 0; color: #1f2937; font-weight: 500;">${partenaireData.nom}</td>
+                    </tr>
+                    <tr style="background-color: rgba(245, 158, 11, 0.05);">
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600;">👤 Responsable :</td>
+                      <td style="padding: 10px 0; color: #1f2937; font-weight: 500;">${partenaireData.nom_representant}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600;">👔 Rôle :</td>
+                      <td style="padding: 10px 0; color: #1f2937; font-weight: 500;">Représentant légal</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 25px; border-radius: 16px; margin-bottom: 30px; border: 2px solid #0ea5e9;">
+                  <h3 style="color: #1e40af; margin: 0 0 20px 0; font-size: 20px; font-weight: 600; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+                    🔐 Vos identifiants de connexion
+                  </h3>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600; width: 35%;">📧 Email :</td>
+                      <td style="padding: 10px 0; color: #1f2937; font-weight: 500;">${partenaireData.email_representant}</td>
+                    </tr>
+                    <tr style="background-color: rgba(59, 130, 246, 0.05);">
+                      <td style="padding: 10px 0; color: #374151; font-weight: 600;">🔑 Mot de passe :</td>
+                      <td style="padding: 10px 0;">
+                        <code style="background-color: #e2e8f0; padding: 8px 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 14px; color: #1f2937; border: 1px solid #cbd5e1; letter-spacing: 1px;">
+                          ${results.responsable.account.password}
+                        </code>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 20%); padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 6px solid #f59e0b;">
+                  <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+                    🔐 Sécurité importante
+                  </h3>
+                  <p style="color: #78350f; margin: 0; line-height: 1.6; font-weight: 500;">
+                    Pour votre sécurité, nous vous recommandons fortement de <strong>changer votre mot de passe</strong> lors de votre première connexion.
+                  </p>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 25px; padding: 25px; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 12px;">
+                  <h3 style="color: white; margin: 0 0 15px 0; font-size: 20px; font-weight: 600;">
+                    🌐 Accès à la plateforme
+                  </h3>
+                  <p style="color: #bfdbfe; margin: 0 0 20px 0; font-size: 16px;">
+                    Connectez-vous dès maintenant à l'interface d'administration ZaLaMa
+                  </p>
+                  <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <a href="https://admin.zalama.com" style="color: #ffffff; text-decoration: none; font-size: 18px; font-weight: 600; display: inline-block; padding: 12px 25px; background: rgba(255, 255, 255, 0.2); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.3);">
+                      ➜ Se connecter maintenant
+                    </a>
+                  </div>
+                </div>
+                
+                <div style="background: #ecfdf5; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #d1fae5;">
+                  <h3 style="color: #065f46; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+                    🚀 Fonctionnalités responsable disponibles
+                  </h3>
+                  <ul style="margin: 0; padding-left: 20px; color: #064e3b;">
+                    <li style="margin-bottom: 8px; font-weight: 500;">📊 Tableau de bord du partenariat</li>
+                    <li style="margin-bottom: 8px; font-weight: 500;">💰 Suivi des transactions et remboursements</li>
+                    <li style="margin-bottom: 8px; font-weight: 500;">📈 Rapports financiers détaillés</li>
+                    <li style="margin-bottom: 8px; font-weight: 500;">⚙️ Paramètres du partenariat</li>
+                    <li style="margin-bottom: 8px; font-weight: 500;">📧 Communications avec ZaLaMa</li>
+                  </ul>
+                </div>
+                
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
+                  <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+                    💬 Support dédié
+                  </h3>
+                  <p style="color: #475569; margin: 0 0 15px 0; line-height: 1.6;">
+                    Votre équipe dédiée est à votre disposition :
+                  </p>
+                  <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db;">
+                      <div style="color: #059669; font-weight: 600; margin-bottom: 5px;">📧 Email</div>
+                      <div style="color: #374151;">partenaires@zalamagn.com</div>
+                    </div>
+                    <div style="flex: 1; min-width: 200px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db;">
+                      <div style="color: #059669; font-weight: 600; margin-bottom: 5px;">📱 Téléphone</div>
+                      <div style="color: #374151;">+224 XXX XXX XXX</div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          `
+        });
+        
         const responsableEmailResult = await directEmailService.sendEmail(partenaireData.email_representant, responsableEmailSubject, responsableEmailBody);
         emailResults.responsable = {
           success: responsableEmailResult.success,

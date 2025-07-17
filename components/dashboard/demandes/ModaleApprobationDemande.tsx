@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from '@/components/ui/button';
 import { UISalaryAdvanceRequest } from '@/types/salaryAdvanceRequest';
 import { Building, CheckCircle, DollarSign, User, X } from 'lucide-react';
 import React, { useState } from 'react';
@@ -9,7 +10,7 @@ interface ModaleApprobationDemandeProps {
   onClose: () => void;
   onConfirm: (motif?: string) => void;
   request: UISalaryAdvanceRequest | null;
-  isLoading: boolean;
+  isLoading?: boolean;
 }
 
 const ModaleApprobationDemande: React.FC<ModaleApprobationDemandeProps> = ({
@@ -40,114 +41,157 @@ const ModaleApprobationDemande: React.FC<ModaleApprobationDemandeProps> = ({
     });
   };
 
+  const handleSubmit = () => {
+    onConfirm(motif.trim() || undefined);
+    setMotif('');
+  };
+
   if (!isOpen || !request) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow-2xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[var(--zalama-text)] flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-[var(--zalama-success)]" />
-              Approuver la demande
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-1 text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)] rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Détails de la demande */}
-          <div className="space-y-3 mb-4">
-            <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-3">
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center gap-1">
-                  <User className="w-3 h-3 text-[var(--zalama-text-secondary)]" />
-                  <span className="font-medium text-[var(--zalama-text)] truncate">
-                    {request.employeNom || 'Employé inconnu'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <DollarSign className="w-3 h-3 text-[var(--zalama-text-secondary)]" />
-                  <span className="font-medium text-[var(--zalama-text)]">
-                    {formatCurrency(request.montant_demande)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 col-span-2">
-                  <Building className="w-3 h-3 text-[var(--zalama-text-secondary)]" />
-                  <span className="text-[var(--zalama-text-secondary)] truncate">
-                    {request.partenaireNom || 'Partenaire inconnu'}
-                  </span>
-                </div>
-              </div>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Overlay */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-[var(--zalama-bg-light)] rounded-xl shadow-xl border border-[var(--zalama-border)] w-full max-w-lg max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)] flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 dark:bg-green-100/10 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
-
-            <div className="text-xs">
-              <p className="text-[var(--zalama-text-secondary)] mb-1">Motif:</p>
-              <p className="text-[var(--zalama-text)] bg-[var(--zalama-bg-lighter)] p-2 rounded text-xs">
-                {request.motif}
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--zalama-text)]">
+                Approuver la demande
+              </h2>
+              <p className="text-sm text-[var(--zalama-text-secondary)]">
+                Demande #{request.id.slice(0, 8)}
               </p>
             </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg)] rounded-lg transition-colors"
+            aria-label="Fermer le modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-          {/* Motif d'approbation (optionnel) */}
-          <div className="mb-4">
-            <label htmlFor="approval-motif" className="block text-xs font-medium text-[var(--zalama-text)] mb-1">
-              Commentaire (optionnel)
-            </label>
-            <textarea
-              id="approval-motif"
-              rows={2}
-              value={motif}
-              onChange={(e) => setMotif(e.target.value)}
-              className="w-full px-2 py-1 text-xs border border-[var(--zalama-border)] rounded bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] focus:outline-none focus:ring-1 focus:ring-[var(--zalama-success)]"
-              placeholder="Commentaire d'approbation..."
-            />
-          </div>
-
-          {/* Information sur les notifications automatiques */}
-          <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded">
-            <div className="flex items-center gap-2">
-              <svg className="w-3 h-3 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Notice d'approbation */}
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-xs font-medium text-blue-800">
-                  Notifications automatiques: SMS + Email
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  Validation de la demande
+                </p>
+                <p className="text-sm text-green-700 dark:text-green-400 mt-1">
+                  L'employé sera automatiquement notifié de l'approbation de sa demande.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--zalama-border)]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-1 text-xs border border-[var(--zalama-border)] rounded bg-[var(--zalama-bg-lighter)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg)] transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={() => onConfirm(motif || undefined)}
-              disabled={isLoading}
-              className="px-3 py-1 text-xs bg-[var(--zalama-success)] text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Approbation...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-3 h-3" />
-                  Approuver
-                </>
-              )}
-            </button>
+          {/* Détails de la demande */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-[var(--zalama-text)]">Détails de la demande</h3>
+            
+            <div className="bg-[var(--zalama-bg-lighter)] rounded-lg p-4 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-[var(--zalama-text-secondary)] flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-[var(--zalama-text-secondary)]">Employé</p>
+                    <p className="text-sm font-medium text-[var(--zalama-text)] truncate">
+                      {request.employeNom || 'Employé inconnu'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-[var(--zalama-text-secondary)] flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-[var(--zalama-text-secondary)]">Montant</p>
+                    <p className="text-sm font-medium text-[var(--zalama-text)]">
+                      {formatCurrency(request.montant_demande)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Building className="w-4 h-4 text-[var(--zalama-text-secondary)] flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-[var(--zalama-text-secondary)]">Partenaire</p>
+                  <p className="text-sm text-[var(--zalama-text)] truncate">
+                    {request.partenaireNom || 'Partenaire inconnu'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-[var(--zalama-text-secondary)] mb-2">Motif de la demande</p>
+              <div className="bg-[var(--zalama-bg)] border border-[var(--zalama-border)] rounded-lg p-3">
+                <p className="text-sm text-[var(--zalama-text)]">
+                  {request.motif || 'Aucun motif spécifié'}
+                </p>
+              </div>
+            </div>
           </div>
+
+          {/* Motif d'approbation (optionnel) */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--zalama-text)] mb-2">
+              Commentaire d'approbation (optionnel)
+            </label>
+            <textarea
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+              placeholder="Ajouter un commentaire pour cette approbation..."
+              className="w-full p-3 border border-[var(--zalama-border)] bg-[var(--zalama-bg)] text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 resize-none transition-colors"
+              rows={3}
+            />
+            <p className="text-xs text-[var(--zalama-text-secondary)] mt-1">
+              Ce commentaire sera visible dans l'historique de la demande.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-[var(--zalama-border)] flex-shrink-0">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+            className="min-w-[100px]"
+          >
+            Annuler
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="min-w-[120px] bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Approbation...</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                <span>Approuver</span>
+              </div>
+            )}
+          </Button>
         </div>
       </div>
     </div>

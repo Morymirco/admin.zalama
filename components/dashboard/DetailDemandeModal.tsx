@@ -1,7 +1,7 @@
-import React from 'react';
-import { X, Building2, User, Users, Phone, Mail, MapPin, Calendar, FileText, CheckCircle, XCircle, Eye, Download } from 'lucide-react';
-import { PartnershipRequest } from '@/types/partnership';
 import { PDFService } from '@/services/pdfService';
+import { PartnershipRequest } from '@/types/partnership';
+import { Building2, Calendar, CheckCircle, Download, Eye, FileText, Mail, MapPin, Phone, User, Users, X, XCircle } from 'lucide-react';
+import React from 'react';
 import { toast } from 'react-hot-toast';
 
 interface DetailDemandeModalProps {
@@ -39,10 +39,10 @@ const DetailDemandeModal: React.FC<DetailDemandeModalProps> = ({
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { label: 'En attente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-      in_review: { label: 'En révision', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-      approved: { label: 'Approuvée', color: 'bg-green-100 text-green-800 border-green-200' },
-      rejected: { label: 'Rejetée', color: 'bg-red-100 text-red-800 border-red-200' }
+      pending: { label: 'En attente', color: 'bg-[var(--zalama-warning)]/10 text-[var(--zalama-warning)] border-[var(--zalama-warning)]/20' },
+      in_review: { label: 'En révision', color: 'bg-[var(--zalama-blue)]/10 text-[var(--zalama-blue)] border-[var(--zalama-blue)]/20' },
+      approved: { label: 'Approuvée', color: 'bg-[var(--zalama-success)]/10 text-[var(--zalama-success)] border-[var(--zalama-success)]/20' },
+      rejected: { label: 'Rejetée', color: 'bg-[var(--zalama-danger)]/10 text-[var(--zalama-danger)] border-[var(--zalama-danger)]/20' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -67,68 +67,69 @@ const DetailDemandeModal: React.FC<DetailDemandeModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Overlay */}
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity z-[9998]" onClick={onClose}></div>
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
+        onClick={onClose}
+      />
       
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="relative w-full max-w-4xl bg-[var(--zalama-card)] rounded-xl shadow-xl border border-[var(--zalama-border)] overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                  <Building2 className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">Détails de la Demande</h2>
-                  <p className="text-blue-100 text-sm">{request.company_name}</p>
-                </div>
+          <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-[var(--zalama-blue)]/10 rounded-lg">
+                <Building2 className="w-6 h-6 text-[var(--zalama-blue)]" />
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleExportPDF}
-                  className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors"
-                  title="Exporter en PDF"
-                >
-                  <Download className="w-5 h-5 text-white" />
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-white" />
-                </button>
+              <div>
+                <h2 className="text-xl font-bold text-[var(--zalama-text)]">Détails de la Demande</h2>
+                <p className="text-[var(--zalama-text-secondary)] text-sm">{request.company_name}</p>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportPDF}
+                className="p-2 text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg)] rounded-lg transition-colors"
+                title="Exporter en PDF"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg)] rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
           {/* Content */}
           <div className="p-6 max-h-[70vh] overflow-y-auto">
             {/* Status and Actions */}
-            <div className="flex items-center justify-between mb-6 p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center space-x-3">
-                <span className="text-sm font-medium text-gray-600">Statut:</span>
+            <div className="flex items-center justify-between mb-6 p-4 bg-[var(--zalama-bg-light)] rounded-xl border border-[var(--zalama-border)]">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-[var(--zalama-text-secondary)]">Statut:</span>
                 {getStatusBadge(request.status)}
               </div>
               {request.status === 'pending' && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => onApprove?.(request.id)}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-[var(--zalama-success)] hover:bg-[var(--zalama-success)]/80 text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     <CheckCircle className="w-4 h-4" />
                     <span>Approuver</span>
                   </button>
                   <button
                     onClick={() => onReject?.(request.id)}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-[var(--zalama-danger)] hover:bg-[var(--zalama-danger)]/80 text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     <XCircle className="w-4 h-4" />
                     <span>Rejeter</span>
                   </button>
                   <button
                     onClick={() => onSetInReview?.(request.id)}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     <Eye className="w-4 h-4" />
                     <span>En révision</span>
@@ -140,62 +141,62 @@ const DetailDemandeModal: React.FC<DetailDemandeModalProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Informations de l'entreprise */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2 text-lg font-semibold text-gray-800">
-                  <Building2 className="w-5 h-5 text-blue-600" />
+                <div className="flex items-center gap-2 text-lg font-semibold text-[var(--zalama-text)]">
+                  <Building2 className="w-5 h-5 text-[var(--zalama-blue)]" />
                   <span>Informations de l'entreprise</span>
                 </div>
                 
-                <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Building2 className="w-4 h-4 text-gray-400" />
+                <div className="bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Building2 className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Nom de l'entreprise</p>
-                      <p className="font-medium text-gray-900">{request.company_name}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Nom de l'entreprise</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.company_name}</p>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-sm text-gray-500">Statut légal</p>
-                      <p className="font-medium text-gray-900">{request.legal_status}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Statut légal</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.legal_status}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">RCCM</p>
-                      <p className="font-medium text-gray-900">{request.rccm}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">RCCM</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.rccm}</p>
                     </div>
                   </div>
                   
                   <div>
-                    <p className="text-sm text-gray-500">NIF</p>
-                    <p className="font-medium text-gray-900">{request.nif}</p>
+                    <p className="text-sm text-[var(--zalama-text-secondary)]">NIF</p>
+                    <p className="font-medium text-[var(--zalama-text)]">{request.nif}</p>
                   </div>
                   
                   <div>
-                    <p className="text-sm text-gray-500">Domaine d'activité</p>
-                    <p className="font-medium text-gray-900">{request.activity_domain}</p>
+                    <p className="text-sm text-[var(--zalama-text-secondary)]">Domaine d'activité</p>
+                    <p className="font-medium text-[var(--zalama-text)]">{request.activity_domain}</p>
                   </div>
                   
-                  <div className="flex items-start space-x-3">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-4 h-4 text-[var(--zalama-text-secondary)] mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">Adresse du siège</p>
-                      <p className="font-medium text-gray-900">{request.headquarters_address}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Adresse du siège</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.headquarters_address}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <Phone className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Téléphone</p>
-                      <p className="font-medium text-gray-900">{request.phone}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Téléphone</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.phone}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <Mail className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium text-gray-900">{request.email}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Email</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.email}</p>
                     </div>
                   </div>
                 </div>
@@ -203,44 +204,44 @@ const DetailDemandeModal: React.FC<DetailDemandeModalProps> = ({
 
               {/* Informations RH */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2 text-lg font-semibold text-gray-800">
-                  <Users className="w-5 h-5 text-green-600" />
+                <div className="flex items-center gap-2 text-lg font-semibold text-[var(--zalama-text)]">
+                  <Users className="w-5 h-5 text-[var(--zalama-success)]" />
                   <span>Informations RH</span>
                 </div>
                 
-                <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Users className="w-4 h-4 text-gray-400" />
+                <div className="bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Responsable RH</p>
-                      <p className="font-medium text-gray-900">{request.hr_full_name}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Responsable RH</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.hr_full_name}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <Mail className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Email RH</p>
-                      <p className="font-medium text-gray-900">{request.hr_email}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Email RH</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.hr_email}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <Phone className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Téléphone RH</p>
-                      <p className="font-medium text-gray-900">{request.hr_phone}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Téléphone RH</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.hr_phone}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <FileText className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Accord aux conditions</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Accord aux conditions</p>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         request.agreement 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-[var(--zalama-success)]/10 text-[var(--zalama-success)]' 
+                          : 'bg-[var(--zalama-danger)]/10 text-[var(--zalama-danger)]'
                       }`}>
                         {request.agreement ? 'Oui' : 'Non'}
                       </span>
@@ -252,36 +253,36 @@ const DetailDemandeModal: React.FC<DetailDemandeModalProps> = ({
 
             {/* Informations du représentant */}
             <div className="mt-6 space-y-4">
-              <div className="flex items-center space-x-2 text-lg font-semibold text-gray-800">
-                <User className="w-5 h-5 text-purple-600" />
+              <div className="flex items-center gap-2 text-lg font-semibold text-[var(--zalama-text)]">
+                <User className="w-5 h-5 text-[var(--zalama-warning)]" />
                 <span>Informations du représentant</span>
               </div>
               
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-xl p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Nom complet</p>
-                    <p className="font-medium text-gray-900">{request.rep_full_name}</p>
+                    <p className="text-sm text-[var(--zalama-text-secondary)]">Nom complet</p>
+                    <p className="font-medium text-[var(--zalama-text)]">{request.rep_full_name}</p>
                   </div>
                   
                   <div>
-                    <p className="text-sm text-gray-500">Poste</p>
-                    <p className="font-medium text-gray-900">{request.rep_position}</p>
+                    <p className="text-sm text-[var(--zalama-text-secondary)]">Poste</p>
+                    <p className="font-medium text-[var(--zalama-text)]">{request.rep_position}</p>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <Mail className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium text-gray-900">{request.rep_email}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Email</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.rep_email}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <Phone className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                     <div>
-                      <p className="text-sm text-gray-500">Téléphone</p>
-                      <p className="font-medium text-gray-900">{request.rep_phone}</p>
+                      <p className="text-sm text-[var(--zalama-text-secondary)]">Téléphone</p>
+                      <p className="font-medium text-[var(--zalama-text)]">{request.rep_phone}</p>
                     </div>
                   </div>
                 </div>
@@ -290,39 +291,39 @@ const DetailDemandeModal: React.FC<DetailDemandeModalProps> = ({
 
             {/* Statistiques employés */}
             <div className="mt-6 space-y-4">
-              <div className="flex items-center space-x-2 text-lg font-semibold text-gray-800">
-                <Users className="w-5 h-5 text-indigo-600" />
+              <div className="flex items-center gap-2 text-lg font-semibold text-[var(--zalama-text)]">
+                <Users className="w-5 h-5 text-[var(--zalama-blue)]" />
                 <span>Statistiques employés</span>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">{request.employees_count}</div>
-                  <div className="text-sm text-blue-700">Total employés</div>
+                <div className="bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold text-[var(--zalama-blue)]">{request.employees_count}</div>
+                  <div className="text-sm text-[var(--zalama-text-secondary)]">Total employés</div>
                 </div>
                 
-                <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{request.cdi_count}</div>
-                  <div className="text-sm text-green-700">CDI</div>
+                <div className="bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold text-[var(--zalama-success)]">{request.cdi_count}</div>
+                  <div className="text-sm text-[var(--zalama-text-secondary)]">CDI</div>
                 </div>
                 
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-orange-600">{request.cdd_count}</div>
-                  <div className="text-sm text-orange-700">CDD</div>
+                <div className="bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold text-[var(--zalama-warning)]">{request.cdd_count}</div>
+                  <div className="text-sm text-[var(--zalama-text-secondary)]">CDD</div>
                 </div>
                 
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 text-center">
-                  <div className="text-lg font-bold text-purple-600">{request.payroll}</div>
-                  <div className="text-sm text-purple-700">Masse salariale</div>
+                <div className="bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-xl p-4 text-center">
+                  <div className="text-lg font-bold text-[var(--zalama-blue)]">{request.payroll}</div>
+                  <div className="text-sm text-[var(--zalama-text-secondary)]">Masse salariale</div>
                 </div>
               </div>
               
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="w-4 h-4 text-gray-400" />
+              <div className="bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-4 h-4 text-[var(--zalama-text-secondary)]" />
                   <div>
-                    <p className="text-sm text-gray-500">Date de paiement</p>
-                    <p className="font-medium text-gray-900">{request.payment_date}</p>
+                    <p className="text-sm text-[var(--zalama-text-secondary)]">Date de paiement</p>
+                    <p className="font-medium text-[var(--zalama-text)]">{request.payment_date}</p>
                   </div>
                 </div>
               </div>
@@ -330,27 +331,27 @@ const DetailDemandeModal: React.FC<DetailDemandeModalProps> = ({
 
             {/* Métadonnées */}
             <div className="mt-6 space-y-4">
-              <div className="flex items-center space-x-2 text-lg font-semibold text-gray-800">
-                <FileText className="w-5 h-5 text-gray-600" />
+              <div className="flex items-center gap-2 text-lg font-semibold text-[var(--zalama-text)]">
+                <FileText className="w-5 h-5 text-[var(--zalama-text-secondary)]" />
                 <span>Métadonnées</span>
               </div>
               
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <div className="bg-[var(--zalama-bg-lighter)] border border-[var(--zalama-border)] rounded-xl p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500">ID de la demande</p>
-                    <p className="font-mono text-gray-900">{request.id}</p>
+                    <p className="text-[var(--zalama-text-secondary)]">ID de la demande</p>
+                    <p className="font-mono text-[var(--zalama-text)]">{request.id}</p>
                   </div>
                   
                   <div>
-                    <p className="text-gray-500">Date de création</p>
-                    <p className="text-gray-900">{formatDate(request.created_at)}</p>
+                    <p className="text-[var(--zalama-text-secondary)]">Date de création</p>
+                    <p className="text-[var(--zalama-text)]">{formatDate(request.created_at)}</p>
                   </div>
                   
                   {request.updated_at && (
                     <div>
-                      <p className="text-gray-500">Dernière modification</p>
-                      <p className="text-gray-900">{formatDate(request.updated_at)}</p>
+                      <p className="text-[var(--zalama-text-secondary)]">Dernière modification</p>
+                      <p className="text-[var(--zalama-text)]">{formatDate(request.updated_at)}</p>
                     </div>
                   )}
                 </div>

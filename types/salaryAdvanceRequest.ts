@@ -5,7 +5,7 @@ export interface DemandeAvanceSalaire {
   montant_demande: number;
   motif: string;
   date_demande: string; // ISO string au lieu de Date
-  statut: 'EN_ATTENTE' | 'APPROUVE' | 'REFUSE' | 'PAYE';
+  statut: 'En attente' | 'Validé' | 'Rejeté' | 'Annulé';
   commentaire?: string;
   date_traitement?: string; // ISO string au lieu de Date
   numero_reception?: string;

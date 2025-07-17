@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import cors from 'cors';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCIojE2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
 
 // Configuration Lengo Pay
 const LENGO_SITE_ID = 'ozazlahgzpntmYAG';
@@ -11,8 +12,32 @@ const LENGO_CALLBACK_URL = process.env.LENGO_CALLBACK_URL || 'https://admin.zala
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// POST /api/remboursements/simple-paiement - Paiement ultra-simplifié
+// Initialize CORS middleware
+const corsMiddleware = cors({
+  origin: 'http://localhost:3000', // Allow requests from this origin
+  methods: ['POST', 'OPTIONS'], // Allow POST and OPTIONS methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers
+});
+
+// Helper to run middleware in Next.js
+const runMiddleware = (req: NextRequest, res: NextResponse, fn: Function) => {
+  return new Promise((resolve, reject) => {
+    fn(req, res, (result: any) => {
+      if (result instanceof Error) {
+        return reject(result);
+      }
+      return resolve(result);
+    });
+  });
+};
+
+// POST /api/remboursements/simple-paiement
 export async function POST(request: NextRequest) {
+  const response = NextResponse.next();
+
+  // Run CORS middleware
+  await runMiddleware(request, response, corsMiddleware);
+
   try {
     const body = await request.json();
     const { remboursement_id } = body;
@@ -40,10 +65,6 @@ export async function POST(request: NextRequest) {
         'Authorization': `Basic ${process.env.LENGO_API_KEY || 'bDM0WlhpcDRta052MmxIZEFFcEV1Mno0WERwS2R0dnk3ZUhWOEpwczdYVXdnM1Bwd016UTVLcEVZNmc0RkQwMw=='}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Origin': 'http://localhost:3000'
       },
       body: JSON.stringify({
         websiteid: LENGO_SITE_ID,
@@ -80,4 +101,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
-} 
+}
+
+// Handle OPTIONS requests for preflight
+export async function OPTIONS(request: NextRequest) {
+  const response = NextResponse.next();
+  await runMiddleware(request, response, corsMiddleware);
+  return response;
+}

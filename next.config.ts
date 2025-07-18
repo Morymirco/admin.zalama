@@ -28,6 +28,33 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  // Configuration CORS globale pour les API routes
+  async headers() {
+    return [
+      {
+        // Appliquer à toutes les routes API
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: 'http://localhost:3002, http://localhost:3000, https://admin.zalamasas.com, https://zalama-partner-dashboard-4esq.vercel.app',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

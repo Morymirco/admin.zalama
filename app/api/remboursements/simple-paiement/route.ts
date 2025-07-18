@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import cors from 'cors';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Configuration Supabase
@@ -12,40 +11,8 @@ const LENGO_CALLBACK_URL = process.env.LENGO_CALLBACK_URL || 'https://admin.zala
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  origin: ['http://localhost:3000', 'https://admin.zalamasas.com','https://zalama-partner-dashboard-4esq.vercel.app'],
-  methods: ['POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-});
-
-// Helper to run middleware in Next.js
-const runMiddleware = (req: NextRequest, res: NextResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        console.error('Middleware error:', result);
-        return reject(result);
-      }
-      console.log('Middleware executed successfully');
-      return resolve(result);
-    });
-  });
-};
-
 // POST /api/remboursements/simple-paiement
 export async function POST(request: NextRequest) {
-  const response = NextResponse.next();
-
-  // Run CORS middleware
-  try {
-    await runMiddleware(request, response, corsMiddleware);
-  } catch (error) {
-    console.error('CORS middleware failed:', error);
-    return NextResponse.json({ error: 'CORS middleware error' }, { status: 500 });
-  }
-
   try {
     const body = await request.json();
     const { remboursement_id } = body;
@@ -111,14 +78,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Handle OPTIONS requests for preflight
-export async function OPTIONS(request: NextRequest) {
-  const response = NextResponse.json({}, { status: 200 });
-  try {
-    await runMiddleware(request, response, corsMiddleware);
-    console.log('OPTIONS request handled successfully');
-  } catch (error) {
-    console.error('OPTIONS middleware failed:', error);
-  }
-  return response;
-}

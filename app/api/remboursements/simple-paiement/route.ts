@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Configuration Supabase
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCIojE2NjM2MzI1OH0.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3ODcyNTgsImV4cCI6MjA2NjQzMjU4fQ.zr-TRpKjGJjW0nRtsyPcCLy4Us-c5tOGX71k5_3JJd0';
 
 // Configuration Lengo Pay
 const LENGO_SITE_ID = 'ozazlahgzpntmYAG';
@@ -14,10 +14,10 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Initialize CORS middleware
 const corsMiddleware = cors({
-  origin: ['http://localhost:3000', 'https://admin.zalamasas.com'], // Allow both local and production
-  methods: ['POST', 'OPTIONS'], // Allow POST and OPTIONS methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers
-  credentials: true, // Allow credentials
+  origin: ['http://localhost:3000', 'https://admin.zalamasas.com','https://zalama-partner-dashboard-4esq.vercel.app'],
+  methods: ['POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 });
 
 // Helper to run middleware in Next.js
@@ -25,8 +25,10 @@ const runMiddleware = (req: NextRequest, res: NextResponse, fn: Function) => {
   return new Promise((resolve, reject) => {
     fn(req, res, (result: any) => {
       if (result instanceof Error) {
+        console.error('Middleware error:', result);
         return reject(result);
       }
+      console.log('Middleware executed successfully');
       return resolve(result);
     });
   });
@@ -37,7 +39,12 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.next();
 
   // Run CORS middleware
-  await runMiddleware(request, response, corsMiddleware);
+  try {
+    await runMiddleware(request, response, corsMiddleware);
+  } catch (error) {
+    console.error('CORS middleware failed:', error);
+    return NextResponse.json({ error: 'CORS middleware error' }, { status: 500 });
+  }
 
   try {
     const body = await request.json();
@@ -72,8 +79,8 @@ export async function POST(request: NextRequest) {
         amount: Math.round(remboursement.montant_total_remboursement),
         currency: 'GNF',
         return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/dashboard/remboursements/success`,
-        callback_url: LENGO_CALLBACK_URL
-      })
+        callback_url: LENGO_CALLBACK_URL,
+      }),
     });
 
     const lengoResult = await lengoResponse.json();
@@ -88,7 +95,7 @@ export async function POST(request: NextRequest) {
       .update({
         numero_transaction_remboursement: lengoResult.pay_id,
         methode_remboursement: 'MOBILE_MONEY',
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', remboursement_id);
 
@@ -96,17 +103,22 @@ export async function POST(request: NextRequest) {
       success: true,
       pay_id: lengoResult.pay_id,
       payment_url: lengoResult.payment_url,
-      montant: remboursement.montant_total_remboursement
+      montant: remboursement.montant_total_remboursement,
     });
-
   } catch (error) {
+    console.error('Server error:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
 // Handle OPTIONS requests for preflight
 export async function OPTIONS(request: NextRequest) {
-  const response = NextResponse.next();
-  await runMiddleware(request, response, corsMiddleware);
+  const response = NextResponse.json({}, { status: 200 });
+  try {
+    await runMiddleware(request, response, corsMiddleware);
+    console.log('OPTIONS request handled successfully');
+  } catch (error) {
+    console.error('OPTIONS middleware failed:', error);
+  }
   return response;
 }

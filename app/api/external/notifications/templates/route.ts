@@ -9,7 +9,7 @@ const API_KEY = process.env.EXTERNAL_API_KEY || 'zalama_external_key_2024';
 const TEMPLATES = {
   welcome: {
     sms: {
-      content: 'Bienvenue sur ZaLaMa ! Votre compte a été créé avec succès. Connectez-vous sur https://admin.zalama.com'
+      content: 'ZaLaMa - Votre compte a été créé avec succès. Connectez-vous sur votre espace personnel pour commencer.'
     },
     email: {
       subject: 'Bienvenue sur ZaLaMa',
@@ -42,7 +42,7 @@ const TEMPLATES = {
               
               <p>Votre compte a été créé avec succès et vous pouvez maintenant accéder à toutes les fonctionnalités de la plateforme.</p>
               
-              <a href="https://admin.zalama.com" class="button">Se connecter maintenant</a>
+              <p>Connectez-vous sur votre espace personnel pour commencer à utiliser ZaLaMa.</p>
               
               <p>Pour toute question ou assistance, n'hésitez pas à nous contacter :</p>
               <ul>

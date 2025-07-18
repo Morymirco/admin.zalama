@@ -14,9 +14,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendPasswordResetEmail(email: string, displayName: string, resetLink: string, companyName: string) {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Zalama <contact@zalamagn.com>',
-      to: email,
-      subject: 'Bienvenue chez Zalama - Configurez votre compte',
+      from: 'noreply@zalamagn.com',
+      to: [email],
+      subject: 'Bienvenue chez ZaLaMa',
       html: `
 <!DOCTYPE html>
 <html lang="fr">
@@ -43,7 +43,7 @@ export async function sendPasswordResetEmail(email: string, displayName: string,
           </tr>
           <tr>
             <td style="text-align: center; padding: 20px 0;">
-              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px; border: 1px solid #1e40af;">Configurer mon mot de passe</a>
+              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3); transition: all 0.3s ease; display: inline-block; text-transform: uppercase; letter-spacing: 1px;">Configurer mon mot de passe</a>
             </td>
           </tr>
           <tr>
@@ -96,16 +96,16 @@ export async function sendPasswordResetEmail(email: string, displayName: string,
 export async function sendPasswordResetEmailRH(email: string, displayName: string, resetLink: string, partenaireNom: string) {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Zalama <contact@zalamagn.com>',
-      to: email,
-      subject: 'Bienvenue sur l\'espace RH Zalama - Configurez votre compte',
+      from: 'noreply@zalamagn.com',
+      to: [email],
+      subject: 'Accès RH - Configuration de votre compte ZaLaMa',
       html: `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Espace RH Zalama</title>
+  <title>Accès RH - ZaLaMa</title>
 </head>
 <body style="background-color: #ffffff; font-family: 'Roboto', Helvetica, sans-serif; margin: 0; padding: 0;">
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; min-height: 100%; margin: 20px auto; background-color: #ffffff; border: 4px solid #1e40af; border-radius: 16px;">
@@ -116,7 +116,7 @@ export async function sendPasswordResetEmailRH(email: string, displayName: strin
     </tr>
     <tr>
       <td style="padding: 40px; background-color: #f9fafb;">
-        <h2 style="color: #1e3a8a; font-size: 30px; font-weight: 700; margin: 0 0 25px 0; border-bottom: 6px solid #3b82f6; padding-bottom: 12px; text-align: center; letter-spacing: 1px;">BIENVENUE SUR L'ESPACE RH ZaLaMa, ${partenaireNom}</h2>
+        <h2 style="color: #1e3a8a; font-size: 30px; font-weight: 700; margin: 0 0 25px 0; border-bottom: 6px solid #3b82f6; padding-bottom: 12px; text-align: center; letter-spacing: 1px;">Bienvenue dans l'espace RH, ${displayName}!</h2>
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
@@ -135,12 +135,12 @@ export async function sendPasswordResetEmailRH(email: string, displayName: strin
           </tr>
           <tr>
             <td style="text-align: center; padding: 20px 0;">
-              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px; border: 1px solid #1e40af;">Configurer mon mot de passe</a>
+              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3); transition: all 0.3s ease; display: inline-block; text-transform: uppercase; letter-spacing: 1px;">Accéder à mon espace RH</a>
             </td>
           </tr>
           <tr>
             <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; border: 1px solid #dbeafe;">
-              Merci pour votre confiance. Nous restons à votre disposition pour toute assistance.
+              <span style="font-weight: bold; color: #1e40af;">Important :</span> Ce lien est valable 24 heures. Après activation, vous pourrez accéder à l'espace RH de votre entreprise via <a href="https://zalama-partner-dashboard-4esq.vercel.app/" style="color: #1e40af; text-decoration: none;">https://zalama-partner-dashboard-4esq.vercel.app/</a>
             </td>
           </tr>
         </table>
@@ -148,11 +148,11 @@ export async function sendPasswordResetEmailRH(email: string, displayName: strin
     </tr>
     <tr>
       <td style="background-color: #1e40af; padding: 25px; text-align: center; font-size: 14px; color: #ffffff; border-radius: 0 0 12px 12px;">
-        <p style="margin: 0 0 15px 0; font-weight: 500;">Zalama SAS - Espace Ressources Humaines</p>
+        <p style="margin: 0 0 15px 0; font-weight: 500;">ZaLaMa SAS - Espace Ressources Humaines</p>
         <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); padding: 12px 30px; border-radius: 10px; border: 1px solid #ffffff;">
-              <a href="mailto:support@zalamagn.com" style="color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">Support RH</a>
+              <a href="mailto:rh@zalamagn.com" style="color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">Support RH</a>
             </td>
           </tr>
         </table>
@@ -188,27 +188,27 @@ export async function sendPasswordResetEmailRH(email: string, displayName: strin
 export async function sendWelcomeEmailToResponsable(email: string, displayName: string, partenaireNom: string, resetLink: string) {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Zalama <contact@zalamagn.com>',
-      to: email,
-      subject: 'Bienvenue sur l\'espace d\'administration de votre entreprise',
+      from: 'noreply@zalamagn.com',
+      to: [email],
+      subject: 'Accès Responsable - Configuration de votre compte ZaLaMa',
       html: `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Espace Administration</title>
+  <title>Accès Responsable - ZaLaMa</title>
 </head>
 <body style="background-color: #ffffff; font-family: 'Roboto', Helvetica, sans-serif; margin: 0; padding: 0;">
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; min-height: 100%; margin: 20px auto; background-color: #ffffff; border: 4px solid #1e40af; border-radius: 16px;">
     <tr>
       <td style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 15px; text-align: center; border-radius: 12px 12px 0 0;">
-        <span style="color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); display: inline-block; padding: 8px 16px; background-color: rgba(0,0,0,0.1); border-radius: 8px;">Zalama</span>
+        <span style="color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); display: inline-block; padding: 8px 16px; background-color: rgba(0,0,0,0.1); border-radius: 8px;">ZaLaMa</span>
       </td>
     </tr>
     <tr>
       <td style="padding: 40px; background-color: #f9fafb;">
-        <h2 style="color: #1e3a8a; font-size: 30px; font-weight: 700; margin: 0 0 25px 0; border-bottom: 6px solid #3b82f6; padding-bottom: 12px; text-align: center; letter-spacing: 1px;">Bienvenue, ${displayName}!</h2>
+        <h2 style="color: #1e3a8a; font-size: 30px; font-weight: 700; margin: 0 0 25px 0; border-bottom: 6px solid #3b82f6; padding-bottom: 12px; text-align: center; letter-spacing: 1px;">Bienvenue dans l'espace Responsable, ${displayName}!</h2>
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; margin-bottom: 10px; border: 1px solid #dbeafe;">
@@ -222,12 +222,12 @@ export async function sendWelcomeEmailToResponsable(email: string, displayName: 
           </tr>
           <tr>
             <td style="text-align: center; padding: 20px 0;">
-              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px; border: 1px solid #1e40af;">Configurer mon mot de passe</a>
+              <a href="${resetLink}" style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3); transition: all 0.3s ease; display: inline-block; text-transform: uppercase; letter-spacing: 1px;">Accéder à mon espace</a>
             </td>
           </tr>
           <tr>
             <td style="padding: 12px 15px; color: #1f2937; font-size: 16px; line-height: 1.6; background-color: #ffffff; border-radius: 8px; border: 1px solid #dbeafe;">
-              <span style="font-weight: bold; color: #1e40af;">Important :</span> Ce lien est valable 24 heures. Après activation, vous pourrez accéder à l'espace d'administration de votre entreprise.
+              <span style="font-weight: bold; color: #1e40af;">Important :</span> Ce lien est valable 24 heures. Après activation, vous pourrez accéder à l'espace d'administration de votre entreprise via <a href="https://zalama-partner-dashboard-4esq.vercel.app/" style="color: #1e40af; text-decoration: none;">https://zalama-partner-dashboard-4esq.vercel.app/</a>
             </td>
           </tr>
         </table>

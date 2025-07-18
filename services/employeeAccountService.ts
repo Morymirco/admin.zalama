@@ -130,7 +130,7 @@ class EmployeeAccountService {
       // Formater le numéro de téléphone
       const formattedPhone = this.formatPhoneNumber(employeeData.telephone);
       
-      const smsMessage = `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte ZaLaMa a été créé avec succès.\nEmail: ${employeeData.email}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
+      const smsMessage = `ZaLaMa - Votre compte employé a été créé avec succès. Email: ${employeeData.email}, Mot de passe: ${accountResult.account?.password}. Connexion: https://www.zalamasas.com/login`;
       
       const smsResponse = await serverSmsService.sendSMS({
         to: [formattedPhone],
@@ -164,7 +164,7 @@ class EmployeeAccountService {
         <p>Votre compte ZaLaMa employé a été créé avec succès.</p>
         <p><strong>Email :</strong> ${employeeData.email}</p>
         <p><strong>Mot de passe :</strong> ${accountResult.account?.password || ''}</p>
-        <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
+        <p>Connectez-vous sur <a href="https://www.zalamasas.com/login">https://www.zalamasas.com/login</a></p>
       `;
       
       const response = await fetch('/api/email/send', {

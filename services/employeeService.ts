@@ -145,7 +145,7 @@ class EmployeeService {
         console.log(`📧 Email: ${employeeData.email}`);
         console.log(`🔑 Mot de passe: ${password}`);
         console.log(`📱 Téléphone: ${employeeData.telephone || 'Non fourni'}`);
-        console.log(`🌐 URL de connexion: https://admin.zalama.com`);
+        console.log(`🌐 URL de connexion: https://www.zalamasas.com/login`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         // Créer le compte dans Supabase Auth
@@ -291,7 +291,7 @@ class EmployeeService {
         try {
           const smsResult = await serverSmsService.sendSMS({
             to: [employeeData.telephone || ''],
-            message: `Bonjour ${employeeData.prenom} ${employeeData.nom}, votre compte employé ZaLaMa a été créé avec succès. Vos identifiants: Email: ${employeeData.email}, Mot de passe: ${password || 'Mot de passe temporaire'}. Connectez-vous sur https://admin.zalama.com`,
+            message: `ZaLaMa - Votre compte employé a été créé avec succès. Email: ${employeeData.email}, Mot de passe: ${password}. Connexion: https://www.zalamasas.com/login. Bienvenue !`,
             sender_name: 'ZaLaMa'
           });
 

@@ -186,7 +186,7 @@ class PartnerAccountService {
     }
 
     try {
-      const smsMessage = `Bonjour ${rhData.nom_rh}, votre compte ZaLaMa RH a été créé avec succès.\nEmail: ${rhData.email_rh}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
+      const smsMessage = `ZaLaMa - Votre compte RH a été créé avec succès. Email: ${rhData.email_rh}, Mot de passe: ${accountResult.account?.password}. Connexion: https://zalama-partner-dashboard-4esq.vercel.app/`;
       
       const smsResponse = await serverSmsService.sendSMS({
         to: [rhData.telephone_rh],
@@ -220,7 +220,7 @@ class PartnerAccountService {
         <p>Votre compte ZaLaMa RH a été créé avec succès.</p>
         <p><strong>Email :</strong> ${rhData.email_rh}</p>
         <p><strong>Mot de passe :</strong> ${accountResult.account?.password || ''}</p>
-        <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
+        <p>Connectez-vous sur <a href="https://zalama-partner-dashboard-4esq.vercel.app/">https://zalama-partner-dashboard-4esq.vercel.app/</a></p>
       `;
       
       const response = await fetch('/api/email/send', {
@@ -258,7 +258,7 @@ class PartnerAccountService {
     }
 
     try {
-      const smsMessage = `Bonjour ${responsableData.nom_representant}, votre compte ZaLaMa responsable a été créé avec succès.\nEmail: ${responsableData.email_representant}\nMot de passe: ${accountResult.account?.password}\nConnectez-vous sur https://admin.zalama.com`;
+      const smsMessage = `ZaLaMa - Votre compte responsable a été créé avec succès. Email: ${responsableData.email_representant}, Mot de passe: ${accountResult.account?.password}. Connexion: https://zalama-partner-dashboard-4esq.vercel.app/`;
       
       const smsResponse = await serverSmsService.sendSMS({
         to: [responsableData.telephone_representant],
@@ -292,7 +292,7 @@ class PartnerAccountService {
         <p>Votre compte ZaLaMa responsable a été créé avec succès.</p>
         <p><strong>Email :</strong> ${responsableData.email_representant}</p>
         <p><strong>Mot de passe :</strong> ${accountResult.account?.password || ''}</p>
-        <p>Connectez-vous sur <a href="https://admin.zalama.com">https://admin.zalama.com</a></p>
+        <p>Connectez-vous sur <a href="https://zalama-partner-dashboard-4esq.vercel.app/">https://zalama-partner-dashboard-4esq.vercel.app/</a></p>
       `;
       
       const response = await fetch('/api/email/send', {

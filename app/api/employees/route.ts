@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cleanEmployeeData, validateEmployeeData, generatePassword } from '@/lib/utils';
-import { createClient } from '@supabase/supabase-js';
+import { cleanEmployeeData, validateEmployeeData } from '@/lib/utils';
 import employeeService from '@/services/employeeService';
+import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
 
 const supabaseUrl = 'https://mspmrzlqhwpdkkburjiw.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zcG1yemxxaHdwZGtrYnVyaml3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc4NzI1OCwiZXhwIjoyMDY2MzYzMjU4fQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8';
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         console.log(`📧 Email: ${result.employee.email}`);
         console.log(`🔑 Mot de passe: ${result.accountResults.employe.password}`);
         console.log(`📱 Téléphone: ${result.employee.telephone || 'Non fourni'}`);
-        console.log(`🌐 URL de connexion: https://admin.zalama.com`);
+        console.log(`🌐 URL de connexion: https://www.zalamasas.com/login`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
 

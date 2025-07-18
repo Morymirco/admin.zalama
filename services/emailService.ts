@@ -1,4 +1,3 @@
-
 export interface EmailMessage {
   to: string;
   subject: string;
@@ -93,14 +92,14 @@ class EmailService {
    * Envoyer un email de bienvenue pour un RH
    */
   async sendWelcomeEmailToRH(data: WelcomeEmailData): Promise<any> {
-    const subject = `Bienvenue sur ZaLaMa - ${data.partenaireNom || 'Votre entreprise'}`;
+    const subject = `Bienvenue sur ZaLaMa RH - ${data.partenaireNom || 'Votre entreprise'}`;
     
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Bienvenue sur ZaLaMa</title>
+        <title>Bienvenue sur ZaLaMa RH</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -135,7 +134,7 @@ class EmailService {
             
             <p><strong>⚠️ Important :</strong> Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
             
-            <a href="https://admin.zalama.com" class="button">Se connecter maintenant</a>
+            <a href="https://zalama-partner-dashboard-4esq.vercel.app/" class="button">Se connecter maintenant</a>
             
             <h3>🚀 Fonctionnalités RH disponibles :</h3>
             <ul>
@@ -182,7 +181,7 @@ class EmailService {
       
       Important : Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.
       
-      Connectez-vous sur : https://admin.zalama.com
+      Connectez-vous sur : https://zalama-partner-dashboard-4esq.vercel.app/
       
       Fonctionnalités RH disponibles :
       - Gestion des employés et contrats
@@ -235,7 +234,7 @@ class EmailService {
         <div class="container">
           <div class="header">
             <h1>🎉 Bienvenue sur ZaLaMa</h1>
-            <p>Votre compte responsable a été créé avec succès</p>
+            <p>Votre compte a été créé avec succès</p>
           </div>
           
           <div class="content">
@@ -255,7 +254,7 @@ class EmailService {
             
             <p><strong>⚠️ Important :</strong> Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
             
-            <a href="https://admin.zalama.com" class="button">Se connecter maintenant</a>
+            <a href="https://zalama-partner-dashboard-4esq.vercel.app/" class="button">Se connecter maintenant</a>
             
             <h3>🚀 Fonctionnalités disponibles :</h3>
             <ul>
@@ -300,7 +299,7 @@ class EmailService {
       
       Important : Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.
       
-      Connectez-vous sur : https://admin.zalama.com
+      Connectez-vous sur : https://zalama-partner-dashboard-4esq.vercel.app/
       
       Fonctionnalités disponibles :
       - Vue d'ensemble de votre entreprise
@@ -336,7 +335,7 @@ class EmailService {
     console.log(`📧 Email: ${data.email}`);
     console.log(`🔑 Mot de passe: ${data.password}`);
     console.log(`🏢 Partenaire: ${data.partenaireNom || 'Aucun partenaire'}`);
-    console.log(`🌐 URL de connexion: https://admin.zalama.com`);
+    console.log(`🌐 URL de connexion: https://www.zalamasas.com/login`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     const subject = `Bienvenue sur ZaLaMa - ${data.partenaireNom || 'Votre entreprise'}`;
@@ -381,7 +380,7 @@ class EmailService {
             
             <p><strong>⚠️ Important :</strong> Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
             
-            <a href="https://admin.zalama.com" class="button">Se connecter maintenant</a>
+            <a href="https://www.zalamasas.com/login" class="button">Se connecter maintenant</a>
             
             <h3>🚀 Fonctionnalités disponibles :</h3>
             <ul>
@@ -426,7 +425,7 @@ class EmailService {
       
       Important : Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.
       
-      Connectez-vous sur : https://admin.zalama.com
+      Connectez-vous sur : https://www.zalamasas.com/login
       
       Fonctionnalités disponibles :
       - Consulter vos informations personnelles

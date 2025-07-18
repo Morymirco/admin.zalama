@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
       try {
         // SMS à l'employé (seulement si téléphone fourni)
         if (employeeData.telephone) {
-          const employeSMSMessage = `ZaLaMa - Votre compte employé a été créé avec succès. Email de connexion: ${employeeData.email}, Mot de passe: ${results.account.password}. Connexion: admin.zalama.com. Bienvenue !`;
+          const employeSMSMessage = `ZaLaMa - Votre compte employé a été créé avec succès. Email de connexion: ${employeeData.email}, Mot de passe: ${results.account.password}. Connexion: https://www.zalamasas.com/login. Bienvenue !`;
           
           const employeSMSResult = await directSmsService.sendSMS([employeeData.telephone], employeSMSMessage);
           smsResults.employe = {

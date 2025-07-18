@@ -415,25 +415,20 @@ Les SMS de bienvenue ont été envoyés aux contacts.`;
     console.log(`📧 Email: ${emailEmploye}`);
     console.log(`🔑 Mot de passe: ${password}`);
     console.log(`📱 Téléphone: ${telephoneEmploye}`);
-    console.log(`🌐 URL de connexion: https://admin.zalama.com`);
+    console.log(`🌐 URL de connexion: https://www.zalamasas.com/login`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    const message = `Bonjour ${prenomEmploye},
+    const message = `ZaLaMa - Votre compte employé a été créé avec succès.
 
-Votre compte ZaLaMa a été créé avec succès !
-
-🔐 Vos identifiants de connexion :
+Identifiants de connexion :
 Email: ${emailEmploye}
 Mot de passe: ${password}
 
-🌐 Connectez-vous sur : https://admin.zalama.com
+Connectez-vous sur : https://www.zalamasas.com/login
 
-⚠️ Important : Changez votre mot de passe lors de votre première connexion.
+Important : Changez votre mot de passe lors de votre première connexion.
 
-Pour toute question, contactez-nous au +224 XXX XXX XXX.
-
-Cordialement,
-L'équipe ZaLaMa`;
+Support : +224 XXX XXX XXX`;
 
     return this.sendSMS({
       to: [formattedPhone],

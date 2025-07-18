@@ -832,7 +832,7 @@ class AdvanceNotificationService {
   private formatCurrency(amount: number): string {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'XOF',
+      currency: 'GNF',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);

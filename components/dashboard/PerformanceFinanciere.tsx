@@ -1,9 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, BarChart3 } from 'lucide-react';
 import { useSupabaseCollection } from '@/hooks/useSupabaseCollection';
 import { transactionService } from '@/services/transactionService';
+import { ArrowUpRight, BarChart3, DollarSign, PiggyBank, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+// ✅ Fonction utilitaire pour les calculs financiers arrondis
+const calculerMontantFinancier = (montant: number, pourcentage: number): number => {
+  return Math.round(montant * pourcentage / 100);
+};
+
+const arrondirMontant = (montant: number): number => {
+  return Math.round(montant * 100) / 100; // Arrondir à 2 décimales
+};
 
 export default function PerformanceFinanciere() {
   // Utiliser notre hook pour récupérer les transactions
@@ -31,24 +40,36 @@ export default function PerformanceFinanciere() {
           // Calculer le montant total
           const montantTotal = transactions.filter(t => ['EFFECTUEE'].includes(t.statut)).reduce((total, transaction) => total + (transaction.montant || 0), 0);
           
-          // Calculer le montant débloqué (sorties/avances)
+          // ✅ AMÉLIORATION : Calculer le montant débloqué avec arrondi
           const montantDebloque = transactions
             .filter(t => ['EFFECTUEE'].includes(t.statut))
-            .reduce((total, t) => total + (t.montant || 0) * (100 -6.5)/100, 0);
+            .reduce((total, t) => total + calculerMontantFinancier(t.montant || 0, 93.5), 0); // 100% - 6.5%
           
-          // Calculer le montant récupéré (remboursements/entrées)
-          const montantRecupere = transactions
-            .filter(t => ['remboursement', 'credit', 'entree'].includes(t.type?.toLowerCase()) && 
-                        ['En attente', 'Validé', 'Effectué'].includes(t.statut))
-            .reduce((total, t) => total + (t.montant || 0), 0);
+          // ✅ CORRECTION : Calculer le montant récupéré depuis les remboursements PAYÉS
+          let montantRecupere = 0;
+          try {
+            const remboursementsResponse = await fetch('/api/remboursements?statut=PAYE');
+            if (remboursementsResponse.ok) {
+              const remboursementsResult = await remboursementsResponse.json();
+              if (remboursementsResult.success && remboursementsResult.data) {
+                montantRecupere = remboursementsResult.data.reduce((total: number, remb: any) => 
+                  total + arrondirMontant(parseFloat(remb.montant_total_remboursement) || 0), 0
+                );
+              }
+            }
+          } catch (remboursementError) {
+            console.warn('⚠️ Erreur lors de la récupération des remboursements:', remboursementError);
+            // Fallback : utiliser 0 si les remboursements ne sont pas disponibles
+            montantRecupere = 0;
+          }
           
-          // Calculer les revenus générés (frais de service)
+          // ✅ AMÉLIORATION : Calculer les revenus générés avec arrondi (frais de service)
           const revenusGeneres = transactions
             .filter(t => ['EFFECTUEE'].includes(t.statut))
-            .reduce((total, t) => total + (t.montant || 0) * 6.5/100, 0);
+            .reduce((total, t) => total + calculerMontantFinancier(t.montant || 0, 6.5), 0);
           
-          // Calculer le taux de remboursement
-          const tauxRemboursement = montantDebloque > 0 ? (montantRecupere / montantDebloque) * 100 : 0;
+          // Calculer le taux de remboursement basé sur les vrais remboursements
+          const tauxRemboursement = montantDebloque > 0 ? Math.round((montantRecupere / montantDebloque) * 100) : 0;
           
           // Calculer les transactions de ce mois
           const now = new Date();
@@ -63,13 +84,13 @@ export default function PerformanceFinanciere() {
           const montantCeMois = transactionsCeMois.filter(t => ['EFFECTUEE'].includes(t.statut)).reduce((sum, transaction) => sum + (transaction.montant || 0), 0);
           
           setStats({
-            montantTotal,
-            montantDebloque,
-            montantRecupere,
-            revenusGeneres,
+            montantTotal: arrondirMontant(montantTotal),
+            montantDebloque: arrondirMontant(montantDebloque),
+            montantRecupere: arrondirMontant(montantRecupere),
+            revenusGeneres: arrondirMontant(revenusGeneres),
             tauxRemboursement,
             transactionsCeMois: transactionsCeMois.length,
-            montantCeMois
+            montantCeMois: arrondirMontant(montantCeMois)
           });
         }
       } catch (error) {
@@ -89,7 +110,7 @@ export default function PerformanceFinanciere() {
       currency: 'GNF',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(montant);
+    }).format(Math.round(montant)); // ✅ Forcer l'arrondi dans l'affichage
   };
 
   // Afficher un spinner pendant le chargement
@@ -122,7 +143,7 @@ export default function PerformanceFinanciere() {
       </div>
       
       {/* Grille de statistiques financières */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 mb-4">
         {/* Montant Débloqué */}
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-3 border border-[var(--zalama-border)]">
           <div className="flex justify-between items-center mb-1">
@@ -143,6 +164,9 @@ export default function PerformanceFinanciere() {
             </div>
           </div>
           <div className="text-lg font-bold text-[var(--zalama-text)]">{formatMontant(stats.montantRecupere)}</div>
+          <div className="text-xs text-[var(--zalama-text-secondary)] mt-1">
+            Remboursements payés
+          </div>
         </div>
         
         {/* Revenus Générés */}
@@ -154,9 +178,12 @@ export default function PerformanceFinanciere() {
             </div>
           </div>
           <div className="text-lg font-bold text-[var(--zalama-text)]">{formatMontant(stats.revenusGeneres)}</div>
+          <div className="text-xs text-[var(--zalama-text-secondary)] mt-1">
+            Frais de service (6.5%)
+          </div>
         </div>
         
-        {/* Taux Remboursement */}
+        {/* Taux de Remboursement */}
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-3 border border-[var(--zalama-border)]">
           <div className="flex justify-between items-center mb-1">
             <div className="text-sm text-[var(--zalama-text-secondary)]">Taux Remboursement</div>
@@ -164,12 +191,15 @@ export default function PerformanceFinanciere() {
               <BarChart3 className="h-4 w-4 text-[var(--zalama-success)]" />
             </div>
           </div>
-          <div className="text-lg font-bold text-[var(--zalama-text)]">{Math.round(stats.tauxRemboursement)}%</div>
+          <div className="text-lg font-bold text-[var(--zalama-text)]">{stats.tauxRemboursement}%</div>
+          <div className="text-xs text-[var(--zalama-text-secondary)] mt-1">
+            Récupéré / Débloqué
+          </div>
         </div>
       </div>
       
       {/* Statistiques du mois */}
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="bg-[var(--zalama-bg-light)] rounded-lg p-3 border border-[var(--zalama-border)]">
           <div className="text-sm text-[var(--zalama-text-secondary)]">Transactions ce mois</div>
           <div className="text-lg font-bold text-[var(--zalama-text)]">{stats.transactionsCeMois}</div>

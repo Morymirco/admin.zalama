@@ -1,16 +1,8 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Remboursement } from '@/types/reimbursement';
-import { CreditCard, Loader2, Wallet } from 'lucide-react';
+import { CreditCard, Loader2, Wallet, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -129,51 +121,69 @@ export default function PaymentModal({ isOpen, onClose, remboursement, onSuccess
     }
   };
 
-  if (!remboursement) return null;
+  if (!isOpen || !remboursement) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Paiement via Lengo Pay
-          </DialogTitle>
-          <DialogDescription>
-            Effectuer le paiement du remboursement pour {remboursement.employe?.nom} {remboursement.employe?.prenom}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[var(--zalama-blue)]/10 rounded-lg">
+              <CreditCard className="h-5 w-5 text-[var(--zalama-blue)]" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--zalama-text)]">
+                Paiement via Lengo Pay
+              </h2>
+              <p className="text-sm text-[var(--zalama-text-secondary)]">
+                Pour {remboursement.employe?.nom} {remboursement.employe?.prenom}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleClose}
+            disabled={loading}
+            className="p-2 text-[var(--zalama-text-secondary)] hover:text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-        <div className="space-y-6">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Informations du remboursement */}
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Montant à rembourser:</span>
-              <span className="text-sm font-bold">
-                {new Intl.NumberFormat('fr-FR').format(remboursement.montant_total_remboursement)} FCFA
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Montant transaction:</span>
-              <span className="text-sm">
-                {new Intl.NumberFormat('fr-FR').format(remboursement.montant_transaction)} FCFA
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Frais de service:</span>
-              <span className="text-sm">
-                {new Intl.NumberFormat('fr-FR').format(remboursement.frais_service)} FCFA
-              </span>
+          <div className="bg-[var(--zalama-bg-light)] p-4 rounded-lg space-y-3 border border-[var(--zalama-border)]">
+            <h3 className="text-sm font-medium text-[var(--zalama-text)] mb-3">Détails du remboursement</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-[var(--zalama-text-secondary)]">Montant à rembourser:</span>
+                <span className="text-sm font-bold text-[var(--zalama-success)]">
+                  {new Intl.NumberFormat('fr-FR').format(remboursement.montant_total_remboursement)} FCFA
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-[var(--zalama-text-secondary)]">Montant transaction:</span>
+                <span className="text-sm text-[var(--zalama-text)]">
+                  {new Intl.NumberFormat('fr-FR').format(remboursement.montant_transaction)} FCFA
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-[var(--zalama-text-secondary)]">Frais de service:</span>
+                <span className="text-sm text-[var(--zalama-warning)]">
+                  {new Intl.NumberFormat('fr-FR').format(remboursement.frais_service)} FCFA
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Informations Lengo Pay */}
-          <div className="bg-blue-50 p-4 rounded-lg space-y-3">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg space-y-3 border border-blue-200 dark:border-blue-800">
+            <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-800 dark:text-blue-200">
               <Wallet className="h-5 w-5" />
               Paiement Sécurisé Lengo Pay
             </h3>
-            <div className="text-sm text-blue-800 space-y-2">
+            <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
               <p>• Paiement sécurisé via la plateforme Lengo Pay</p>
               <p>• Supporte Mobile Money, cartes bancaires, et plus</p>
               <p>• Transaction instantanée et sécurisée</p>
@@ -182,21 +192,62 @@ export default function PaymentModal({ isOpen, onClose, remboursement, onSuccess
           </div>
 
           {/* Avertissement */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <div className="text-sm text-yellow-800">
-              <p className="font-medium">Important</p>
-              <p>En cliquant sur "Payer via Lengo Pay", vous serez redirigé vers la page de paiement sécurisée de Lengo Pay pour finaliser la transaction.</p>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="text-sm">
+              <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-1">Important</p>
+              <p className="text-yellow-700 dark:text-yellow-300">
+                En cliquant sur &ldquo;Payer via Lengo Pay&rdquo;, vous serez redirigé vers la page de paiement sécurisée de Lengo Pay pour finaliser la transaction.
+              </p>
             </div>
           </div>
+
+          {/* Afficher le lien de paiement si disponible */}
+          {paymentUrl && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
+                ✅ Paiement initié avec succès !
+              </h4>
+              <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                Cliquez sur &ldquo;Ouvrir Page de Paiement&rdquo; ou copiez le lien ci-dessous :
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={paymentUrl}
+                  readOnly
+                  className="flex-1 text-xs p-2 border border-green-300 dark:border-green-700 rounded bg-white dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                />
+                <Button
+                  onClick={copyPaymentUrl}
+                  size="sm"
+                  variant="outline"
+                  className="text-xs border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/40"
+                >
+                  Copier
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+        {/* Footer */}
+        <div className="flex justify-end gap-3 p-6 border-t border-[var(--zalama-border)]">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handleClose} 
+            disabled={loading}
+            className="border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]"
+          >
             {paymentInitiated ? 'Fermer' : 'Annuler'}
           </Button>
           
           {!paymentInitiated ? (
-            <Button onClick={handleLengoPayment} disabled={loading}>
+            <Button 
+              onClick={handleLengoPayment} 
+              disabled={loading}
+              className="bg-[var(--zalama-blue)] hover:bg-[var(--zalama-blue-accent)] text-white"
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -213,7 +264,7 @@ export default function PaymentModal({ isOpen, onClose, remboursement, onSuccess
             <div className="flex gap-2">
               <Button 
                 onClick={() => window.open(paymentUrl, '_blank', 'noopener,noreferrer')}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-[var(--zalama-success)] hover:bg-green-700 text-white"
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 Ouvrir Page de Paiement
@@ -221,42 +272,14 @@ export default function PaymentModal({ isOpen, onClose, remboursement, onSuccess
               <Button 
                 onClick={copyPaymentUrl}
                 variant="outline"
-                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                className="border-[var(--zalama-blue)] text-[var(--zalama-blue)] hover:bg-blue-50 dark:hover:bg-blue-900/20"
               >
                 Copier le Lien
               </Button>
             </div>
           ) : null}
-        </DialogFooter>
-
-        {/* Afficher le lien de paiement si disponible */}
-        {paymentUrl && (
-          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h4 className="text-sm font-medium text-green-800 mb-2">
-              ✅ Paiement initié avec succès !
-            </h4>
-            <p className="text-sm text-green-700 mb-3">
-              Cliquez sur "Ouvrir Page de Paiement" ci-dessus ou copiez le lien ci-dessous :
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={paymentUrl}
-                readOnly
-                className="flex-1 text-xs p-2 border border-green-300 rounded bg-white"
-              />
-              <Button
-                onClick={copyPaymentUrl}
-                size="sm"
-                variant="outline"
-                className="text-xs"
-              >
-                Copier
-              </Button>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>
   );
 } 

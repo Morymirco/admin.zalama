@@ -5,6 +5,15 @@
 -- basé sur les transactions qui ont réussi (statut EFFECTUEE)
 
 -- =====================================================
+-- SUPPRIMER LES VUES EXISTANTES POUR ÉVITER LES CONFLITS
+-- =====================================================
+
+DROP VIEW IF EXISTS remboursements_details CASCADE;
+DROP VIEW IF EXISTS transactions_sans_remboursement CASCADE;
+DROP VIEW IF EXISTS statistiques_remboursement_partenaire CASCADE;
+DROP VIEW IF EXISTS remboursements_en_retard CASCADE;
+
+-- =====================================================
 -- TYPES ENUM POUR LES REMBOURSEMENTS
 -- =====================================================
 
@@ -48,8 +57,8 @@ CREATE TABLE IF NOT EXISTS remboursements (
   
   -- Montants (basés sur la transaction réussie)
   montant_transaction DECIMAL(10,2) NOT NULL, -- Montant de la transaction EFFECTUEE
-  frais_service DECIMAL(10,2) DEFAULT 0, -- Frais de service
-  montant_total_remboursement DECIMAL(10,2) NOT NULL, -- Montant total à rembourser (transaction + frais)
+  frais_service DECIMAL(10,2) DEFAULT 0, -- Frais de service (informatif - ZaLaMa garde ces frais)
+  montant_total_remboursement DECIMAL(10,2) NOT NULL, -- Montant que paie le partenaire (= montant_transaction)
   
   -- Informations de remboursement
   methode_remboursement methode_remboursement NOT NULL,
@@ -76,12 +85,31 @@ CREATE TABLE IF NOT EXISTS remboursements (
   
   -- Métadonnées
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  -- Contraintes
-  CONSTRAINT remboursements_transaction_unique UNIQUE (transaction_id),
-  CONSTRAINT remboursements_montant_check CHECK (montant_total_remboursement = montant_transaction + frais_service)
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Vérifier et ajouter la contrainte unique seulement si elle n'existe pas
+DO $$ 
+DECLARE
+    constraint_exists BOOLEAN;
+BEGIN
+    -- Vérifier si la contrainte existe déjà
+    SELECT EXISTS (
+        SELECT 1 
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'remboursements' 
+        AND constraint_name = 'remboursements_transaction_unique'
+        AND constraint_type = 'UNIQUE'
+    ) INTO constraint_exists;
+    
+    -- Ajouter la contrainte seulement si elle n'existe pas
+    IF NOT constraint_exists THEN
+        ALTER TABLE remboursements ADD CONSTRAINT remboursements_transaction_unique UNIQUE (transaction_id);
+        RAISE NOTICE 'Contrainte remboursements_transaction_unique créée';
+    ELSE
+        RAISE NOTICE 'Contrainte remboursements_transaction_unique existe déjà';
+    END IF;
+END $$;
 
 -- =====================================================
 -- TABLE: historique_remboursements
@@ -109,8 +137,19 @@ CREATE TABLE IF NOT EXISTS historique_remboursements (
 );
 
 -- =====================================================
--- INDEXES POUR LES PERFORMANCES
+-- INDEXES POUR LES PERFORMANCES (avec gestion des conflits)
 -- =====================================================
+
+-- Supprimer et recréer les index pour éviter les conflits
+DROP INDEX IF EXISTS idx_remboursements_transaction_id;
+DROP INDEX IF EXISTS idx_remboursements_demande_avance_id;
+DROP INDEX IF EXISTS idx_remboursements_employe_id;
+DROP INDEX IF EXISTS idx_remboursements_partenaire_id;
+DROP INDEX IF EXISTS idx_remboursements_statut;
+DROP INDEX IF EXISTS idx_remboursements_date_creation;
+DROP INDEX IF EXISTS idx_remboursements_date_limite;
+DROP INDEX IF EXISTS idx_historique_remboursement_id;
+DROP INDEX IF EXISTS idx_historique_created_at;
 
 -- Index pour les remboursements
 CREATE INDEX idx_remboursements_transaction_id ON remboursements(transaction_id);
@@ -126,147 +165,16 @@ CREATE INDEX idx_historique_remboursement_id ON historique_remboursements(rembou
 CREATE INDEX idx_historique_created_at ON historique_remboursements(created_at);
 
 -- =====================================================
--- VUES POUR LES RAPPORTS
--- =====================================================
-
--- Vue des remboursements avec détails complets (paiement intégral)
-CREATE OR REPLACE VIEW remboursements_details AS
-SELECT 
-  r.id,
-  r.transaction_id,
-  r.demande_avance_id,
-  r.employe_id,
-  e.nom as employe_nom,
-  e.prenom as employe_prenom,
-  e.email as employe_email,
-  e.telephone as employe_telephone,
-  r.partenaire_id,
-  p.nom as partenaire_nom,
-  p.email as partenaire_email,
-  p.email_rh as partenaire_email_rh,
-  p.telephone as partenaire_telephone,
-  r.montant_transaction,
-  r.frais_service,
-  r.montant_total_remboursement,
-  r.methode_remboursement,
-  r.statut,
-  r.date_creation,
-  r.date_transaction_effectuee,
-  r.date_limite_remboursement,
-  r.date_remboursement_effectue,
-  r.commentaire_partenaire,
-  r.commentaire_admin,
-  r.created_at,
-  r.updated_at,
-  -- Informations de la transaction
-  t.numero_transaction,
-  t.methode_paiement as methode_paiement_transaction,
-  t.date_transaction,
-  t.statut as statut_transaction,
-  -- Calculs
-  CASE 
-    WHEN r.date_limite_remboursement < CURRENT_DATE AND r.statut = 'EN_ATTENTE' 
-    THEN CURRENT_DATE - r.date_limite_remboursement::date 
-    ELSE 0 
-  END as jours_retard
-FROM remboursements r
-LEFT JOIN employees e ON r.employe_id = e.id
-LEFT JOIN partners p ON r.partenaire_id = p.id
-LEFT JOIN transactions t ON r.transaction_id = t.id;
-
--- Vue des transactions réussies sans remboursement
-CREATE OR REPLACE VIEW transactions_sans_remboursement AS
-SELECT 
-  t.id as transaction_id,
-  t.demande_avance_id,
-  t.employe_id,
-  e.nom as employe_nom,
-  e.prenom as employe_prenom,
-  e.email as employe_email,
-  t.entreprise_id as partenaire_id,
-  p.nom as partenaire_nom,
-  p.email as partenaire_email,
-  p.email_rh as partenaire_email_rh,
-  t.montant,
-  t.numero_transaction,
-  t.methode_paiement,
-  t.date_transaction,
-  t.statut,
-  t.created_at,
-  -- Informations de la demande d'avance
-  sar.motif,
-  sar.type_motif,
-  sar.frais_service,
-  -- Calcul du montant total à rembourser
-  t.montant + COALESCE(sar.frais_service, 0) as montant_total_remboursement
-FROM transactions t
-LEFT JOIN employees e ON t.employe_id = e.id
-LEFT JOIN partners p ON t.entreprise_id = p.id
-LEFT JOIN salary_advance_requests sar ON t.demande_avance_id = sar.id
-WHERE t.statut = 'EFFECTUEE'
-  AND NOT EXISTS (
-    SELECT 1 FROM remboursements r WHERE r.transaction_id = t.id
-  );
-
--- Vue des statistiques de remboursement par partenaire
-CREATE OR REPLACE VIEW statistiques_remboursement_partenaire AS
-SELECT 
-  p.id as partenaire_id,
-  p.nom as partenaire_nom,
-  COUNT(r.id) as total_remboursements,
-  COUNT(CASE WHEN r.statut = 'EN_ATTENTE' THEN 1 END) as remboursements_en_attente,
-  COUNT(CASE WHEN r.statut = 'PAYE' THEN 1 END) as remboursements_payes,
-  COUNT(CASE WHEN r.statut = 'EN_RETARD' THEN 1 END) as remboursements_en_retard,
-  SUM(r.montant_transaction) as montant_total_transactions,
-  SUM(r.montant_total_remboursement) as montant_total_a_rembourser,
-  SUM(CASE WHEN r.statut = 'PAYE' THEN r.montant_total_remboursement ELSE 0 END) as montant_total_rembourse,
-  AVG(r.montant_transaction) as montant_moyen_transaction,
-  CASE 
-    WHEN SUM(r.montant_total_remboursement) > 0 
-    THEN (SUM(CASE WHEN r.statut = 'PAYE' THEN r.montant_total_remboursement ELSE 0 END) / SUM(r.montant_total_remboursement)) * 100 
-    ELSE 0 
-  END as taux_remboursement,
-  -- Statistiques des transactions réussies
-  COUNT(DISTINCT t.id) as total_transactions_reussies,
-  SUM(t.montant) as montant_total_transactions_reussies
-FROM partners p
-LEFT JOIN transactions t ON p.id = t.entreprise_id AND t.statut = 'EFFECTUEE'
-LEFT JOIN remboursements r ON t.id = r.transaction_id
-GROUP BY p.id, p.nom;
-
--- Vue des remboursements en retard
-CREATE OR REPLACE VIEW remboursements_en_retard AS
-SELECT 
-  r.id,
-  r.transaction_id,
-  r.employe_id,
-  e.nom as employe_nom,
-  e.prenom as employe_prenom,
-  r.partenaire_id,
-  p.nom as partenaire_nom,
-  p.email_rh as partenaire_email_rh,
-  p.telephone as partenaire_telephone,
-  r.montant_transaction,
-  r.montant_total_remboursement,
-  r.date_limite_remboursement,
-  CURRENT_DATE - r.date_limite_remboursement::date as jours_retard
-FROM remboursements r
-LEFT JOIN employees e ON r.employe_id = e.id
-LEFT JOIN partners p ON r.partenaire_id = p.id
-WHERE r.statut = 'EN_ATTENTE' 
-  AND r.date_limite_remboursement < CURRENT_DATE;
-
--- =====================================================
 -- FONCTIONS POUR LA GESTION AUTOMATIQUE
 -- =====================================================
 
--- Fonction pour créer automatiquement un remboursement lors d'une transaction réussie
+-- ✅ CORRECTION : Fonction pour créer automatiquement un remboursement avec la logique ZaLaMa correcte
 CREATE OR REPLACE FUNCTION creer_remboursement_integral_automatique()
 RETURNS TRIGGER AS $$
 DECLARE
-  montant_transaction DECIMAL(10,2);
-  frais_service DECIMAL(10,2);
-  montant_total_remboursement DECIMAL(10,2);
+  montant_demande DECIMAL(10,2);
+  frais_service_zalama DECIMAL(10,2);
+  montant_remboursement_partenaire DECIMAL(10,2);
   date_limite_remboursement TIMESTAMP WITH TIME ZONE;
   demande_avance_id UUID;
   employe_id UUID;
@@ -280,18 +188,24 @@ BEGIN
       sar.employe_id,
       sar.partenaire_id,
       COALESCE(sar.frais_service, 0)
-    INTO demande_avance_id, employe_id, partenaire_id, frais_service
+    INTO demande_avance_id, employe_id, partenaire_id, frais_service_zalama
     FROM salary_advance_requests sar
     WHERE sar.id = NEW.demande_avance_id;
     
-    -- Récupérer les montants
-    montant_transaction := NEW.montant;
-    montant_total_remboursement := montant_transaction + frais_service;
+    -- ✅ LOGIQUE FINANCIÈRE ZALAMA CORRECTE
+    montant_demande := NEW.montant; -- Ex: 2,000 GNF (ce que demande l'employé)
+    -- Si frais_service n'est pas défini dans la demande, utiliser 6.5%
+    IF frais_service_zalama = 0 THEN
+      frais_service_zalama := ROUND(montant_demande * 0.065, 2); -- Ex: 130 GNF (frais ZaLaMa)
+    END IF;
+    
+    -- Le partenaire rembourse exactement le montant demandé (ZaLaMa garde ses frais)
+    montant_remboursement_partenaire := montant_demande; -- Ex: 2,000 GNF
     
     -- Calculer la date limite de remboursement (30 jours après la transaction)
     date_limite_remboursement := NEW.date_transaction + INTERVAL '30 days';
     
-    -- Créer le remboursement
+    -- Créer le remboursement avec la logique correcte
     INSERT INTO remboursements (
       transaction_id,
       demande_avance_id,
@@ -303,20 +217,26 @@ BEGIN
       methode_remboursement,
       date_transaction_effectuee,
       date_limite_remboursement,
-      statut
+      statut,
+      commentaire_admin
     ) VALUES (
       NEW.id,
       demande_avance_id,
       employe_id,
       partenaire_id,
-      montant_transaction,
-      frais_service,
-      montant_total_remboursement,
+      montant_demande, -- Montant de la transaction
+      frais_service_zalama, -- Frais ZaLaMa (informatif)
+      montant_remboursement_partenaire, -- Ce que paie le partenaire (= montant demandé)
       'VIREMENT_BANCAIRE',
       NEW.date_transaction,
       date_limite_remboursement,
-      'EN_ATTENTE'
+      'EN_ATTENTE',
+      'Remboursement créé automatiquement - Logique ZaLaMa : partenaire rembourse ' || montant_demande || ' GNF (ZaLaMa garde ' || frais_service_zalama || ' GNF de frais)'
     );
+    
+    -- Log pour debugging
+    RAISE NOTICE 'Remboursement créé automatiquement : montant_demande=%, frais_zalama=%, montant_partenaire=%', 
+      montant_demande, frais_service_zalama, montant_remboursement_partenaire;
   END IF;
   
   RETURN NEW;
@@ -449,12 +369,157 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
+-- VUES POUR LES RAPPORTS (RECRÉÉES APRÈS LES TABLES)
+-- =====================================================
+
+-- Vue des remboursements avec détails complets (paiement intégral)
+CREATE OR REPLACE VIEW remboursements_details AS
+SELECT 
+  r.id,
+  r.transaction_id,
+  r.demande_avance_id,
+  r.employe_id,
+  e.nom as employe_nom,
+  e.prenom as employe_prenom,
+  e.email as employe_email,
+  e.telephone as employe_telephone,
+  r.partenaire_id,
+  p.nom as partenaire_nom,
+  p.email as partenaire_email,
+  p.email_rh as partenaire_email_rh,
+  p.telephone as partenaire_telephone,
+  r.montant_transaction,
+  r.frais_service,
+  r.montant_total_remboursement,
+  r.methode_remboursement,
+  r.statut,
+  r.date_creation,
+  r.date_transaction_effectuee,
+  r.date_limite_remboursement,
+  r.date_remboursement_effectue,
+  r.commentaire_partenaire,
+  r.commentaire_admin,
+  r.created_at,
+  r.updated_at,
+  -- Informations de la transaction
+  t.numero_transaction,
+  t.methode_paiement as methode_paiement_transaction,
+  t.date_transaction,
+  t.statut as statut_transaction,
+  -- Calculs
+  CASE 
+    WHEN r.date_limite_remboursement < CURRENT_DATE AND r.statut = 'EN_ATTENTE' 
+    THEN CURRENT_DATE - r.date_limite_remboursement::date 
+    ELSE 0 
+  END as jours_retard
+FROM remboursements r
+LEFT JOIN employees e ON r.employe_id = e.id
+LEFT JOIN partners p ON r.partenaire_id = p.id
+LEFT JOIN transactions t ON r.transaction_id = t.id;
+
+-- Vue des transactions réussies sans remboursement
+CREATE OR REPLACE VIEW transactions_sans_remboursement AS
+SELECT 
+  t.id as transaction_id,
+  t.demande_avance_id,
+  t.employe_id,
+  e.nom as employe_nom,
+  e.prenom as employe_prenom,
+  e.email as employe_email,
+  t.entreprise_id as partenaire_id,
+  p.nom as partenaire_nom,
+  p.email as partenaire_email,
+  p.email_rh as partenaire_email_rh,
+  t.montant,
+  t.numero_transaction,
+  t.methode_paiement,
+  t.date_transaction,
+  t.statut,
+  t.created_at,
+  -- Informations de la demande d'avance
+  sar.motif,
+  sar.type_motif,
+  sar.frais_service,
+  -- ✅ CORRECTION : Montant à rembourser = montant demandé (sans ajouter frais)
+  t.montant::DECIMAL(10,2) as montant_total_remboursement
+FROM transactions t
+LEFT JOIN employees e ON t.employe_id = e.id
+LEFT JOIN partners p ON t.entreprise_id = p.id
+LEFT JOIN salary_advance_requests sar ON t.demande_avance_id = sar.id
+WHERE t.statut = 'EFFECTUEE'
+  AND NOT EXISTS (
+    SELECT 1 FROM remboursements r WHERE r.transaction_id = t.id
+  );
+
+-- Vue des statistiques de remboursement par partenaire
+CREATE OR REPLACE VIEW statistiques_remboursement_partenaire AS
+SELECT 
+  p.id as partenaire_id,
+  p.nom as partenaire_nom,
+  COUNT(r.id) as total_remboursements,
+  COUNT(CASE WHEN r.statut = 'EN_ATTENTE' THEN 1 END) as remboursements_en_attente,
+  COUNT(CASE WHEN r.statut = 'PAYE' THEN 1 END) as remboursements_payes,
+  COUNT(CASE WHEN r.statut = 'EN_RETARD' THEN 1 END) as remboursements_en_retard,
+  SUM(r.montant_transaction) as montant_total_transactions,
+  SUM(r.montant_total_remboursement) as montant_total_a_rembourser,
+  SUM(CASE WHEN r.statut = 'PAYE' THEN r.montant_total_remboursement ELSE 0 END) as montant_total_rembourse,
+  AVG(r.montant_transaction) as montant_moyen_transaction,
+  CASE 
+    WHEN SUM(r.montant_total_remboursement) > 0 
+    THEN (SUM(CASE WHEN r.statut = 'PAYE' THEN r.montant_total_remboursement ELSE 0 END) / SUM(r.montant_total_remboursement)) * 100 
+    ELSE 0 
+  END as taux_remboursement,
+  -- Statistiques des transactions réussies
+  COUNT(DISTINCT t.id) as total_transactions_reussies,
+  SUM(t.montant) as montant_total_transactions_reussies
+FROM partners p
+LEFT JOIN transactions t ON p.id = t.entreprise_id AND t.statut = 'EFFECTUEE'
+LEFT JOIN remboursements r ON t.id = r.transaction_id
+GROUP BY p.id, p.nom;
+
+-- Vue des remboursements en retard
+CREATE OR REPLACE VIEW remboursements_en_retard AS
+SELECT 
+  r.id,
+  r.transaction_id,
+  r.employe_id,
+  e.nom as employe_nom,
+  e.prenom as employe_prenom,
+  r.partenaire_id,
+  p.nom as partenaire_nom,
+  p.email_rh as partenaire_email_rh,
+  p.telephone as partenaire_telephone,
+  r.montant_transaction,
+  r.montant_total_remboursement,
+  r.date_limite_remboursement,
+  CURRENT_DATE - r.date_limite_remboursement::date as jours_retard
+FROM remboursements r
+LEFT JOIN employees e ON r.employe_id = e.id
+LEFT JOIN partners p ON r.partenaire_id = p.id
+WHERE r.statut = 'EN_ATTENTE' 
+  AND r.date_limite_remboursement < CURRENT_DATE;
+
+-- =====================================================
 -- COMMENTAIRES
 -- =====================================================
 
-COMMENT ON TABLE remboursements IS 'Table principale pour gérer les remboursements intégraux basés sur les transactions réussies (EFFECTUEE)';
+COMMENT ON TABLE remboursements IS 'Table principale pour gérer les remboursements selon la logique ZaLaMa : le partenaire rembourse exactement le montant demandé (ZaLaMa garde ses frais de service)';
 COMMENT ON TABLE historique_remboursements IS 'Table pour tracer l''historique des actions sur les remboursements';
-COMMENT ON FUNCTION creer_remboursement_integral_automatique() IS 'Fonction déclenchée automatiquement lors d''une transaction réussie (EFFECTUEE)';
+COMMENT ON FUNCTION creer_remboursement_integral_automatique() IS 'Fonction déclenchée automatiquement lors d''une transaction réussie (EFFECTUEE) - Applique la logique financière ZaLaMa correcte';
 COMMENT ON FUNCTION maintenance_quotidienne_remboursements() IS 'Fonction de maintenance quotidienne pour mettre à jour les statuts';
 COMMENT ON VIEW transactions_sans_remboursement IS 'Vue des transactions réussies qui n''ont pas encore de remboursement créé';
 COMMENT ON VIEW remboursements_en_retard IS 'Vue des remboursements en retard (dépassant la date limite)'; 
+
+-- =====================================================
+-- MESSAGE DE CONFIRMATION
+-- =====================================================
+
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Système de remboursement ZaLaMa installé avec succès !';
+  RAISE NOTICE '📊 Logique financière : Partenaire rembourse le montant demandé, ZaLaMa garde ses frais (6.5%%)';
+  RAISE NOTICE '🔧 Triggers automatiques activés pour les transactions EFFECTUEE';
+  RAISE NOTICE '🗂️ Tables et vues créées ou mises à jour';
+  RAISE NOTICE '📈 Index et contraintes gérés automatiquement';
+  RAISE NOTICE '👁️ Vues dépendantes recréées avec les bons types de données';
+END $$; 

@@ -106,9 +106,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculer les frais de service (6.5%)
-    const fraisService = transaction.montant * 0.065;
-    const montantTotal = transaction.montant + fraisService;
+    // ✅ CORRECTION : Logique financière ZaLaMa correcte
+    // ZaLaMa prélève ses frais lors du paiement à l'employé
+    // Le partenaire rembourse exactement le montant demandé
+    const montantDemande = transaction.montant; // Ex: 2,000 GNF
+    const fraisServiceZalama = Math.round(montantDemande * 0.065); // Ex: 130 GNF (frais ZaLaMa)
+    const montantRecuEmploye = montantDemande - fraisServiceZalama; // Ex: 1,870 GNF (ce que reçoit l'employé)
+    
+    // Le partenaire rembourse le montant demandé (pas + frais)
+    const montantRemboursementPartenaire = montantDemande; // Ex: 2,000 GNF
+
+    console.log('💰 Calcul financier ZaLaMa:', {
+      montant_demande: montantDemande,
+      frais_zalama: fraisServiceZalama,
+      montant_recu_employe: montantRecuEmploye,
+      montant_rembourser_partenaire: montantRemboursementPartenaire
+    });
 
     // Créer le remboursement
     const remboursementData = {
@@ -116,13 +129,13 @@ export async function POST(request: NextRequest) {
       demande_avance_id: transaction.demande_avance_id,
       employe_id: transaction.employe_id,
       partenaire_id: transaction.entreprise_id,
-      montant_transaction: transaction.montant,
-      frais_service: fraisService,
-      montant_total_remboursement: montantTotal,
+      montant_transaction: montantDemande,
+      frais_service: fraisServiceZalama, // Frais ZaLaMa (informatif)
+      montant_total_remboursement: montantRemboursementPartenaire, // Montant que paie le partenaire
       methode_remboursement: 'VIREMENT_BANCAIRE',
       date_transaction_effectuee: transaction.date_transaction,
       date_limite_remboursement: new Date(transaction.date_transaction).toISOString(),
-      commentaire_admin: commentaire_admin || null,
+      commentaire_admin: commentaire_admin || 'Remboursement créé automatiquement - Le partenaire rembourse le montant demandé (ZaLaMa garde ses frais de service).',
       statut: 'EN_ATTENTE'
     };
 
@@ -140,10 +153,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('✅ Remboursement créé avec la logique ZaLaMa correcte:', {
+      id: newRemboursement.id,
+      montant_transaction: newRemboursement.montant_transaction,
+      frais_service: newRemboursement.frais_service,
+      montant_total_remboursement: newRemboursement.montant_total_remboursement
+    });
+
     return NextResponse.json({
       success: true,
       data: newRemboursement,
-      message: 'Remboursement créé avec succès'
+      message: 'Remboursement créé avec succès selon la logique financière ZaLaMa'
     });
 
   } catch (error) {

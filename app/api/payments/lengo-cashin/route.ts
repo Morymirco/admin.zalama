@@ -66,9 +66,15 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json();
     console.log('📋 Body reçu:', body);
+    console.log('🔍 DEBUG PARAMETRES:', {
+      amount: body.amount,
+      amountToEmployee: body.amountToEmployee,
+      hasAmountToEmployee: !!body.amountToEmployee,
+      requestId: body.requestId
+    });
     
-    // body doit contenir: amount, phone, description, partnerId (optionnel), type_account (optionnel), requestId (optionnel), employeId (optionnel)
-    const { amount, phone, description, partnerId, type_account, requestId, employeId } = body;
+    // ✅ CORRECTION LOGIQUE ZALAMA : Traiter amount (transaction) et amountToEmployee (LengoPay) séparément
+    const { amount, amountToEmployee, phone, description, partnerId, type_account, requestId, employeId } = body;
 
     if (!amount || !phone || !description) {
       console.error('❌ Paramètres manquants:', { amount, phone, description });
@@ -77,6 +83,16 @@ export async function POST(request: NextRequest) {
         error: 'Paramètres manquants: amount, phone, description sont requis' 
       }, { status: 400 });
     }
+
+    // ✅ LOGIQUE ZALAMA: amount = montant demandé (pour transaction), amountToEmployee = montant net (pour LengoPay)
+    const montantTransaction = parseFloat(amount); // Ex: 2000 GNF (montant demandé - stocké en DB)
+    const montantLengoPay = amountToEmployee ? parseFloat(amountToEmployee) : montantTransaction; // Ex: 1870 GNF (payé via LengoPay)
+    
+    console.log('💰 LOGIQUE ZALAMA CORRECTE:', {
+      montantTransaction: montantTransaction + ' GNF (stocké en DB)',
+      montantLengoPay: montantLengoPay + ' GNF (payé via LengoPay)',
+      difference: (montantTransaction - montantLengoPay) + ' GNF (frais ZaLaMa)'
+    });
 
     // Vérifier s'il existe déjà une transaction pour cette demande
     if (requestId) {
@@ -167,9 +183,9 @@ export async function POST(request: NextRequest) {
     console.log('  - LENGO_CALLBACK_URL:', LENGO_CALLBACK_URL ? '✅ Présent' : '❌ Manquant');
     console.log('  - SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ Présent' : '❌ Manquant');
 
-    // Préparer les paramètres pour Lengo Pay selon la doc officielle
+    // ✅ CORRECTION: Utiliser montantLengoPay (montant net) pour LengoPay au lieu du montant demandé
     const lengoParams: LengoPayCashinParams = {
-      amount: amount.toString(),
+      amount: montantLengoPay.toString(),
       currency: 'GNF',
       websiteid: LENGO_SITE_ID || '',
       type_account: type_account || 'lp-om-gn',
@@ -177,13 +193,14 @@ export async function POST(request: NextRequest) {
       callback_url: LENGO_CALLBACK_URL,
     };
 
-    console.log('💳 Paramètres Lengo Pay préparés:', { 
+    console.log('💳 Paramètres Lengo Pay préparés (LOGIQUE ZALAMA):', { 
       ...lengoParams, 
       description, 
       partnerId,
       requestId,
       employeId,
-      amount: lengoParams.amount + ' ' + lengoParams.currency,
+      lengoPayAmount: lengoParams.amount + ' ' + lengoParams.currency + ' (montant net employé)',
+      transactionAmount: montantTransaction + ' GNF (montant demandé - stocké DB)',
       originalPhone: phone,
       normalizedPhone: normalizedPhone
     });
@@ -216,7 +233,7 @@ export async function POST(request: NextRequest) {
     });
     
     const transactionData = {
-      montant: parseFloat(amount),
+      montant: montantTransaction, // ✅ CRUCIAL: Utiliser montantTransaction (montant demandé) pour la DB
       numero_transaction: lengoResult.pay_id,
       methode_paiement: mappedMethodePaiement,
       numero_compte: phone,

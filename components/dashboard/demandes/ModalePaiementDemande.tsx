@@ -333,16 +333,16 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
     setIsProcessing(true);
 
     try {
-      // Calculer le montant à payer en déduisant les frais de 6.5%
+      // ✅ CORRECTION LOGIQUE ZALAMA : Transaction avec montant demandé, Lengo paie montant net
       const montantDemande = request.montant_demande;
       const fraisService = Math.round(montantDemande * 0.065); // 6.5% des frais
-      const montantAPayer = montantDemande - fraisService;
+      const montantNetEmploye = montantDemande - fraisService; // Ce que reçoit l'employé
 
       console.log('🚀 Début du paiement pour la demande:', request.id);
-      console.log('📋 Données de paiement:', {
+      console.log('📋 Données de paiement (LOGIQUE ZALAMA CORRECTE):', {
         montantDemande: montantDemande,
         fraisService: fraisService,
-        montantAPayer: montantAPayer,
+        montantNetEmploye: montantNetEmploye,
         phone: phoneNumber,
         description: description,
         partnerId: request.partenaire_id,
@@ -355,7 +355,8 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: montantAPayer, // On paie le montant moins les frais
+          amount: montantDemande, // ✅ CRUCIAL: Transaction avec montant demandé original
+          amountToEmployee: montantNetEmploye, // ✅ Lengo paie seulement le montant net à l'employé
           phone: phoneNumber,
           description: description,
           partnerId: request.partenaire_id,
@@ -474,7 +475,7 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                     </span>
                   </div>
                   <div className="flex justify-between border-t border-[var(--zalama-border)] pt-1 mt-1">
-                    <span className="text-[var(--zalama-text-secondary)] font-medium">Montant à payer:</span>
+                    <span className="text-[var(--zalama-text-secondary)] font-medium">Montant reçu par l&apos;employé:</span>
                     <span className="font-bold text-[var(--zalama-blue)] text-base">
                       {formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}
                     </span>
@@ -669,8 +670,8 @@ const ModalePaiementDemande: React.FC<ModalePaiementDemandeProps> = ({
                     {existingTransaction?.statut === 'EFFECTUEE' 
                       ? 'Déjà payé' 
                       : hasCancelledTransactions(request)
-                      ? `Relancer ${formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}`
-                      : `Payer ${formatCurrency(request.montant_demande - Math.round(request.montant_demande * 0.065))}`
+                      ? `Relancer ${formatCurrency(request.montant_demande)}`
+                      : `Payer ${formatCurrency(request.montant_demande)}`
                     }
                   </>
                 )}

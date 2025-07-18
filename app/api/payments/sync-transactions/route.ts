@@ -121,6 +121,9 @@ export async function POST(request: NextRequest) {
               statut: newStatus
             };
             
+            // ✅ CORRECTION: Ne jamais modifier le montant des transactions existantes
+            // Seulement mettre à jour le statut et la date si nécessaire
+            
             // Si la transaction est réussie, mettre à jour la date de transaction
             if (newStatus === 'REUSSI' && !existingTx.date_transaction) {
               updateData.date_transaction = lengoTx.date;
@@ -141,12 +144,15 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Insérer une nouvelle transaction
+          // ✅ CORRECTION: Pour les nouvelles transactions synchronisées depuis LengoPay,
+          // on utilise le montant de LengoPay car on n'a pas le montant original
+          // Mais on ajoute un commentaire pour indiquer que c'est un montant net
           const transactionData = {
-            montant: parseFloat(lengoTx.amount),
+            montant: parseFloat(lengoTx.amount), // Montant net de LengoPay (après frais)
             numero_transaction: payId,
             methode_paiement: mapGatewayToMethodePaiement(lengoTx.gateway),
             numero_compte: lengoTx.account?.toString() || '',
-            description: `Transaction synchronisée depuis LengoPay - ${lengoTx.gateway}`,
+            description: `Transaction synchronisée depuis LengoPay (montant net après frais) - ${lengoTx.gateway}`,
             entreprise_id: null, // On ne peut pas déterminer le partenaire depuis LengoPay
             statut: mapToTransactionStatut(mapLengoStatus(lengoTx.status)),
             date_creation: lengoTx.date,

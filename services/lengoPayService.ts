@@ -245,9 +245,9 @@ export async function handleLengoPayCallback(callbackData: LengoPayCallback, sup
   });
 
   // Mettre à jour la transaction dans la table transactions
+  // ✅ CORRECTION: Ne pas modifier le montant, seulement le statut et autres infos
   const updateData = {
     statut,
-    montant: amount,
     numero_reception: account,
     message_callback: message,
     date_transaction: new Date().toISOString(),

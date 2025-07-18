@@ -20,14 +20,16 @@ export async function POST(request: NextRequest) {
     if (!remboursement_id) {
       return NextResponse.json({ error: 'remboursement_id requis' }, { status: 400 });
     }
-
-    // Récupérer le remboursement
+console.log('remboursement_id', remboursement_id);
+    //Récupérer le remboursement
     const { data: remboursement, error } = await supabase
       .from('remboursements')
       .select('montant_total_remboursement')
       .eq('id', remboursement_id)
       .eq('statut', 'EN_ATTENTE')
       .single();
+
+      console.log('remboursement', remboursement);
 
     if (error || !remboursement) {
       return NextResponse.json({ error: 'Remboursement non trouvé ou déjà payé' }, { status: 404 });

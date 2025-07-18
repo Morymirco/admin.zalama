@@ -21,12 +21,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'partenaire_id requis' }, { status: 400 });
     }
 
-    // Récupérer les remboursements en attente
+    // Récupérer les remboursements en attente avec plus d'informations
     const { data: remboursements, error } = await supabase
       .from('remboursements')
-      .select('id, montant_total_remboursement')
+      .select(`
+        id,
+        montant_transaction,
+        frais_service,
+        montant_total_remboursement,
+        statut,
+        date_creation,
+        date_limite_remboursement,
+        employe_id,
+        transaction_id
+      `)
       .eq('partenaire_id', partenaire_id)
       .eq('statut', 'EN_ATTENTE');
+
+    console.log('🔍 Remboursements récupérés:', {
+      nombre: remboursements?.length || 0,
+      partenaire_id,
+      remboursements: remboursements?.map(r => ({
+        id: r.id,
+        montant_transaction: r.montant_transaction,
+        montant_total_remboursement: r.montant_total_remboursement,
+        date_limite: r.date_limite_remboursement
+      }))
+    });
 
     if (error) {
       return NextResponse.json({ error: 'Erreur lors de la récupération' }, { status: 500 });

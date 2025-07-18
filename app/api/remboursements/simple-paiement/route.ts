@@ -21,15 +21,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'remboursement_id requis' }, { status: 400 });
     }
 console.log('remboursement_id', remboursement_id);
-    //Récupérer le remboursement
+    // Récupérer le remboursement avec plus d'informations
     const { data: remboursement, error } = await supabase
       .from('remboursements')
-      .select('montant_total_remboursement')
+      .select(`
+        id,
+        montant_transaction,
+        frais_service,
+        montant_total_remboursement,
+        statut,
+        date_creation,
+        date_limite_remboursement,
+        partenaire_id,
+        employe_id,
+        transaction_id,
+        methode_remboursement
+      `)
       .eq('id', remboursement_id)
       .eq('statut', 'EN_ATTENTE')
       .single();
 
-      console.log('remboursement', remboursement);
+    console.log('🔍 Remboursement récupéré:', {
+      id: remboursement?.id,
+      montant_transaction: remboursement?.montant_transaction,
+      frais_service: remboursement?.frais_service,
+      montant_total_remboursement: remboursement?.montant_total_remboursement,
+      statut: remboursement?.statut,
+      partenaire_id: remboursement?.partenaire_id,
+      employe_id: remboursement?.employe_id
+    });
 
     if (error || !remboursement) {
       return NextResponse.json({ error: 'Remboursement non trouvé ou déjà payé' }, { status: 404 });

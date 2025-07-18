@@ -54,11 +54,25 @@ export const config = {
 };
 */
 
-// Middleware temporairement désactivé - toutes les routes sont accessibles
-export function middleware() {
-  return;
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { corsMiddleware } from './middleware-cors';
+
+export async function middleware(request: NextRequest) {
+  // Appliquer CORS pour toutes les routes API
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    return corsMiddleware(request);
+  }
+  
+  // Pour les autres routes, continuer normalement
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [],
+  matcher: [
+    '/api/:path*',
+    '/dashboard/:path*',
+    '/login',
+    '/'
+  ],
 }; 
